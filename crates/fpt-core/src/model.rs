@@ -3,11 +3,12 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum OutputFormat {
-    #[default]
     Toon,
+    #[default]
     Json,
     PrettyJson,
 }
+
 
 impl OutputFormat {
     pub const fn is_pretty(self) -> bool {

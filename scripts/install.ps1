@@ -1,0 +1,50 @@
+[CmdletBinding()]
+param(
+    [string]$Version = $env:FPT_INSTALL_VERSION,
+    [string]$InstallDir = $(if ($env:FPT_INSTALL_DIR) { $env:FPT_INSTALL_DIR } else { Join-Path $env:USERPROFILE ".fpt\bin" }),
+    [string]$Repository = $(if ($env:FPT_INSTALL_REPOSITORY) { $env:FPT_INSTALL_REPOSITORY } else { "loonghao/fpt-cli" })
+)
+
+Set-StrictMode -Version Latest
+$ErrorActionPreference = "Stop"
+
+$architecture = [System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString().ToLowerInvariant()
+switch ($architecture) {
+    "x64" { $target = "x86_64-pc-windows-msvc" }
+    default { throw "Unsupported Windows architecture: $architecture" }
+}
+
+$asset = "fpt-$target.zip"
+if ([string]::IsNullOrWhiteSpace($Version) -or $Version -eq "latest") {
+    $downloadUrl = "https://github.com/$Repository/releases/latest/download/$asset"
+}
+else {
+    if (-not $Version.StartsWith("v")) {
+        $Version = "v$Version"
+    }
+    $downloadUrl = "https://github.com/$Repository/releases/download/$Version/$asset"
+}
+
+$tempRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("fpt-install-" + [System.Guid]::NewGuid().ToString("N"))
+$archivePath = Join-Path $tempRoot $asset
+$extractDir = Join-Path $tempRoot "extract"
+$binaryPath = Join-Path $InstallDir "fpt.exe"
+
+try {
+    New-Item -ItemType Directory -Force -Path $tempRoot, $extractDir, $InstallDir | Out-Null
+
+    Write-Host "Downloading $asset from $downloadUrl"
+    Invoke-WebRequest -Uri $downloadUrl -OutFile $archivePath
+    Expand-Archive -Path $archivePath -DestinationPath $extractDir -Force
+    Copy-Item -Path (Join-Path $extractDir "fpt.exe") -Destination $binaryPath -Force
+
+    Write-Host "Installed fpt to $binaryPath"
+    if (-not (($env:PATH -split ';') -contains $InstallDir)) {
+        Write-Host "Add $InstallDir to PATH to run 'fpt' directly."
+    }
+}
+finally {
+    if (Test-Path $tempRoot) {
+        Remove-Item -Path $tempRoot -Recurse -Force -ErrorAction SilentlyContinue
+    }
+}

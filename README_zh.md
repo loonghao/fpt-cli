@@ -10,22 +10,29 @@
 
 ### 当前状态
 
+
 当前仓库处于第一阶段实现，已经包含：
 
 - **Rust workspace** 拆分
 - **CLI-first** 命令树
-- 面向自动化的**结构化 JSON 输出**
+- 面向自动化的 **结构化 JSON 输出**
 - 命令级 **capability / inspect** 发现接口
 - 用于认证、schema 与 entity CRUD 的 **REST transport MVP**
+- 面向高频“只取第一条”场景的 **`entity.find-one`**
+- 用于服务端聚合统计与分组汇总的 **`entity.summarize`**
+- 支持 `additional_filter_presets` 的 **`entity.find` 结构化 `_search`**
+
 - 通过 **`entity batch`** 实现的 client-side 批量 CRUD 编排
 - **受控 batch 并发** 与稳定有序结果返回
 - 写操作的 **dry-run** 请求计划输出
 - **三种认证模式**：script、user password、session token
 - **进程内 access token 复用**，降低重复认证开销
+- 位于 `skills/fpt-cli-openclaw` 的 **可发布 OpenClaw skill 包**
 
 ### 开发环境
 
 项目中的所有环境都应通过 **`vx`** 管理，命令集合通过仓库里的 **`justfile`** 暴露。
+
 
 ```bash
 vx setup
@@ -33,7 +40,107 @@ vx just test
 vx just capabilities
 ```
 
+### 安装
+
+预构建发布产物当前覆盖：
+
+- **Linux**：`x86_64-unknown-linux-gnu`
+- **Windows**：`x86_64-pc-windows-msvc`
+- **macOS**：`x86_64-apple-darwin`、`aarch64-apple-darwin`
+
+可通过 HTTPS 直接安装最新版本：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/loonghao/fpt-cli/main/scripts/install.sh | sh
+
+```
+
+```powershell
+powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/loonghao/fpt-cli/main/scripts/install.ps1 | iex"
+
+```
+
+可选安装环境变量：
+
+- `FPT_INSTALL_VERSION`：安装指定版本而不是 `latest`
+- `FPT_INSTALL_DIR`：覆盖安装目录
+- `FPT_INSTALL_REPOSITORY`：覆盖 GitHub 仓库（格式：`owner/repo`）
+
+### 自更新
+
+已安装的二进制可以原地自更新：
+
+```bash
+fpt self-update --check --output pretty-json
+fpt self-update
+fpt self-update --version 0.1.0
+```
+
+说明：
+
+- `self-update` 会通过 HTTPS 拉取 GitHub Releases
+- 它会自动选择与当前主机平台匹配的发布产物
+- 如果 release 中包含 `fpt-checksums.txt`，替换前会先校验压缩包摘要
+
+### OpenClaw skill
+
+仓库内包含一个可发布的 OpenClaw skill：`skills/fpt-cli-openclaw`。
+
+发布后可通过 ClawHub 安装：
+
+```bash
+npx clawhub@latest install fpt-cli-openclaw
+```
+
+在仓库本地打包整个 `skills/` 目录下的所有 skill：
+
+```bash
+vx just package-skills
+```
+
+如果只想打包 OpenClaw skill，也保留了单 skill 别名：
+
+```bash
+vx just package-openclaw-skill
+```
+
+`generate-skills.yml` 会负责为 `skills/` 下的所有 skill 生成 zip 产物，`clawhub.yml` 会在 PR 上执行 dry-run sync，并在 `main` / tag push 时同步整个 `skills/` 根目录。
+
+### 发布自动化
+
+版本管理通过 **`release-please`** 完成：
+
+
+- 向 `main` 推送 conventional commits
+- `release-please` 创建或更新 release PR
+- 合并 release PR 后生成版本 tag 和 GitHub release 元数据
+- tag 触发的 `release.yml` workflow 发布跨平台 CLI 二进制
+- `generate-skills.yml` 会为 `skills/` 下的所有 skill 生成产物
+- push/tag 触发的 `clawhub.yml` workflow 会把整个 `skills/` 根目录同步到 ClawHub，而 PR 只执行 dry-run sync
+
+
+若要启用完整自动化，请配置：
+
+- `RELEASE_PLEASE_TOKEN`
+- `CLAWHUB_TOKEN`
+
+### Pre-commit
+
+仓库根目录包含 `.pre-commit-config.yaml`，并通过 `vx` 封装 hook 管理：
+
+```bash
+vx just pre-commit-install
+vx just pre-commit-run
+```
+
+当前配置的 hooks：
+
+- `pre-commit`：whitespace / merge-conflict 检查、`vx just fmt-check`、`vx just lint`
+- `pre-push`：`vx just test`
+
 ### 认证环境变量
+
+
 
 CLI 默认优先使用 `FPT_*` 前缀；当 `FPT_*` 缺失时，也支持回退读取 `SG_*`。
 
@@ -72,7 +179,11 @@ fpt schema fields Shot --site ... --auth-mode user-password --username ... --pas
 fpt entity get Shot 123 --site ... --auth-mode session-token --session-token ...
 fpt entity find Asset --input @query.json --site ... --auth-mode script --script-name ... --script-key ...
 fpt entity find Asset --filter-dsl "sg_status_list == 'ip' and (code ~ 'bunny' or id > 100)" --site ... --auth-mode script --script-name ... --script-key ...
+fpt entity find-one Shot --input @query.json --site ... --auth-mode script --script-name ... --script-key ...
+fpt entity summarize Version --input @summaries.json --site ... --auth-mode script --script-name ... --script-key ...
 fpt entity create Version --input @payload.json --dry-run
+
+
 fpt entity update Task 42 --input @patch.json --dry-run
 fpt entity delete Playlist 99 --dry-run
 
@@ -104,10 +215,12 @@ fpt entity batch delete Playlist --input '{"ids":[99,100]}' --dry-run --output j
 - 同一次 CLI 进程中的 batch 子请求会以**受控并发**方式执行，默认并发度为 `8`
 - 可通过 **`FPT_BATCH_CONCURRENCY`** 调整并发度；传入 `1` 可退回串行执行
 
-### 复杂过滤 DSL
+### 复杂过滤 DSL 与结构化 search
 
 `entity find` 支持通过 `--filter-dsl`（或在 `--input` JSON 里传入 `filter_dsl`）描述复杂过滤条件。
+它也支持原生 `search` 对象以及顶层 `additional_filter_presets`，用于直接构造 ShotGrid REST `_search` 请求体。
 当使用 DSL 时，CLI 会自动切换到 ShotGrid REST 的 `_search` 端点。
+
 
 DSL 支持：
 
@@ -179,5 +292,7 @@ vx cargo run -p fpt-cli -- auth test --output pretty-json
 
 - **CLI 契约独立于底层 transport 实现**
 - **默认 JSON 输出，便于 agent 集成**
+- **`--output toon`** 与 **`--output pretty-json`** 仍然保留，可在需要特定展示格式时显式指定
+
 - **写操作支持 `--dry-run`**
 - **未来即使新增 REST 之外的 transport，也不应破坏 OpenClaw 面向的 CLI 契约**

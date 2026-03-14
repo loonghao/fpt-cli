@@ -12,11 +12,21 @@ path = "src/main.rs"
 
 [dependencies]
 clap = { workspace = true }
+flate2 = { workspace = true }
 fpt-core = { path = "../fpt-core" }
 fpt-domain = { path = "../fpt-domain" }
+reqwest = { workspace = true }
+self-replace = { workspace = true }
+semver = { workspace = true }
+serde = { workspace = true }
 serde_json = { workspace = true }
+sha2 = { workspace = true }
+tar = { workspace = true }
+tempfile = { workspace = true }
 tokio = { workspace = true }
 toon-format = { workspace = true }
+zip = { workspace = true }
+
 
 
 

@@ -181,7 +181,142 @@ async fn entity_get_and_find_use_expected_read_endpoints() {
 }
 
 #[tokio::test]
+async fn rpc_methods_use_expected_paths_and_payloads() {
+    let server = MockServer::start();
+    let revive = server.mock(|when, then| {
+        when.method(POST)
+            .path("/api3/json")
+            .json_body(json!({
+                "method_name": "revive",
+                "params": [
+                    {
+                        "script_name": "openclaw",
+                        "script_key": "secret-key"
+                    },
+                    {
+                        "type": "Shot",
+                        "id": 860
+                    }
+                ]
+            }));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({"results": true}));
+    });
+    let work_schedule = server.mock(|when, then| {
+        when.method(POST)
+            .path("/api3/json")
+            .json_body(json!({
+                "method_name": "work_schedule_read",
+                "params": [
+                    {
+                        "script_name": "openclaw",
+                        "script_key": "secret-key"
+                    },
+                    {
+                        "start_date": "2026-03-16",
+                        "end_date": "2026-03-20"
+                    }
+                ]
+            }));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({
+                "results": {
+                    "2026-03-16": {
+                        "working": true,
+                        "reason": "STUDIO_WORK_WEEK"
+                    }
+                }
+            }));
+    });
+    let summarize = server.mock(|when, then| {
+        when.method(POST)
+            .path("/api3/json")
+            .json_body(json!({
+                "method_name": "summarize",
+                "params": [
+                    {
+                        "script_name": "openclaw",
+                        "script_key": "secret-key"
+                    },
+                    {
+                        "type": "Version",
+                        "filters": {
+                            "filter_operator": "all",
+                            "filters": [["sg_status_list", "is", "ip"]]
+                        },
+                        "summaries": [
+                            {
+                                "field": "id",
+                                "type": "record_count"
+                            }
+                        ]
+                    }
+                ]
+            }));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({
+                "results": {
+                    "summaries": {
+                        "id": {
+                            "record_count": 3
+                        }
+                    },
+                    "groups": []
+                }
+            }));
+    });
+    let transport = RestTransport::default();
+    let config = script_config(&server);
+
+    let revive_response = transport
+        .entity_revive(&config, "Shot", 860)
+        .await
+        .expect("entity revive succeeds");
+    let work_schedule_response = transport
+        .work_schedule_read(
+            &config,
+            &json!({
+                "start_date": "2026-03-16",
+                "end_date": "2026-03-20"
+            }),
+        )
+        .await
+        .expect("work schedule succeeds");
+    let summarize_response = transport
+        .entity_summarize(
+            &config,
+            "Version",
+            &json!({
+                "filters": {
+                    "filter_operator": "all",
+                    "filters": [["sg_status_list", "is", "ip"]]
+                },
+                "summaries": [
+                    {
+                        "field": "id",
+                        "type": "record_count"
+                    }
+                ]
+            }),
+        )
+        .await
+        .expect("entity summarize succeeds");
+
+    assert_eq!(revive.hits(), 1);
+    assert_eq!(work_schedule.hits(), 1);
+    assert_eq!(summarize.hits(), 1);
+    assert_eq!(revive_response, json!(true));
+    assert_eq!(work_schedule_response["2026-03-16"]["working"], true);
+    assert_eq!(summarize_response["summaries"]["id"]["record_count"], 3);
+}
+
+
+#[tokio::test]
 async fn entity_write_commands_use_expected_methods_and_parse_empty_delete() {
+
     let server = MockServer::start();
     let auth = mock_auth(&server);
     let entity_create = server.mock(|when, then| {

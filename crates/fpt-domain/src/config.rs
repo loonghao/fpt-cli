@@ -41,8 +41,9 @@ impl FromStr for AuthMode {
             }
             "session-token" | "session_token" | "session" => Ok(Self::SessionToken),
             other => Err(AppError::invalid_input(format!(
-                "不支持的认证模式 `{other}`，可选值：script / user-password / session-token"
+                "unsupported auth mode `{other}`; expected one of: script / user-password / session-token"
             ))),
+
         }
     }
 }
@@ -220,7 +221,26 @@ pub fn api_version_or_default(value: Option<&str>) -> String {
         .to_string()
 }
 
+pub fn resolve_site(overrides: ConnectionOverrides) -> Result<String> {
+    let site = overrides
+        .site
+        .or(env_var_compat("FPT_SITE", "SG_SITE"))
+        .unwrap_or_default();
+
+    if site.trim().is_empty() {
+        return Err(AppError::invalid_input("缺少 ShotGrid 连接配置").with_details(
+            serde_json::json!({
+                "missing": ["FPT_SITE / SG_SITE / --site"],
+                "hint": "可通过命令行参数或环境变量提供站点信息"
+            }),
+        ));
+    }
+
+    Ok(site.trim_end_matches('/').to_string())
+}
+
 fn env_var_compat(primary: &str, fallback: &str) -> Option<String> {
+
     env::var(primary)
         .ok()
         .map(|value| value.trim().to_string())

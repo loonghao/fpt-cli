@@ -32,14 +32,14 @@ enum Expr {
 pub fn parse_filter_dsl(input: &str) -> Result<Value> {
     let source = input.trim();
     if source.is_empty() {
-        return Err(AppError::invalid_input("`filter_dsl` 不能为空"));
+        return Err(AppError::invalid_input("`filter_dsl` cannot be empty"));
     }
 
     let mut parser = Parser::new(source);
     let expr = parser.parse_expression()?;
     parser.skip_whitespace();
     if !parser.is_eof() {
-        return parser.error("存在无法解析的多余内容");
+        return parser.error("unexpected trailing content" );
     }
 
     Ok(wrap_root(expr))
@@ -140,7 +140,7 @@ impl<'a> Parser<'a> {
             let expr = self.parse_expression()?;
             self.skip_whitespace();
             if !self.consume_char(')') {
-                return self.error("缺少右括号 `)`");
+                return self.error("missing closing parenthesis `)`");
             }
             return Ok(expr);
         }
@@ -162,7 +162,7 @@ impl<'a> Parser<'a> {
 
     fn parse_field_path(&mut self) -> Result<String> {
         let mut path = String::new();
-        path.push_str(&self.parse_identifier("字段名")?);
+        path.push_str(&self.parse_identifier("field name")?);
 
         loop {
             self.skip_whitespace();
@@ -170,7 +170,7 @@ impl<'a> Parser<'a> {
                 break;
             }
             path.push('.');
-            path.push_str(&self.parse_identifier("字段名")?);
+            path.push_str(&self.parse_identifier("field name")?);
         }
 
         Ok(path)
@@ -201,7 +201,7 @@ impl<'a> Parser<'a> {
             return Ok("contains".to_string());
         }
 
-        let keyword = self.parse_identifier("操作符")?.to_ascii_lowercase();
+        let keyword = self.parse_identifier("operator")?.to_ascii_lowercase();
         if keyword == "not" {
             let checkpoint = self.pos;
             if self.consume_keyword("in") {
@@ -212,6 +212,7 @@ impl<'a> Parser<'a> {
 
         Ok(keyword)
     }
+
 
     fn parse_value(&mut self) -> Result<Value> {
         self.skip_whitespace();

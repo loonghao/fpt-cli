@@ -5,18 +5,16 @@ use async_trait::async_trait;
 use fpt_core::{AppError, Result, RiskLevel};
 use reqwest::{Client, Method, Response, StatusCode};
 use serde::Serialize;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use url::Url;
 
 use crate::config::{ConnectionSettings, Credentials};
-
 
 #[derive(Debug, Clone, Default)]
 pub struct FindParams {
     pub query: Vec<(String, String)>,
     pub search: Option<Value>,
 }
-
 
 #[derive(Debug, Clone, Serialize)]
 pub struct RequestPlan {
@@ -47,10 +45,10 @@ struct CachedAccessToken {
     expires_at: Option<Instant>,
 }
 
-
 #[async_trait]
 pub trait ShotgridTransport {
     async fn auth_test(&self, config: &ConnectionSettings) -> Result<Value>;
+    async fn server_info(&self, site: &str) -> Result<Value>;
     async fn schema_entities(&self, config: &ConnectionSettings) -> Result<Value>;
     async fn schema_fields(&self, config: &ConnectionSettings, entity: &str) -> Result<Value>;
     async fn entity_get(
@@ -66,7 +64,14 @@ pub trait ShotgridTransport {
         entity: &str,
         params: FindParams,
     ) -> Result<Value>;
+    async fn entity_summarize(
+        &self,
+        config: &ConnectionSettings,
+        entity: &str,
+        body: &Value,
+    ) -> Result<Value>;
     async fn entity_create(
+
         &self,
         config: &ConnectionSettings,
         entity: &str,
@@ -85,6 +90,13 @@ pub trait ShotgridTransport {
         entity: &str,
         id: u64,
     ) -> Result<Value>;
+    async fn entity_revive(
+        &self,
+        config: &ConnectionSettings,
+        entity: &str,
+        id: u64,
+    ) -> Result<Value>;
+    async fn work_schedule_read(&self, config: &ConnectionSettings, body: &Value) -> Result<Value>;
 }
 
 #[derive(Debug, Clone)]
@@ -102,7 +114,6 @@ impl Default for RestTransport {
     }
 }
 
-
 impl RestTransport {
     fn build_url(
         &self,
@@ -110,9 +121,8 @@ impl RestTransport {
         path: &str,
         query: &[(String, String)],
     ) -> Result<Url> {
-        let mut url = Url::parse(&format!("{}/api/{}/", config.site, config.api_version)).map_err(
-            |error| AppError::invalid_input(format!("无效的站点 URL: {error}")),
-        )?;
+        let mut url = Url::parse(&format!("{}/api/{}/", config.site, config.api_version))
+            .map_err(|error| AppError::invalid_input(format!("无效的站点 URL: {error}")))?;
         url = url.join(path.trim_start_matches('/')).map_err(|error| {
             AppError::internal(format!("无法构造 REST URL `{path}`: {error}"))
         })?;
@@ -125,6 +135,50 @@ impl RestTransport {
         }
 
         Ok(url)
+    }
+
+    fn build_rpc_url(&self, site: &str) -> Result<Url> {
+        let normalized_site = site.trim_end_matches('/');
+        let mut url = Url::parse(&format!("{normalized_site}/"))
+            .map_err(|error| AppError::invalid_input(format!("无效的站点 URL: {error}")))?;
+        url = url
+            .join("api3/json")
+            .map_err(|error| AppError::internal(format!("无法构造 RPC URL: {error}")))?;
+        Ok(url)
+    }
+
+    fn rpc_auth_params(config: &ConnectionSettings) -> Value {
+        match &config.credentials {
+            Credentials::Script {
+                script_name,
+                script_key,
+            } => json!({
+                "script_name": script_name,
+                "script_key": script_key,
+            }),
+            Credentials::UserPassword {
+                username,
+                password,
+                auth_token,
+            } => {
+                let mut payload = json!({
+                    "user_login": username,
+                    "user_password": password,
+                });
+                if let Some(auth_token) = auth_token {
+                    payload["auth_token"] = Value::String(auth_token.clone());
+                }
+                payload
+            }
+            Credentials::SessionToken { session_token } => json!({
+                "session_token": session_token,
+                "reject_if_expired": true,
+            }),
+        }
+    }
+
+    fn extract_rpc_results(response: Value) -> Value {
+        response.get("results").cloned().unwrap_or(response)
     }
 
     fn token_cache_key(config: &ConnectionSettings) -> String {
@@ -187,8 +241,6 @@ impl RestTransport {
 
         let url = self.build_url(config, "auth/access_token", &[])?;
 
-
-        // 构造 form 数据——使用 &str slice 与 shotgrid-rs 保持一致
         let mut form: Vec<(&str, &str)> = Vec::new();
         match &config.credentials {
             Credentials::Script {
@@ -217,7 +269,6 @@ impl RestTransport {
             }
         };
 
-        // 诊断：输出等效 curl 命令（隐藏 secret 的中间部分）
         if std::env::var("FPT_DEBUG").is_ok() {
             let masked_form: Vec<String> = form
                 .iter()
@@ -229,15 +280,9 @@ impl RestTransport {
                     }
                 })
                 .collect();
-            eprintln!(
-                "[debug] POST {} form=[{}]",
-                url,
-                masked_form.join("&")
-            );
+            eprintln!("[debug] POST {} form=[{}]", url, masked_form.join("&"));
         }
 
-        // 注意：.form() 会自动设置 Content-Type: application/x-www-form-urlencoded
-        // 不要手动再设置 content-type，避免重复 header
         let response = self
             .client
             .post(url)
@@ -251,7 +296,7 @@ impl RestTransport {
                     .retryable(true)
             })?;
 
-        let body = Self::parse_response(response).await?;
+        let body = Self::parse_response(response, "rest").await?;
         let access_token = body
             .get("access_token")
             .and_then(Value::as_str)
@@ -276,7 +321,6 @@ impl RestTransport {
         self.store_access_token(config, &payload)?;
         Ok(payload)
     }
-
 
     async fn authorized_json_request(
         &self,
@@ -304,7 +348,7 @@ impl RestTransport {
                 .retryable(true)
         })?;
 
-        Self::parse_response(response).await
+        Self::parse_response(response, "rest").await
     }
 
     async fn authorized_search_request(
@@ -334,15 +378,38 @@ impl RestTransport {
                     .retryable(true)
             })?;
 
-        Self::parse_response(response).await
+        Self::parse_response(response, "rest").await
     }
 
-    async fn parse_response(response: Response) -> Result<Value> {
+    async fn rpc_request(&self, site: &str, method_name: &str, params: Vec<Value>) -> Result<Value> {
+        let url = self.build_rpc_url(site)?;
+        let body = json!({
+            "method_name": method_name,
+            "params": params,
+        });
 
+        let response = self
+            .client
+            .request(Method::POST, url)
+            .header("accept", "application/json")
+            .json(&body)
+            .send()
+            .await
+            .map_err(|error| {
+                AppError::network(format!("请求 ShotGrid RPC 失败: {error}"))
+                    .with_transport("rpc")
+                    .retryable(true)
+            })?;
+
+        let parsed = Self::parse_response(response, "rpc").await?;
+        Ok(Self::extract_rpc_results(parsed))
+    }
+
+    async fn parse_response(response: Response, transport: &'static str) -> Result<Value> {
         let status = response.status();
         let text = response.text().await.map_err(|error| {
             AppError::network(format!("读取 ShotGrid 响应失败: {error}"))
-                .with_transport("rest")
+                .with_transport(transport)
                 .retryable(true)
         })?;
 
@@ -356,24 +423,22 @@ impl RestTransport {
 
             return serde_json::from_str(&text).map_err(|error| {
                 AppError::api(format!("无法解析 ShotGrid JSON 响应: {error}"))
-                    .with_transport("rest")
+                    .with_transport(transport)
                     .with_details(json!({ "raw": text }))
             });
         }
 
         let details = serde_json::from_str(&text).unwrap_or_else(|_| json!({ "raw": text }));
-
-        // 识别认证相关的错误——ShotGrid 对 script 认证失败返回 400 而非 401
         let is_auth_error = matches!(status, StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN)
             || (status == StatusCode::BAD_REQUEST && text.contains("authenticate"));
 
         let error = if is_auth_error {
             AppError::auth(format!("ShotGrid 认证失败 ({status})"))
         } else {
-            AppError::api(format!("ShotGrid REST 请求失败 ({status})"))
+            AppError::api(format!("ShotGrid API 请求失败 ({status})"))
         };
 
-        Err(error.with_transport("rest").with_details(details))
+        Err(error.with_transport(transport).with_details(details))
     }
 }
 
@@ -391,6 +456,10 @@ impl ShotgridTransport for RestTransport {
             "expires_in": token.expires_in,
             "refresh_token_received": token.refresh_token.is_some(),
         }))
+    }
+
+    async fn server_info(&self, site: &str) -> Result<Value> {
+        self.rpc_request(site, "info", Vec::new()).await
     }
 
     async fn schema_entities(&self, config: &ConnectionSettings) -> Result<Value> {
@@ -454,8 +523,24 @@ impl ShotgridTransport for RestTransport {
             .await
     }
 
+    async fn entity_summarize(
+        &self,
+        config: &ConnectionSettings,
+        entity: &str,
+        body: &Value,
+    ) -> Result<Value> {
+        let mut payload = body.clone();
+        payload["type"] = Value::String(entity.to_string());
+        self.rpc_request(
+            &config.site,
+            "summarize",
+            vec![Self::rpc_auth_params(config), payload],
+        )
+        .await
+    }
 
     async fn entity_create(
+
         &self,
         config: &ConnectionSettings,
         entity: &str,
@@ -500,6 +585,35 @@ impl ShotgridTransport for RestTransport {
             &format!("entity/{}/{}", entity_collection_path(entity), id),
             &[],
             None,
+        )
+        .await
+    }
+
+    async fn entity_revive(
+        &self,
+        config: &ConnectionSettings,
+        entity: &str,
+        id: u64,
+    ) -> Result<Value> {
+        self.rpc_request(
+            &config.site,
+            "revive",
+            vec![
+                Self::rpc_auth_params(config),
+                json!({
+                    "type": entity,
+                    "id": id,
+                }),
+            ],
+        )
+        .await
+    }
+
+    async fn work_schedule_read(&self, config: &ConnectionSettings, body: &Value) -> Result<Value> {
+        self.rpc_request(
+            &config.site,
+            "work_schedule_read",
+            vec![Self::rpc_auth_params(config), body.clone()],
         )
         .await
     }
@@ -595,6 +709,29 @@ pub fn plan_entity_delete(api_version: &str, entity: &str, id: u64) -> RequestPl
         notes: vec![
             "dry-run 仅展示请求计划，不发起网络调用".to_string(),
             "真实删除需显式传入 `--yes`".to_string(),
+        ],
+    }
+}
+
+pub fn plan_entity_revive(entity: &str, id: u64) -> RequestPlan {
+    RequestPlan {
+        transport: "rpc",
+        method: "POST",
+        path: "/api3/json".to_string(),
+        risk: RiskLevel::Write,
+        query: Vec::new(),
+        body: Some(json!({
+            "method_name": "revive",
+            "params": [
+                {
+                    "type": entity,
+                    "id": id,
+                }
+            ]
+        })),
+        notes: vec![
+            "dry-run 仅展示请求计划，不发起网络调用".to_string(),
+            "RPC 认证参数会在真实执行时根据连接配置注入".to_string(),
         ],
     }
 }

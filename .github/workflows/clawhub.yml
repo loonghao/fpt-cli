@@ -1,0 +1,117 @@
+name: Sync OpenClaw Skills
+
+on:
+  pull_request:
+    branches:
+      - main
+
+    paths:
+      - "skills/**"
+      - "scripts/package_openclaw_skill.py"
+      - ".github/workflows/clawhub.yml"
+      - "justfile"
+      - "vx.toml"
+  push:
+    branches:
+      - main
+
+    tags:
+      - "v*"
+    paths:
+      - "skills/**"
+      - "scripts/package_openclaw_skill.py"
+      - ".github/workflows/clawhub.yml"
+      - "justfile"
+      - "vx.toml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+  CLAWHUB_CLI_PACKAGE: clawhub@0.7.0
+  CLAWHUB_CONFIG_PATH: ${{ runner.temp }}/clawhub/config.json
+  CLAWHUB_DISABLE_TELEMETRY: "1"
+
+jobs:
+  sync-skills:
+    name: Sync skills to ClawHub
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup vx
+        uses: loonghao/vx@main
+        with:
+          version: "0.8.0"
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup tools (vx)
+        run: vx setup
+
+      - name: Verify Cargo version matches tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: |
+          cargo_version="$(vx python - <<'PY'
+          import tomllib
+          from pathlib import Path
+
+          data = tomllib.loads(Path('Cargo.toml').read_text(encoding='utf-8'))
+          print(data['workspace']['package']['version'])
+          PY
+          )"
+
+          expected_tag="v${cargo_version}"
+          if [[ "${GITHUB_REF_NAME}" != "${expected_tag}" ]]; then
+            echo "Tag ${GITHUB_REF_NAME} does not match workspace version ${cargo_version}" >&2
+            exit 1
+          fi
+
+      - name: Package all skills
+        run: vx just package-skills
+
+      - name: Upload packaged skill artifacts
+        uses: actions/upload-artifact@v6
+        with:
+          name: skill-packages
+          path: dist/skills/*.zip
+          if-no-files-found: error
+
+      - name: Skip ClawHub sync for external pull requests
+        if: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork }}
+        run: echo "Skipping ClawHub sync for external pull requests because secrets are unavailable."
+
+      - name: Require ClawHub token
+        if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false }}
+        shell: bash
+        env:
+          CLAWHUB_TOKEN: ${{ secrets.CLAWHUB_TOKEN }}
+        run: |
+          if [[ -z "${CLAWHUB_TOKEN}" ]]; then
+            echo "Missing CLAWHUB_TOKEN secret" >&2
+            exit 1
+          fi
+
+      - name: Login to ClawHub
+        if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false }}
+        shell: bash
+        env:
+          CLAWHUB_TOKEN: ${{ secrets.CLAWHUB_TOKEN }}
+        run: |
+          mkdir -p "$(dirname "$CLAWHUB_CONFIG_PATH")"
+          vx npx "$CLAWHUB_CLI_PACKAGE" login --token "$CLAWHUB_TOKEN" --no-browser --no-input
+
+      - name: Dry-run sync skills
+        if: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false }}
+        run: vx just clawhub-sync-dry-run
+
+      - name: Sync skills
+        if: ${{ github.event_name != 'pull_request' }}
+        run: vx just clawhub-sync

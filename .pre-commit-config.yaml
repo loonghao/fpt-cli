@@ -1,0 +1,31 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: check-merge-conflict
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+
+  - repo: local
+    hooks:
+      - id: fmt-check
+        name: fmt-check
+        entry: vx just fmt-check
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      - id: lint
+        name: lint
+        entry: vx just lint
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      - id: test
+        name: test
+        entry: vx just test
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push]
