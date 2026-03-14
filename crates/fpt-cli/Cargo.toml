@@ -1,0 +1,29 @@
+[package]
+name = "fpt-cli"
+version = { workspace = true }
+edition = { workspace = true }
+license = { workspace = true }
+rust-version = { workspace = true }
+
+
+[[bin]]
+name = "fpt"
+path = "src/main.rs"
+
+[dependencies]
+clap = { workspace = true }
+fpt-core = { path = "../fpt-core" }
+fpt-domain = { path = "../fpt-domain" }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+toon-format = { workspace = true }
+
+
+
+
+[dev-dependencies]
+assert_cmd = { workspace = true }
+predicates = { workspace = true }
+rstest = { workspace = true }
+
+

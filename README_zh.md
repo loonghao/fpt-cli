@@ -1,0 +1,183 @@
+## `fpt-cli`
+
+[English](README.md) | [简体中文](README_zh.md)
+
+一个面向 **OpenClaw、AI agent 与自动化工作流** 的 Rust 版 Autodesk Flow Production Tracking（**ShotGrid / FPT**）CLI。
+
+`fpt-cli` 明确采用 **CLI-first** 设计。它的目标不仅是提供可用的 ShotGrid/FPT 操作命令，还要为 agent 提供稳定的命令契约，让编排更直接，并通过结构化 JSON 输出把可重复交互下沉到显式 CLI 命令里，从而减少不必要的 **MCP token 消耗**。
+
+这个仓库同时也是对文章 [MCP Is Dead, Long Live the CLI](https://ejholmes.github.io/2026/02/28/mcp-is-dead-long-live-the-cli.html) 中相关观点的一次实践验证与持续探索。
+
+### 当前状态
+
+当前仓库处于第一阶段实现，已经包含：
+
+- **Rust workspace** 拆分
+- **CLI-first** 命令树
+- 面向自动化的**结构化 JSON 输出**
+- 命令级 **capability / inspect** 发现接口
+- 用于认证、schema 与 entity CRUD 的 **REST transport MVP**
+- 通过 **`entity batch`** 实现的 client-side 批量 CRUD 编排
+- **受控 batch 并发** 与稳定有序结果返回
+- 写操作的 **dry-run** 请求计划输出
+- **三种认证模式**：script、user password、session token
+- **进程内 access token 复用**，降低重复认证开销
+
+### 开发环境
+
+项目中的所有环境都应通过 **`vx`** 管理，命令集合通过仓库里的 **`justfile`** 暴露。
+
+```bash
+vx setup
+vx just test
+vx just capabilities
+```
+
+### 认证环境变量
+
+CLI 默认优先使用 `FPT_*` 前缀；当 `FPT_*` 缺失时，也支持回退读取 `SG_*`。
+
+- `FPT_SITE` / `SG_SITE`
+- `FPT_AUTH_MODE` / `SG_AUTH_MODE`：`script` / `user_password` / `session_token`
+- `FPT_SCRIPT_NAME` / `SG_SCRIPT_NAME`
+- `FPT_SCRIPT_KEY` / `SG_SCRIPT_KEY`
+- `FPT_USERNAME` / `SG_USERNAME`
+- `FPT_PASSWORD` / `SG_PASSWORD`
+- `FPT_AUTH_TOKEN` / `SG_AUTH_TOKEN`：站点启用 2FA 时可选
+- `FPT_SESSION_TOKEN` / `SG_SESSION_TOKEN`
+- `FPT_API_VERSION` / `SG_API_VERSION`（可选，默认 `v1.1`）
+
+### 认证模式
+
+- **script**：使用 `script_name + script_key` 走 `client_credentials`
+- **user_password**：使用 `username + password` 走 `password` grant
+- **session_token**：使用已有 `session_token` 走 `session_token` grant
+
+如果没有显式传入 `--auth-mode`，CLI 会基于已有输入自动推断：
+
+- **优先 user password**：只要出现 `username`、`password` 或 `auth_token` 之一
+- **其次 session token**：当传入 `session_token` 时使用
+- **否则 script**：回退到 `script_name + script_key`
+
+### 已实现命令
+
+```bash
+fpt capabilities --output json
+fpt inspect command entity.update --output json
+fpt auth test --site https://example.shotgrid.autodesk.com --auth-mode script --script-name bot --script-key xxx
+fpt auth test --site https://example.shotgrid.autodesk.com --auth-mode user-password --username user@example.com --password secret
+fpt auth test --site https://example.shotgrid.autodesk.com --auth-mode session-token --session-token xxx
+fpt schema entities --site ... --auth-mode script --script-name ... --script-key ...
+fpt schema fields Shot --site ... --auth-mode user-password --username ... --password ...
+fpt entity get Shot 123 --site ... --auth-mode session-token --session-token ...
+fpt entity find Asset --input @query.json --site ... --auth-mode script --script-name ... --script-key ...
+fpt entity find Asset --filter-dsl "sg_status_list == 'ip' and (code ~ 'bunny' or id > 100)" --site ... --auth-mode script --script-name ... --script-key ...
+fpt entity create Version --input @payload.json --dry-run
+fpt entity update Task 42 --input @patch.json --dry-run
+fpt entity delete Playlist 99 --dry-run
+
+fpt entity batch get Shot --input '{"ids":[101,102],"fields":["code","sg_status_list"]}' --output json
+fpt entity batch find Asset --input @batch_queries.json --output json
+fpt entity batch create Version --input @batch_payloads.json --dry-run --output json
+fpt entity batch update Task --input @batch_updates.json --dry-run --output json
+fpt entity batch delete Playlist --input '{"ids":[99,100]}' --dry-run --output json
+```
+
+### 批量 CRUD
+
+`entity batch` 提供批量 get / find / create / update / delete 工作流。
+当前实现是**在 CLI 侧编排已有 REST CRUD 端点**，统一返回 `results` 数组，其中每一项都会携带自己的 `ok` 状态以及 `response` 或 `error`。
+
+输入约定：
+
+- **`entity batch get`**：`[1,2,3]` 或 `{"ids":[1,2,3],"fields":["code"]}`
+- **`entity batch find`**：`[{...query1...},{...query2...}]` 或 `{"requests":[...]}`
+- **`entity batch create`**：`[{...body1...},{...body2...}]` 或 `{"items":[...]}`
+- **`entity batch update`**：`[{"id":42,"body":{...}}, {"id":43,"body":{...}}]` 或 `{"items":[...]}`
+- **`entity batch delete`**：`[42,43]` 或 `{"ids":[42,43]}`
+
+说明：
+
+- **批量 create / update / delete 支持 `--dry-run`**
+- **批量 delete 真实执行仍要求显式传入 `--yes`**
+- 同一次 CLI 进程中的 batch 子请求会**复用 access token**
+- 同一次 CLI 进程中的 batch 子请求会以**受控并发**方式执行，默认并发度为 `8`
+- 可通过 **`FPT_BATCH_CONCURRENCY`** 调整并发度；传入 `1` 可退回串行执行
+
+### 复杂过滤 DSL
+
+`entity find` 支持通过 `--filter-dsl`（或在 `--input` JSON 里传入 `filter_dsl`）描述复杂过滤条件。
+当使用 DSL 时，CLI 会自动切换到 ShotGrid REST 的 `_search` 端点。
+
+DSL 支持：
+
+- 字段路径：`field` / `linked.field`
+- 逻辑运算：`and` / `or` / `(...)`
+- 比较运算符：`==`、`!=`、`>`、`>=`、`<`、`<=`、`~`（映射为 `contains`）
+- 关键字运算符：例如 `in`、`not in`、`starts_with`（按原样透传给 ShotGrid）
+- 值类型：字符串、数字、布尔、`null`、数组
+
+示例：
+
+```bash
+fpt entity find Asset --filter-dsl "sg_status_list == 'ip' and (code ~ 'bunny' or id > 100)"
+```
+
+> `filters` 与 `filter_dsl` 不能同时使用。
+
+### 测试覆盖
+
+当前测试覆盖分为两层：
+
+- **App 编排测试**：`auth.test`、`schema.entities`、`schema.fields`、`entity.get/find/create/update/delete`、`entity.batch.*`
+- **REST transport 测试**：OAuth token 获取、schema/entity 路由映射、`_search` 切换、写操作 method 映射、错误分类、token 复用
+
+开发时建议优先执行：
+
+```bash
+vx just test
+```
+
+### OpenClaw 站点联调示例
+
+建议优先使用环境变量，而不是把 secret 直接写进 shell 历史。
+
+```powershell
+$env:FPT_SITE = "https://openclaw.shotgrid.autodesk.com"
+$env:FPT_AUTH_MODE = "user_password"
+$env:FPT_USERNAME = "user@example.com"
+$env:FPT_PASSWORD = "your-password"
+vx cargo run -p fpt-cli -- auth test --output pretty-json
+```
+
+调试 `scripts/local_count_projects.ps1` 时，也可以在仓库根目录放一个 `.env` 文件。脚本会自动读取，并且不会覆盖当前 shell 已有的环境变量。
+
+```dotenv
+FPT_SITE=https://openclaw.shotgrid.autodesk.com
+FPT_AUTH_MODE=script
+FPT_SCRIPT_NAME=openclaw
+FPT_SCRIPT_KEY="your-script-key"
+```
+
+```powershell
+pwsh -File .\scripts\local_count_projects.ps1 -AuthMode script -VerbosePage
+```
+
+> 建议通过环境变量或 `.env` 传递 secret，不要直接放到命令行参数里。
+> 在 Windows 下，`^`、`&`、`!`、`%` 等字符可能在 shell / 进程启动链路中被转义或吞掉。
+> 当前脚本只传 `--auth-mode`，凭据由 CLI 从环境变量读取。
+> 其直连预检使用 `Invoke-WebRequest -SkipHttpErrorCheck`，因此即使 ShotGrid 返回 `400`，也会尽量输出响应正文，方便诊断。
+
+如果站点启用了双因素认证，还可以额外设置：
+
+```powershell
+$env:FPT_AUTH_TOKEN = "123456"
+vx cargo run -p fpt-cli -- auth test --output pretty-json
+```
+
+### 设计原则
+
+- **CLI 契约独立于底层 transport 实现**
+- **默认 JSON 输出，便于 agent 集成**
+- **写操作支持 `--dry-run`**
+- **未来即使新增 REST 之外的 transport，也不应破坏 OpenClaw 面向的 CLI 契约**

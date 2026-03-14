@@ -1,0 +1,22 @@
+[tools]
+just = "latest"
+python = "3.12"
+rust = "stable"
+uv = "latest"
+
+[settings]
+auto_install = true
+parallel_install = true
+
+[scripts]
+build = "cargo build"
+build-release = "cargo build --release"
+capabilities = "vx cargo run -p fpt-cli -- capabilities --output json"
+check = "vx cargo check --workspace"
+default = "just default"
+doc = "cargo doc"
+fmt = "vx cargo fmt --all"
+format = "cargo fmt"
+lint = "vx cargo clippy --workspace --all-targets -- -D warnings"
+run = "just run"
+test = "vx cargo test --workspace"
