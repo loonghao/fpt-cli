@@ -43,10 +43,11 @@ fn parses_keyword_operators_and_array_values() {
 }
 
 #[rstest]
-#[case("", "不能为空")]
-#[case("(sg_status == 'ip'", "缺少右括号")]
-#[case("sg_status ==", "缺少操作数")]
+#[case("", "cannot be empty")]
+#[case("(sg_status == 'ip'", "missing closing parenthesis")]
+#[case("sg_status ==", "missing operand")]
 fn rejects_invalid_dsl(#[case] input: &str, #[case] expected_message: &str) {
+
     let error = parse_filter_dsl(input).expect_err("dsl should fail");
     let message = error.envelope().message;
     assert!(

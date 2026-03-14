@@ -14,16 +14,22 @@ This repository is the first implementation stage and already includes:
 
 - **Rust workspace** split into focused crates
 - **CLI-first** command tree
-- **Structured JSON output** for automation
+- **Structured JSON output** for automation, now used as the default output mode
 - **Command capability / inspect** discovery APIs
 - **REST transport MVP** for auth, schema, and entity CRUD
+- **`entity.find-one`** for the common “return the first match” workflow
+- **`entity.summarize`** for server-side aggregate summaries and grouped rollups
+- **`entity.find` structured `_search` support**, including `additional_filter_presets`
+
 - **`entity batch`** client-side orchestration for batch CRUD operations
 - **Controlled batch concurrency** with stable ordered results
 - **Dry-run** planning for write operations
 - **Three auth modes**: script, user password, and session token
 - **In-process access token reuse** to reduce repeated auth overhead
+- **A publishable OpenClaw skill bundle** under `skills/fpt-cli-openclaw`
 
 ### Development environment
+
 
 All environments in this project should be managed through **`vx`**, and command collections should be exposed through the repository **`justfile`**.
 
@@ -33,7 +39,104 @@ vx just test
 vx just capabilities
 ```
 
+### Installation
+
+Prebuilt release binaries are published for:
+
+- **Linux**: `x86_64-unknown-linux-gnu`
+- **Windows**: `x86_64-pc-windows-msvc`
+- **macOS**: `x86_64-apple-darwin`, `aarch64-apple-darwin`
+
+Install the latest release over HTTPS:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/loonghao/fpt-cli/main/scripts/install.sh | sh
+```
+
+```powershell
+powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/loonghao/fpt-cli/main/scripts/install.ps1 | iex"
+```
+
+Optional installer environment variables:
+
+- `FPT_INSTALL_VERSION`: install a specific release instead of `latest`
+- `FPT_INSTALL_DIR`: override the installation directory
+- `FPT_INSTALL_REPOSITORY`: override the GitHub repository in `owner/repo` format
+
+### Self-update
+
+Installed binaries can update themselves in place:
+
+```bash
+fpt self-update --check --output pretty-json
+fpt self-update
+fpt self-update --version 0.1.0
+```
+
+Notes:
+
+- `self-update` downloads assets from GitHub Releases over HTTPS
+- It automatically selects the archive that matches the current host platform
+- If a release includes `fpt-checksums.txt`, the archive is verified before replacement
+
+### OpenClaw skill
+
+This repository includes a publishable OpenClaw skill at `skills/fpt-cli-openclaw`.
+
+Install it from ClawHub after publication:
+
+```bash
+npx clawhub@latest install fpt-cli-openclaw
+```
+
+Package all repository skills from the local checkout:
+
+```bash
+vx just package-skills
+```
+
+Use the single-skill packaging alias when you only want the OpenClaw bundle:
+
+```bash
+vx just package-openclaw-skill
+```
+
+`generate-skills.yml` packages all skill directories under `skills/`, while `clawhub.yml` runs a ClawHub dry-run sync on pull requests and syncs the same root on `main` / tag pushes.
+
+
+
+### Release automation
+
+Version management is handled by **`release-please`**:
+
+- Push conventional commits to `main`
+- `release-please` opens or updates a release PR
+- Merging the release PR creates the version tag and GitHub release metadata
+- The tag-triggered `release.yml` workflow publishes the cross-platform CLI archives
+- `generate-skills.yml` packages every skill under `skills/`
+- The push/tag-triggered `clawhub.yml` workflow syncs the `skills/` root to ClawHub, while pull requests run a dry-run sync
+
+For fully automatic downstream workflow triggering, set a repository secret named `RELEASE_PLEASE_TOKEN` with permission to create tags and releases.
+
+To enable ClawHub publishing, also set `CLAWHUB_TOKEN`.
+
+### Pre-commit
+
+
+This repository includes a root `.pre-commit-config.yaml` and wraps hook management through `vx`:
+
+```bash
+vx just pre-commit-install
+vx just pre-commit-run
+```
+
+Configured hooks:
+
+- `pre-commit`: whitespace / merge-conflict checks, `vx just fmt-check`, `vx just lint`
+- `pre-push`: `vx just test`
+
 ### Authentication environment variables
+
 
 The CLI prefers the `FPT_*` prefix and also supports `SG_*` as a fallback when `FPT_*` is not present.
 
@@ -72,11 +175,18 @@ fpt schema fields Shot --site ... --auth-mode user-password --username ... --pas
 fpt entity get Shot 123 --site ... --auth-mode session-token --session-token ...
 fpt entity find Asset --input @query.json --site ... --auth-mode script --script-name ... --script-key ...
 fpt entity find Asset --filter-dsl "sg_status_list == 'ip' and (code ~ 'bunny' or id > 100)" --site ... --auth-mode script --script-name ... --script-key ...
+fpt entity find-one Shot --input @query.json --site ... --auth-mode script --script-name ... --script-key ...
+fpt entity summarize Version --input @summaries.json --site ... --auth-mode script --script-name ... --script-key ...
 fpt entity create Version --input @payload.json --dry-run
+
+
 fpt entity update Task 42 --input @patch.json --dry-run
 fpt entity delete Playlist 99 --dry-run
+fpt self-update --check --output pretty-json
+fpt self-update
 
 fpt entity batch get Shot --input '{"ids":[101,102],"fields":["code","sg_status_list"]}' --output json
+
 fpt entity batch find Asset --input @batch_queries.json --output json
 fpt entity batch create Version --input @batch_payloads.json --dry-run --output json
 fpt entity batch update Task --input @batch_updates.json --dry-run --output json
@@ -104,10 +214,12 @@ Notes:
 - Batch sub-requests run with **controlled concurrency**, defaulting to `8`
 - Use **`FPT_BATCH_CONCURRENCY`** to tune concurrency; set it to `1` to force serial execution
 
-### Complex filter DSL
+### Complex filter DSL and structured search
 
 `entity find` supports complex filtering through `--filter-dsl` (or `filter_dsl` inside the `--input` JSON).
+It also accepts a native `search` object and top-level `additional_filter_presets` for ShotGrid REST `_search` payloads.
 When DSL is used, the CLI automatically switches to ShotGrid REST `_search`.
+
 
 Supported DSL features:
 
@@ -179,5 +291,7 @@ vx cargo run -p fpt-cli -- auth test --output pretty-json
 
 - **The CLI contract stays independent from transport implementation details**
 - **JSON is the default output for agent-friendly integration**
+- **`--output toon`** and **`--output pretty-json`** remain available for explicit human or tool-specific formatting needs
+
 - **Write operations support `--dry-run`**
 - **Future transports beyond REST can be added without breaking the OpenClaw-facing contract**

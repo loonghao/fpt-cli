@@ -1,0 +1,188 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_HTTP_TIMEOUT: "600"
+  CARGO_NET_RETRY: "10"
+
+jobs:
+  verify-tag:
+    name: Verify Tag Version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup vx
+        uses: loonghao/vx@main
+        with:
+          version: "0.8.0"
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup tools (vx)
+        run: vx setup
+
+      - name: Verify Cargo version matches tag
+        shell: bash
+        run: |
+          cargo_version="$(vx python - <<'PY'
+          import tomllib
+          from pathlib import Path
+
+          data = tomllib.loads(Path('Cargo.toml').read_text(encoding='utf-8'))
+          print(data['workspace']['package']['version'])
+          PY
+          )"
+
+          expected_tag="v${cargo_version}"
+          if [[ "${GITHUB_REF_NAME}" != "${expected_tag}" ]]; then
+            echo "Tag ${GITHUB_REF_NAME} does not match workspace version ${cargo_version}" >&2
+            exit 1
+          fi
+
+  build:
+    name: Build ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    needs: verify-tag
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            archive_name: fpt-x86_64-unknown-linux-gnu.tar.gz
+            binary_name: fpt
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            archive_name: fpt-x86_64-pc-windows-msvc.zip
+            binary_name: fpt.exe
+          - os: macos-13
+            target: x86_64-apple-darwin
+            archive_name: fpt-x86_64-apple-darwin.tar.gz
+            binary_name: fpt
+          - os: macos-14
+            target: aarch64-apple-darwin
+            archive_name: fpt-aarch64-apple-darwin.tar.gz
+            binary_name: fpt
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup vx
+        uses: loonghao/vx@main
+        with:
+          version: "0.8.0"
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup tools (vx)
+        run: vx setup
+
+      - name: Add Rust target
+        run: vx rustup target add ${{ matrix.target }}
+
+      - name: Fix MSVC linker (remove Git's link.exe)
+        if: runner.os == 'Windows'
+        run: Remove-Item 'C:\Program Files\Git\usr\bin\link.exe' -Force -ErrorAction SilentlyContinue
+        shell: pwsh
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: release-${{ matrix.target }}
+
+      - name: Build release binary
+        run: vx cargo build --release --locked -p fpt-cli --target ${{ matrix.target }}
+
+      - name: Package tarball
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          mkdir -p dist
+          tar -C target/${{ matrix.target }}/release -czf dist/${{ matrix.archive_name }} ${{ matrix.binary_name }}
+
+      - name: Package zip
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          Compress-Archive -Path "target/${{ matrix.target }}/release/${{ matrix.binary_name }}" -DestinationPath "dist/${{ matrix.archive_name }}" -Force
+
+      - name: Upload release artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: ${{ matrix.target }}
+          path: dist/${{ matrix.archive_name }}
+          if-no-files-found: error
+
+  github-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v6
+        with:
+          path: artifacts
+          pattern: '*'
+          merge-multiple: true
+
+      - name: Generate checksums
+        shell: bash
+        run: |
+          cd artifacts
+          sha256sum fpt-* > fpt-checksums.txt
+
+      - name: Prepare release notes
+        shell: bash
+        run: |
+          cat > RELEASE_NOTES.md <<'EOF'
+          ## Installation
+
+          ### macOS / Linux
+
+          ```bash
+          curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/main/scripts/install.sh | sh
+
+          ```
+
+          ### Windows PowerShell
+
+          ```powershell
+          powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/${{ github.repository }}/main/scripts/install.ps1 | iex"
+
+          ```
+
+          ### In-place update
+
+          ```bash
+          fpt self-update
+          ```
+
+          ### Check for updates only
+
+          ```bash
+          fpt self-update --check --output pretty-json
+          ```
+          EOF
+
+      - name: Create GitHub Release
+        uses: ncipollo/release-action@v1
+        with:
+          tag: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          bodyFile: RELEASE_NOTES.md
+          artifacts: artifacts/*
+          allowUpdates: true
+          artifactErrorsFailBuild: true
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          makeLatest: true

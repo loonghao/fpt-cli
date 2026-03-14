@@ -1,0 +1,58 @@
+name: Generate Skill Packages
+
+on:
+  pull_request:
+    branches:
+      - main
+
+    paths:
+      - "skills/**"
+      - "scripts/package_openclaw_skill.py"
+      - ".github/workflows/generate-skills.yml"
+      - "justfile"
+      - "vx.toml"
+  push:
+    branches-ignore:
+      - main
+
+    paths:
+      - "skills/**"
+      - "scripts/package_openclaw_skill.py"
+      - ".github/workflows/generate-skills.yml"
+      - "justfile"
+      - "vx.toml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: generate-skills-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  package-skills:
+    name: Package repository skills
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup vx
+        uses: loonghao/vx@main
+        with:
+          version: "0.8.0"
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup tools (vx)
+        run: vx setup
+
+      - name: Package all skills
+        run: vx just package-skills
+
+      - name: Upload packaged skill artifacts
+        uses: actions/upload-artifact@v6
+        with:
+          name: skill-packages
+          path: dist/skills/*.zip
+          if-no-files-found: error
