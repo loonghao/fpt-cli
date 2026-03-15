@@ -34,10 +34,11 @@ ci:
     vx just package-skills
 
 package-skills:
-    vx python scripts/package_openclaw_skill.py skills dist/skills --all
+    vx uv run python scripts/package_openclaw_skill.py skills dist/skills --all
 
 package-openclaw-skill:
-    vx python scripts/package_openclaw_skill.py skills/fpt-cli-openclaw dist/skills
+    vx uv run python scripts/package_openclaw_skill.py skills/fpt-cli-openclaw dist/skills
+
 
 clawhub-sync-dry-run:
     vx npx clawhub@0.7.0 sync --root skills --all --dry-run --no-input
