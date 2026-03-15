@@ -26,8 +26,9 @@ Use this skill when any of the following is needed:
 ### 1. Choose the execution mode
 Determine whether the task should use a released binary or a source checkout.
 
-- For released binary installation or update, read `references/install-and-auth.md`.
+- For released binary installation or update, read `references/install-and-auth.md` and prefer release archives plus checksum verification over pipe-to-shell installers.
 - For repository-local development, prefer `vx cargo run -p fpt-cli -- ...` and `vx just ...`.
+
 
 ### 2. Prefer environment-based authentication
 Load credentials through environment variables instead of putting secrets directly on the command line.

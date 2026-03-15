@@ -1,16 +1,33 @@
 ## Install and update `fpt-cli`
 
 ### Released binary installation
-Install the latest release over HTTPS.
+Prefer downloading a release archive, optionally verifying `fpt-checksums.txt`, and then extracting the binary locally.
+Avoid remote-script piping and direct remote-expression execution patterns in automated environments.
 
-#### macOS / Linux
+
+Release asset names:
+- Linux: `fpt-x86_64-unknown-linux-gnu.tar.gz`
+- Windows: `fpt-x86_64-pc-windows-msvc.zip`
+- macOS (Intel): `fpt-x86_64-apple-darwin.tar.gz`
+- macOS (Apple Silicon): `fpt-aarch64-apple-darwin.tar.gz`
+
+#### macOS / Linux example
 ```bash
-curl -fsSL https://raw.githubusercontent.com/loonghao/fpt-cli/main/scripts/install.sh | sh
+export FPT_VERSION="v0.1.0"
+curl -fLO "https://github.com/loonghao/fpt-cli/releases/download/${FPT_VERSION}/fpt-x86_64-unknown-linux-gnu.tar.gz"
+curl -fLO "https://github.com/loonghao/fpt-cli/releases/download/${FPT_VERSION}/fpt-checksums.txt"
+sha256sum -c --ignore-missing fpt-checksums.txt
+tar -xzf fpt-x86_64-unknown-linux-gnu.tar.gz
+./fpt capabilities --output json
 ```
 
-#### Windows PowerShell
+#### Windows PowerShell example
 ```powershell
-powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/loonghao/fpt-cli/main/scripts/install.ps1 | iex"
+$FptVersion = "v0.1.0"
+$Archive = "fpt-x86_64-pc-windows-msvc.zip"
+Invoke-WebRequest -Uri "https://github.com/loonghao/fpt-cli/releases/download/$FptVersion/$Archive" -OutFile $Archive
+Expand-Archive -Path $Archive -DestinationPath ".\fpt-bin" -Force
+.\fpt-bin\fpt.exe capabilities --output json
 ```
 
 ### In-place update
@@ -20,6 +37,7 @@ Use the released binary's self-update command when `fpt` is already installed.
 fpt self-update --check --output pretty-json
 fpt self-update
 ```
+
 
 ### Repository-local execution
 When operating from the source checkout, prefer the repository-managed environment.
@@ -82,6 +100,7 @@ fpt auth test --output pretty-json
 ```
 
 ## Safety notes
+- Prefer release archives over remote-script execution in agent workflows.
 - Prefer environment variables over raw credential arguments.
 - Treat `FPT_*` as the primary namespace.
 - Use `SG_*` only as fallback compatibility inputs.
