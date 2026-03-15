@@ -21,6 +21,9 @@ jobs:
   release-please:
     name: Release Please
     runs-on: ubuntu-latest
+    outputs:
+      release_created: ${{ steps.release.outputs['crates/fpt-cli--release_created'] }}
+      tag_name: ${{ steps.release.outputs['crates/fpt-cli--tag_name'] }}
     steps:
       - name: Run release-please
         id: release
@@ -29,3 +32,21 @@ jobs:
           token: ${{ secrets.RELEASE_PLEASE_TOKEN != '' && secrets.RELEASE_PLEASE_TOKEN || secrets.GITHUB_TOKEN }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
+
+  publish-release:
+    name: Publish CLI release
+    needs: release-please
+    if: ${{ needs.release-please.outputs.release_created == 'true' }}
+    uses: ./.github/workflows/release.yml
+    with:
+      tag_name: ${{ needs.release-please.outputs.tag_name }}
+    secrets: inherit
+
+  publish-skills:
+    name: Publish skills to ClawHub
+    needs: release-please
+    if: ${{ needs.release-please.outputs.release_created == 'true' }}
+    uses: ./.github/workflows/clawhub.yml
+    with:
+      ref: refs/tags/${{ needs.release-please.outputs.tag_name }}
+    secrets: inherit

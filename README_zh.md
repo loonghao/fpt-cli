@@ -107,25 +107,23 @@ vx just package-skills
 vx just package-openclaw-skill
 ```
 
-`generate-skills.yml` 会负责为 `skills/` 下的所有 skill 生成 zip 产物，`clawhub.yml` 会在 PR 上执行 dry-run sync，并在 `main` / tag push 时同步整个 `skills/` 根目录。
+`generate-skills.yml` 会负责为 `skills/` 下的所有 skill 生成 zip 产物，`clawhub.yml` 会在 PR 上执行 dry-run sync，并在 `main` push 时同步整个 `skills/` 根目录。
 
 ### 发布自动化
 
 版本管理通过 **`release-please`** 完成：
 
-
 - 向 `main` 推送 conventional commits
 - `release-please` 创建或更新 release PR
 - 合并 release PR 后生成版本 tag 和 GitHub release 元数据
-- tag 触发的 `release.yml` workflow 发布跨平台 CLI 二进制
+- `release-please.yml` 会直接调用可复用的 `release.yml` workflow，为新生成的 tag 发布跨平台 CLI 二进制
 - `generate-skills.yml` 会为 `skills/` 下的所有 skill 生成产物
-- push/tag 触发的 `clawhub.yml` workflow 会把整个 `skills/` 根目录同步到 ClawHub，而 PR 只执行 dry-run sync
+- `clawhub.yml` 会在 PR 上执行 dry-run sync，在 `main` push 时同步 `skills/` 根目录，并且也会被 `release-please.yml` 直接调用，因此 release 时发布到 ClawHub 不再依赖第二次 tag 触发
 
+`RELEASE_PLEASE_TOKEN` 是可选的。若已配置，`release-please` 会优先使用它；但下游的 release 构建与 ClawHub 发布已经不再依赖 tag 触发的 workflow 级联。
 
-若要启用完整自动化，请配置：
+要启用 ClawHub 发布，请配置 `CLAWHUB_TOKEN`。
 
-- `RELEASE_PLEASE_TOKEN`
-- `CLAWHUB_TOKEN`
 
 ### Pre-commit
 

@@ -104,7 +104,7 @@ Use the single-skill packaging alias when you only want the OpenClaw bundle:
 vx just package-openclaw-skill
 ```
 
-`generate-skills.yml` packages all skill directories under `skills/`, while `clawhub.yml` runs a ClawHub dry-run sync on pull requests and syncs the same root on `main` / tag pushes.
+`generate-skills.yml` packages all skill directories under `skills/`, while `clawhub.yml` runs a ClawHub dry-run sync on pull requests and syncs the same root on `main` pushes.
 
 
 
@@ -115,13 +115,14 @@ Version management is handled by **`release-please`**:
 - Push conventional commits to `main`
 - `release-please` opens or updates a release PR
 - Merging the release PR creates the version tag and GitHub release metadata
-- The tag-triggered `release.yml` workflow publishes the cross-platform CLI archives
+- `release-please.yml` then directly calls the reusable `release.yml` workflow to publish the cross-platform CLI archives for the created tag
 - `generate-skills.yml` packages every skill under `skills/`
-- The push/tag-triggered `clawhub.yml` workflow syncs the `skills/` root to ClawHub, while pull requests run a dry-run sync
+- `clawhub.yml` runs a dry-run sync on pull requests, syncs the `skills/` root on `main` pushes, and is also called directly by `release-please.yml` so release-time ClawHub publishing does not depend on a second tag-triggered workflow run
 
-For fully automatic downstream workflow triggering, set a repository secret named `RELEASE_PLEASE_TOKEN` with permission to create tags and releases.
+`RELEASE_PLEASE_TOKEN` is optional. If provided, `release-please` uses it instead of `GITHUB_TOKEN`, but downstream release and ClawHub publishing no longer depend on tag-triggered workflow fan-out.
 
-To enable ClawHub publishing, also set `CLAWHUB_TOKEN`.
+To enable ClawHub publishing, set `CLAWHUB_TOKEN`.
+
 
 ### Pre-commit
 

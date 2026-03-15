@@ -1,6 +1,12 @@
 name: Sync OpenClaw Skills
 
 on:
+  workflow_call:
+    inputs:
+      ref:
+        description: Git ref or tag to sync from
+        required: false
+        type: string
   pull_request:
     branches:
       - main
@@ -15,8 +21,6 @@ on:
     branches:
       - main
 
-    tags:
-      - "v*"
     paths:
       - "skills/**"
       - "scripts/package_openclaw_skill.py"
@@ -24,6 +28,11 @@ on:
       - "justfile"
       - "vx.toml"
   workflow_dispatch:
+    inputs:
+      ref:
+        description: Git ref or tag to sync from
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -45,6 +54,8 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v6
+        with:
+          ref: ${{ ((github.event_name == 'workflow_call' || github.event_name == 'workflow_dispatch') && inputs.ref) || github.ref }}
 
       - name: Setup vx
         uses: loonghao/vx@main
@@ -55,31 +66,11 @@ jobs:
       - name: Setup tools (vx)
         run: vx setup
 
-      - name: Verify Cargo version matches tag
-        if: startsWith(github.ref, 'refs/tags/v')
-        shell: bash
-        run: |
-          cargo_version="$(vx uv run python - <<'PY'
-
-          import tomllib
-          from pathlib import Path
-
-          data = tomllib.loads(Path('Cargo.toml').read_text(encoding='utf-8'))
-          print(data['workspace']['package']['version'])
-          PY
-          )"
-
-          expected_tag="v${cargo_version}"
-          if [[ "${GITHUB_REF_NAME}" != "${expected_tag}" ]]; then
-            echo "Tag ${GITHUB_REF_NAME} does not match workspace version ${cargo_version}" >&2
-            exit 1
-          fi
-
       - name: Package all skills
         run: vx just package-skills
 
       - name: Upload packaged skill artifacts
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v6
         with:
           name: skill-packages
           path: dist/skills/*.zip
