@@ -1,10 +1,9 @@
 [package]
 name = "fpt-cli"
-version = "0.2.0"
+version = { workspace = true }
 edition = { workspace = true }
 license = { workspace = true }
 rust-version = { workspace = true }
-
 
 [[bin]]
 name = "fpt"
@@ -28,13 +27,7 @@ toon-format = { workspace = true }
 zip = { workspace = true }
 workspace-hack = { version = "0.1", path = "../../workspace-hack" }
 
-
-
-
-
 [dev-dependencies]
 assert_cmd = { workspace = true }
 predicates = { workspace = true }
 rstest = { workspace = true }
-
-

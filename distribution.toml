@@ -1,0 +1,31 @@
+[release]
+package = "fpt-cli"
+binary = "fpt"
+workspace_manifest_path = "Cargo.toml"
+package_manifest_path = "crates/fpt-cli/Cargo.toml"
+checksum_name = "fpt-checksums.txt"
+tag_prefix = "v"
+
+[[targets]]
+os = "ubuntu-latest"
+target = "x86_64-unknown-linux-gnu"
+archive_name = "fpt-x86_64-unknown-linux-gnu.tar.gz"
+binary_name = "fpt"
+
+[[targets]]
+os = "windows-latest"
+target = "x86_64-pc-windows-msvc"
+archive_name = "fpt-x86_64-pc-windows-msvc.zip"
+binary_name = "fpt.exe"
+
+[[targets]]
+os = "macos-13"
+target = "x86_64-apple-darwin"
+archive_name = "fpt-x86_64-apple-darwin.tar.gz"
+binary_name = "fpt"
+
+[[targets]]
+os = "macos-14"
+target = "aarch64-apple-darwin"
+archive_name = "fpt-aarch64-apple-darwin.tar.gz"
+binary_name = "fpt"
