@@ -18,7 +18,9 @@ where
     ) -> Result<Value> {
         let config = ConnectionSettings::resolve(overrides)?;
         let payload = normalize_summarize_input(input)?;
-        self.transport.entity_summarize(&config, entity, &payload).await
+        self.transport
+            .entity_summarize(&config, entity, &payload)
+            .await
     }
 }
 
@@ -34,9 +36,9 @@ fn normalize_summarize_input(input: Value) -> Result<Value> {
     let filter_operator = object.remove("filter_operator");
     let normalized_filters = normalize_filters(filters, filter_operator)?;
 
-    let summary_fields = object
-        .remove("summary_fields")
-        .ok_or_else(|| AppError::invalid_input("entity summarize requires a `summary_fields` field"))?;
+    let summary_fields = object.remove("summary_fields").ok_or_else(|| {
+        AppError::invalid_input("entity summarize requires a `summary_fields` field")
+    })?;
     let summaries = normalize_summary_fields(summary_fields)?;
 
     let mut payload = Map::new();
@@ -86,7 +88,10 @@ fn normalize_filters(filters: Value, filter_operator: Option<Value>) -> Result<V
                         "`filter_operator` cannot be set both at the top level and inside `filters`",
                     ));
                 }
-                object.insert("filter_operator".to_string(), Value::String(filter_operator));
+                object.insert(
+                    "filter_operator".to_string(),
+                    Value::String(filter_operator),
+                );
             }
             Ok(Value::Object(object))
         }
@@ -101,10 +106,9 @@ fn normalize_filter_operator(filter_operator: Option<&Value>) -> Result<Option<S
         return Ok(None);
     };
 
-
-    let filter_operator = filter_operator.as_str().ok_or_else(|| {
-        AppError::invalid_input("`filter_operator` must be `all` or `any`")
-    })?;
+    let filter_operator = filter_operator
+        .as_str()
+        .ok_or_else(|| AppError::invalid_input("`filter_operator` must be `all` or `any`"))?;
 
     match filter_operator {
         "all" | "any" => Ok(Some(filter_operator.to_string())),
@@ -119,15 +123,15 @@ fn normalize_summary_fields(summary_fields: Value) -> Result<Value> {
         AppError::invalid_input("`summary_fields` must be an array of summary descriptors")
     })?;
     if fields.is_empty() {
-        return Err(AppError::invalid_input(
-            "`summary_fields` cannot be empty",
-        ));
+        return Err(AppError::invalid_input("`summary_fields` cannot be empty"));
     }
 
     let normalized = fields
         .iter()
         .enumerate()
-        .map(|(index, field)| normalize_named_object(field, index, "summary_fields", &["field", "type"]))
+        .map(|(index, field)| {
+            normalize_named_object(field, index, "summary_fields", &["field", "type"])
+        })
         .collect::<Result<Vec<_>>>()?;
 
     Ok(Value::Array(normalized))
@@ -141,7 +145,9 @@ fn normalize_grouping(grouping: Value) -> Result<Value> {
     let normalized = grouping
         .iter()
         .enumerate()
-        .map(|(index, group)| normalize_named_object(group, index, "grouping", &["field", "type", "direction"]))
+        .map(|(index, group)| {
+            normalize_named_object(group, index, "grouping", &["field", "type", "direction"])
+        })
         .collect::<Result<Vec<_>>>()?;
 
     Ok(Value::Array(normalized))
@@ -154,9 +160,7 @@ fn normalize_named_object(
     allowed_keys: &[&str],
 ) -> Result<Value> {
     let object = value.as_object().ok_or_else(|| {
-        AppError::invalid_input(format!(
-            "`{field_name}[{index}]` must be an object"
-        ))
+        AppError::invalid_input(format!("`{field_name}[{index}]` must be an object"))
     })?;
 
     for key in allowed_keys {
@@ -180,9 +184,7 @@ fn normalize_named_object(
     let mut normalized = Map::new();
     for (key, value) in object {
         let value = value.as_str().ok_or_else(|| {
-            AppError::invalid_input(format!(
-                "`{field_name}[{index}].{key}` must be a string"
-            ))
+            AppError::invalid_input(format!("`{field_name}[{index}].{key}` must be a string"))
         })?;
         if value.trim().is_empty() {
             return Err(AppError::invalid_input(format!(

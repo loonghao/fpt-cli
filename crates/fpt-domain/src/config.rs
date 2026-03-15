@@ -36,14 +36,11 @@ impl FromStr for AuthMode {
     fn from_str(value: &str) -> Result<Self> {
         match value.trim().to_ascii_lowercase().as_str() {
             "script" | "client_credentials" => Ok(Self::Script),
-            "user-password" | "user_password" | "password" | "user" => {
-                Ok(Self::UserPassword)
-            }
+            "user-password" | "user_password" | "password" | "user" => Ok(Self::UserPassword),
             "session-token" | "session_token" | "session" => Ok(Self::SessionToken),
             other => Err(AppError::invalid_input(format!(
                 "unsupported auth mode `{other}`; expected one of: script / user-password / session-token"
             ))),
-
         }
     }
 }
@@ -123,16 +120,24 @@ impl ConnectionSettings {
         let env_session_token = env_var_compat("FPT_SESSION_TOKEN", "SG_SESSION_TOKEN");
         let env_api_version = env_var_compat("FPT_API_VERSION", "SG_API_VERSION");
 
-
         let site = overrides.site.or(env_site).unwrap_or_default();
-        let script_name = overrides.script_name.or(env_script_name).unwrap_or_default();
+        let script_name = overrides
+            .script_name
+            .or(env_script_name)
+            .unwrap_or_default();
         let script_key = overrides.script_key.or(env_script_key).unwrap_or_default();
         let username = overrides.username.or(env_username).unwrap_or_default();
         let password = overrides.password.or(env_password).unwrap_or_default();
         let auth_token = overrides.auth_token.or(env_auth_token).unwrap_or_default();
-        let session_token = overrides.session_token.or(env_session_token).unwrap_or_default();
+        let session_token = overrides
+            .session_token
+            .or(env_session_token)
+            .unwrap_or_default();
         let api_version = api_version_or_default(
-            overrides.api_version.as_deref().or(env_api_version.as_deref()),
+            overrides
+                .api_version
+                .as_deref()
+                .or(env_api_version.as_deref()),
         );
         let auth_mode = overrides
             .auth_mode
@@ -143,7 +148,6 @@ impl ConnectionSettings {
         if site.trim().is_empty() {
             missing.push("FPT_SITE / SG_SITE / --site");
         }
-
 
         let credentials = match auth_mode {
             AuthMode::Script => {
@@ -183,13 +187,13 @@ impl ConnectionSettings {
         };
 
         if !missing.is_empty() {
-            return Err(AppError::invalid_input("缺少 ShotGrid 连接配置").with_details(
-                serde_json::json!({
+            return Err(
+                AppError::invalid_input("缺少 ShotGrid 连接配置").with_details(serde_json::json!({
                     "auth_mode": auth_mode,
                     "missing": missing,
                     "hint": "可通过命令行参数或环境变量提供认证信息"
-                }),
-            ));
+                })),
+            );
         }
 
         Ok(Self {
@@ -228,19 +232,18 @@ pub fn resolve_site(overrides: ConnectionOverrides) -> Result<String> {
         .unwrap_or_default();
 
     if site.trim().is_empty() {
-        return Err(AppError::invalid_input("缺少 ShotGrid 连接配置").with_details(
-            serde_json::json!({
+        return Err(
+            AppError::invalid_input("缺少 ShotGrid 连接配置").with_details(serde_json::json!({
                 "missing": ["FPT_SITE / SG_SITE / --site"],
                 "hint": "可通过命令行参数或环境变量提供站点信息"
-            }),
-        ));
+            })),
+        );
     }
 
     Ok(site.trim_end_matches('/').to_string())
 }
 
 fn env_var_compat(primary: &str, fallback: &str) -> Option<String> {
-
     env::var(primary)
         .ok()
         .map(|value| value.trim().to_string())
@@ -254,7 +257,6 @@ fn env_var_compat(primary: &str, fallback: &str) -> Option<String> {
 }
 
 fn parse_optional_auth_mode(value: Option<&str>) -> Result<Option<AuthMode>> {
-
     value.map(AuthMode::from_str).transpose()
 }
 

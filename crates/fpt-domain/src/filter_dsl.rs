@@ -1,5 +1,5 @@
 use fpt_core::{AppError, Result};
-use serde_json::{json, Number, Value};
+use serde_json::{Number, Value, json};
 
 #[derive(Debug, Clone, PartialEq)]
 enum LogicalOp {
@@ -39,7 +39,7 @@ pub fn parse_filter_dsl(input: &str) -> Result<Value> {
     let expr = parser.parse_expression()?;
     parser.skip_whitespace();
     if !parser.is_eof() {
-        return parser.error("unexpected trailing content" );
+        return parser.error("unexpected trailing content");
     }
 
     Ok(wrap_root(expr))
@@ -213,11 +213,10 @@ impl<'a> Parser<'a> {
         Ok(keyword)
     }
 
-
     fn parse_value(&mut self) -> Result<Value> {
         self.skip_whitespace();
         let Some(ch) = self.peek_char() else {
-            return self.error("缺少操作数");
+            return self.error("missing operand");
         };
 
         match ch {
@@ -348,7 +347,7 @@ impl<'a> Parser<'a> {
                         return Err(AppError::invalid_input(format!(
                             "filter_dsl 语法错误: 不支持的转义字符 `\\{other}`（位置 {}）",
                             self.pos
-                        )))
+                        )));
                     }
                 };
                 output.push(normalized);

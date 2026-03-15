@@ -18,7 +18,6 @@ const ENTITY_SUMMARIZE_EXAMPLES: &[&str] = &[
     "fpt entity summarize Task --input '{\"filters\":[[\"sg_status_list\",\"is\",\"ip\"]],\"summary_fields\":[{\"field\":\"id\",\"type\":\"record_count\"}]}' --output json",
 ];
 const ENTITY_CREATE_EXAMPLES: &[&str] = &[
-
     "fpt entity create Version --input @payload.json --dry-run",
     "fpt entity create Version --input @payload.json --site ... --auth-mode user-password --username ... --password ...",
 ];
@@ -38,15 +37,12 @@ const ENTITY_REVIVE_EXAMPLES: &[&str] = &[
 const ENTITY_BATCH_GET_EXAMPLES: &[&str] = &[
     "fpt entity batch get Shot --input '{\"ids\":[101,102],\"fields\":[\"code\",\"sg_status_list\"]}' --output json",
 ];
-const ENTITY_BATCH_FIND_EXAMPLES: &[&str] = &[
-    "fpt entity batch find Asset --input @batch_queries.json --output json",
-];
-const ENTITY_BATCH_CREATE_EXAMPLES: &[&str] = &[
-    "fpt entity batch create Version --input @batch_payloads.json --dry-run --output json",
-];
-const ENTITY_BATCH_UPDATE_EXAMPLES: &[&str] = &[
-    "fpt entity batch update Task --input @batch_updates.json --dry-run --output json",
-];
+const ENTITY_BATCH_FIND_EXAMPLES: &[&str] =
+    &["fpt entity batch find Asset --input @batch_queries.json --output json"];
+const ENTITY_BATCH_CREATE_EXAMPLES: &[&str] =
+    &["fpt entity batch create Version --input @batch_payloads.json --dry-run --output json"];
+const ENTITY_BATCH_UPDATE_EXAMPLES: &[&str] =
+    &["fpt entity batch update Task --input @batch_updates.json --dry-run --output json"];
 const ENTITY_BATCH_DELETE_EXAMPLES: &[&str] = &[
     "fpt entity batch delete Playlist --input '{\"ids\":[99,100]}' --dry-run --output json",
     "fpt entity batch delete Playlist --input '{\"ids\":[99,100]}' --yes --output json",
@@ -61,7 +57,6 @@ const ENTITY_NOTES: &[&str] = &[
     "revive uses the ShotGrid RPC `revive` method and supports `--dry-run`",
     "All entity commands reuse the same auth configuration",
 ];
-
 
 const ENTITY_BATCH_NOTES: &[&str] = &[
     "Batch commands are client-side orchestration over existing REST CRUD endpoints",
@@ -128,7 +123,6 @@ pub const ENTITY_SUMMARIZE_SPEC: CommandSpec = CommandSpec {
 };
 
 pub const ENTITY_CREATE_SPEC: CommandSpec = CommandSpec {
-
     name: "entity.create",
     summary: "Create an entity record",
     risk: RiskLevel::Write,
@@ -185,7 +179,6 @@ pub const ENTITY_REVIVE_SPEC: CommandSpec = CommandSpec {
 };
 
 pub const ENTITY_BATCH_GET_SPEC: CommandSpec = CommandSpec {
-
     name: "entity.batch.get",
     summary: "Read multiple entity records by id",
     risk: RiskLevel::Read,

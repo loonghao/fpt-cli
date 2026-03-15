@@ -71,7 +71,6 @@ pub trait ShotgridTransport {
         body: &Value,
     ) -> Result<Value>;
     async fn entity_create(
-
         &self,
         config: &ConnectionSettings,
         entity: &str,
@@ -123,9 +122,9 @@ impl RestTransport {
     ) -> Result<Url> {
         let mut url = Url::parse(&format!("{}/api/{}/", config.site, config.api_version))
             .map_err(|error| AppError::invalid_input(format!("无效的站点 URL: {error}")))?;
-        url = url.join(path.trim_start_matches('/')).map_err(|error| {
-            AppError::internal(format!("无法构造 REST URL `{path}`: {error}"))
-        })?;
+        url = url
+            .join(path.trim_start_matches('/'))
+            .map_err(|error| AppError::internal(format!("无法构造 REST URL `{path}`: {error}")))?;
 
         if !query.is_empty() {
             let mut pairs = url.query_pairs_mut();
@@ -191,7 +190,10 @@ impl RestTransport {
         )
     }
 
-    fn cached_access_token(&self, config: &ConnectionSettings) -> Result<Option<AccessTokenPayload>> {
+    fn cached_access_token(
+        &self,
+        config: &ConnectionSettings,
+    ) -> Result<Option<AccessTokenPayload>> {
         let cache = self
             .token_cache
             .lock()
@@ -213,7 +215,11 @@ impl RestTransport {
         Ok(Some(cached.payload.clone()))
     }
 
-    fn store_access_token(&self, config: &ConnectionSettings, payload: &AccessTokenPayload) -> Result<()> {
+    fn store_access_token(
+        &self,
+        config: &ConnectionSettings,
+        payload: &AccessTokenPayload,
+    ) -> Result<()> {
         let expires_at = payload.expires_in.map(|seconds| {
             let effective_seconds = if seconds > 30 { seconds - 30 } else { seconds };
             Instant::now() + Duration::from_secs(effective_seconds)
@@ -231,7 +237,10 @@ impl RestTransport {
         Ok(())
     }
 
-    async fn access_token_response(&self, config: &ConnectionSettings) -> Result<AccessTokenPayload> {
+    async fn access_token_response(
+        &self,
+        config: &ConnectionSettings,
+    ) -> Result<AccessTokenPayload> {
         if let Some(cached) = self.cached_access_token(config)? {
             if std::env::var("FPT_DEBUG").is_ok() {
                 eprintln!("[debug] reuse cached access token for {}", config.site);
@@ -381,7 +390,12 @@ impl RestTransport {
         Self::parse_response(response, "rest").await
     }
 
-    async fn rpc_request(&self, site: &str, method_name: &str, params: Vec<Value>) -> Result<Value> {
+    async fn rpc_request(
+        &self,
+        site: &str,
+        method_name: &str,
+        params: Vec<Value>,
+    ) -> Result<Value> {
         let url = self.build_rpc_url(site)?;
         let body = json!({
             "method_name": method_name,
@@ -540,7 +554,6 @@ impl ShotgridTransport for RestTransport {
     }
 
     async fn entity_create(
-
         &self,
         config: &ConnectionSettings,
         entity: &str,
@@ -625,12 +638,16 @@ pub fn entity_collection_path(entity: &str) -> String {
     let mut output = String::new();
 
     for (index, ch) in chars.iter().copied().enumerate() {
-        let previous = index.checked_sub(1).and_then(|value| chars.get(value)).copied();
+        let previous = index
+            .checked_sub(1)
+            .and_then(|value| chars.get(value))
+            .copied();
         let next = chars.get(index + 1).copied();
 
         if ch.is_ascii_uppercase() {
             let should_split = index > 0
-                && (previous.is_some_and(|value| value.is_ascii_lowercase() || value.is_ascii_digit())
+                && (previous
+                    .is_some_and(|value| value.is_ascii_lowercase() || value.is_ascii_digit())
                     || (previous.is_some_and(|value| value.is_ascii_uppercase())
                         && next.is_some_and(|value| value.is_ascii_lowercase())));
 
@@ -670,7 +687,10 @@ pub fn plan_entity_create(api_version: &str, entity: &str, body: Value) -> Reque
     RequestPlan {
         transport: "rest",
         method: "POST",
-        path: format!("/api/{api_version}/entity/{}", entity_collection_path(entity)),
+        path: format!(
+            "/api/{api_version}/entity/{}",
+            entity_collection_path(entity)
+        ),
         risk: RiskLevel::Write,
         query: Vec::new(),
         body: Some(body),

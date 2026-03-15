@@ -23,7 +23,6 @@ fn capabilities_still_supports_explicit_toon_output() {
         .stdout(predicate::str::contains("name: fpt"));
 }
 
-
 #[test]
 fn capabilities_outputs_entity_update_contract() {
     let mut command = Command::cargo_bin("fpt").expect("binary exists");
@@ -34,7 +33,6 @@ fn capabilities_outputs_entity_update_contract() {
         .success()
         .stdout(predicate::str::contains("\"entity.update\""));
 }
-
 
 #[test]
 fn capabilities_lists_user_password_auth_mode() {
@@ -75,14 +73,11 @@ fn inspect_entity_find_mentions_structured_search() {
     let mut command = Command::cargo_bin("fpt").expect("binary exists");
     command.args(["inspect", "command", "entity.find", "--output", "json"]);
 
-    command
-        .assert()
-        .success()
-        .stdout(
-            predicate::str::contains("filter-dsl")
-                .and(predicate::str::contains("structured `search` object"))
-                .and(predicate::str::contains("additional_filter_presets")),
-        );
+    command.assert().success().stdout(
+        predicate::str::contains("filter-dsl")
+            .and(predicate::str::contains("structured `search` object"))
+            .and(predicate::str::contains("additional_filter_presets")),
+    );
 }
 
 #[test]
@@ -90,13 +85,10 @@ fn inspect_entity_find_one_is_registered() {
     let mut command = Command::cargo_bin("fpt").expect("binary exists");
     command.args(["inspect", "command", "entity.find-one", "--output", "json"]);
 
-    command
-        .assert()
-        .success()
-        .stdout(
-            predicate::str::contains("first matching record or null")
-                .and(predicate::str::contains("same as entity.find")),
-        );
+    command.assert().success().stdout(
+        predicate::str::contains("first matching record or null")
+            .and(predicate::str::contains("same as entity.find")),
+    );
 }
 
 #[test]
@@ -104,20 +96,15 @@ fn inspect_entity_summarize_is_registered() {
     let mut command = Command::cargo_bin("fpt").expect("binary exists");
     command.args(["inspect", "command", "entity.summarize", "--output", "json"]);
 
-    command
-        .assert()
-        .success()
-        .stdout(
-            predicate::str::contains("ShotGrid summary operators")
-                .and(predicate::str::contains("summary_fields"))
-                .and(predicate::str::contains("summarize")),
-        );
+    command.assert().success().stdout(
+        predicate::str::contains("ShotGrid summary operators")
+            .and(predicate::str::contains("summary_fields"))
+            .and(predicate::str::contains("summarize")),
+    );
 }
 
 #[test]
 fn entity_update_dry_run_outputs_rest_request_plan() {
-
-
     let mut command = Command::cargo_bin("fpt").expect("binary exists");
     command.args([
         "entity",
@@ -142,10 +129,9 @@ fn work_schedule_read_requires_input_json() {
     let mut command = Command::cargo_bin("fpt").expect("binary exists");
     command.args(["work-schedule", "read", "--output", "json"]);
 
-    command
-        .assert()
-        .failure()
-        .stderr(predicate::str::contains("required arguments were not provided"));
+    command.assert().failure().stderr(predicate::str::contains(
+        "required arguments were not provided",
+    ));
 }
 
 #[test]
@@ -158,4 +144,3 @@ fn delete_without_yes_is_blocked() {
         .failure()
         .stderr(predicate::str::contains("POLICY_BLOCKED"));
 }
-

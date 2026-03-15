@@ -7,12 +7,10 @@ mod server;
 mod summarize;
 mod work_schedule;
 
-
-
 use std::env;
 
 use fpt_core::{AppError, Result};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 use crate::capability::{command_specs, find_command_spec};
 use crate::transport::{RestTransport, ShotgridTransport};

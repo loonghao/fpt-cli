@@ -3,6 +3,7 @@ use serde_json::Value;
 use std::fs;
 use std::io::Read;
 
+#[allow(clippy::result_large_err)]
 pub fn read_json_input(input: Option<&str>) -> Result<Option<Value>> {
     match input {
         None => Ok(None),
@@ -10,6 +11,7 @@ pub fn read_json_input(input: Option<&str>) -> Result<Option<Value>> {
     }
 }
 
+#[allow(clippy::result_large_err)]
 fn read_from_source(source: &str) -> Result<Value> {
     if source == "@-" {
         let mut buffer = String::new();
@@ -21,8 +23,9 @@ fn read_from_source(source: &str) -> Result<Value> {
     }
 
     if let Some(path) = source.strip_prefix('@') {
-        let content = fs::read_to_string(path)
-            .map_err(|error| AppError::invalid_input(format!("failed to read input file `{path}`: {error}")))?;
+        let content = fs::read_to_string(path).map_err(|error| {
+            AppError::invalid_input(format!("failed to read input file `{path}`: {error}"))
+        })?;
 
         return parse_json(&content, path);
     }
@@ -30,8 +33,8 @@ fn read_from_source(source: &str) -> Result<Value> {
     parse_json(source, "inline JSON")
 }
 
+#[allow(clippy::result_large_err)]
 fn parse_json(raw: &str, label: &str) -> Result<Value> {
     serde_json::from_str(raw)
         .map_err(|error| AppError::invalid_input(format!("failed to parse {label}: {error}")))
 }
-

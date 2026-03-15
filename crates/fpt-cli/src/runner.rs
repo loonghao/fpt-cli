@@ -37,7 +37,8 @@ pub async fn run(cli: Cli) -> Result<Value> {
                 filter_dsl,
             } => {
                 let input = read_json_input(input.as_deref())?;
-                app.entity_find(connection, &entity, input, filter_dsl).await
+                app.entity_find(connection, &entity, input, filter_dsl)
+                    .await
             }
             EntityCommands::FindOne {
                 entity,
@@ -53,7 +54,6 @@ pub async fn run(cli: Cli) -> Result<Value> {
                 app.entity_summarize(connection, &entity, body).await
             }
             EntityCommands::Create {
-
                 entity,
                 input,
                 dry_run,
@@ -68,14 +68,18 @@ pub async fn run(cli: Cli) -> Result<Value> {
                 dry_run,
             } => {
                 let body = required_json_input(input)?;
-                app.entity_update(connection, &entity, id, body, dry_run).await
+                app.entity_update(connection, &entity, id, body, dry_run)
+                    .await
             }
             EntityCommands::Delete {
                 entity,
                 id,
                 dry_run,
                 yes,
-            } => app.entity_delete(connection, &entity, id, dry_run, yes).await,
+            } => {
+                app.entity_delete(connection, &entity, id, dry_run, yes)
+                    .await
+            }
             EntityCommands::Revive {
                 entity,
                 id,

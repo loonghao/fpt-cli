@@ -1,8 +1,7 @@
 use fpt_core::{CommandSpec, RiskLevel};
 
-const SERVER_INFO_EXAMPLES: &[&str] = &[
-    "fpt server info --site https://example.shotgrid.autodesk.com --output json",
-];
+const SERVER_INFO_EXAMPLES: &[&str] =
+    &["fpt server info --site https://example.shotgrid.autodesk.com --output json"];
 
 const SERVER_INFO_NOTES: &[&str] = &[
     "Uses the ShotGrid RPC `info` method over `/api3/json`",

@@ -43,7 +43,6 @@ struct RecordedState {
     work_schedule_calls: Vec<Value>,
 }
 
-
 #[derive(Debug, Clone, Default)]
 struct RecordingTransport {
     state: Arc<Mutex<RecordedState>>,
@@ -76,7 +75,6 @@ impl ShotgridTransport for RecordingTransport {
     }
 
     async fn schema_entities(&self, _config: &ConnectionSettings) -> Result<Value> {
-
         self.state.lock().expect("state lock").schema_entities_calls += 1;
         Ok(json!({"data": ["Asset", "Shot"]}))
     }
@@ -97,11 +95,15 @@ impl ShotgridTransport for RecordingTransport {
         id: u64,
         fields: Option<Vec<String>>,
     ) -> Result<Value> {
-        self.state.lock().expect("state lock").entity_get_calls.push(EntityGetCall {
-            entity: entity.to_string(),
-            id,
-            fields: fields.clone(),
-        });
+        self.state
+            .lock()
+            .expect("state lock")
+            .entity_get_calls
+            .push(EntityGetCall {
+                entity: entity.to_string(),
+                id,
+                fields: fields.clone(),
+            });
         Ok(json!({"entity": entity, "id": id, "fields": fields}))
     }
 
@@ -141,7 +143,6 @@ impl ShotgridTransport for RecordingTransport {
     }
 
     async fn entity_create(
-
         &self,
         _config: &ConnectionSettings,
         entity: &str,
@@ -211,7 +212,11 @@ impl ShotgridTransport for RecordingTransport {
         Ok(json!(true))
     }
 
-    async fn work_schedule_read(&self, _config: &ConnectionSettings, body: &Value) -> Result<Value> {
+    async fn work_schedule_read(
+        &self,
+        _config: &ConnectionSettings,
+        body: &Value,
+    ) -> Result<Value> {
         self.state
             .lock()
             .expect("state lock")
@@ -225,7 +230,6 @@ impl ShotgridTransport for RecordingTransport {
         }))
     }
 }
-
 
 #[derive(Debug, Clone)]
 struct FindOneTransport {
@@ -259,7 +263,6 @@ impl ShotgridTransport for FindOneTransport {
     async fn schema_entities(&self, _config: &ConnectionSettings) -> Result<Value> {
         Err(AppError::not_implemented("unused"))
     }
-
 
     async fn schema_fields(&self, _config: &ConnectionSettings, _entity: &str) -> Result<Value> {
         Err(AppError::not_implemented("unused"))
@@ -295,7 +298,6 @@ impl ShotgridTransport for FindOneTransport {
     }
 
     async fn entity_create(
-
         &self,
         _config: &ConnectionSettings,
         _entity: &str,
@@ -332,18 +334,20 @@ impl ShotgridTransport for FindOneTransport {
         Err(AppError::not_implemented("unused"))
     }
 
-    async fn work_schedule_read(&self, _config: &ConnectionSettings, _body: &Value) -> Result<Value> {
+    async fn work_schedule_read(
+        &self,
+        _config: &ConnectionSettings,
+        _body: &Value,
+    ) -> Result<Value> {
         Err(AppError::not_implemented("unused"))
     }
 }
 
 #[derive(Debug, Clone, Default)]
 struct SlowGetTransport {
-
     current: Arc<AtomicUsize>,
     max_seen: Arc<AtomicUsize>,
 }
-
 
 impl SlowGetTransport {
     fn max_in_flight(&self) -> usize {
@@ -364,7 +368,6 @@ impl ShotgridTransport for SlowGetTransport {
     async fn schema_entities(&self, _config: &ConnectionSettings) -> Result<Value> {
         Err(AppError::not_implemented("unused"))
     }
-
 
     async fn schema_fields(&self, _config: &ConnectionSettings, _entity: &str) -> Result<Value> {
         Err(AppError::not_implemented("unused"))
@@ -411,7 +414,6 @@ impl ShotgridTransport for SlowGetTransport {
     }
 
     async fn entity_create(
-
         &self,
         _config: &ConnectionSettings,
         _entity: &str,
@@ -448,13 +450,16 @@ impl ShotgridTransport for SlowGetTransport {
         Err(AppError::not_implemented("unused"))
     }
 
-    async fn work_schedule_read(&self, _config: &ConnectionSettings, _body: &Value) -> Result<Value> {
+    async fn work_schedule_read(
+        &self,
+        _config: &ConnectionSettings,
+        _body: &Value,
+    ) -> Result<Value> {
         Err(AppError::not_implemented("unused"))
     }
 }
 
 fn overrides() -> ConnectionOverrides {
-
     ConnectionOverrides {
         site: Some("https://example.shotgrid.autodesk.com".to_string()),
         auth_mode: Some(AuthMode::Script),
@@ -478,7 +483,10 @@ async fn auth_schema_and_entity_read_commands_delegate_to_transport() {
     let transport = RecordingTransport::default();
     let app = App::new(transport.clone());
 
-    let auth = app.auth_test(overrides()).await.expect("auth test succeeds");
+    let auth = app
+        .auth_test(overrides())
+        .await
+        .expect("auth test succeeds");
     let server_info = app
         .server_info(ConnectionOverrides {
             site: overrides().site,
@@ -593,7 +601,6 @@ async fn auth_schema_and_entity_read_commands_delegate_to_transport() {
     );
 }
 
-
 #[tokio::test]
 async fn entity_find_builds_query_and_search_payload_from_input() {
     let transport = RecordingTransport::default();
@@ -617,7 +624,10 @@ async fn entity_find_builds_query_and_search_payload_from_input() {
     .expect("entity find succeeds");
 
     let snapshot = transport.snapshot();
-    let params = snapshot.entity_find_calls.first().expect("find params recorded");
+    let params = snapshot
+        .entity_find_calls
+        .first()
+        .expect("find params recorded");
     assert_eq!(query_value(params, "fields"), Some("code,sg_status_list"));
     assert_eq!(query_value(params, "include"), Some("project"));
     assert_eq!(query_value(params, "sort"), Some("code"));
@@ -663,7 +673,10 @@ async fn entity_find_accepts_structured_search_input() {
     .expect("structured search should succeed");
 
     let snapshot = transport.snapshot();
-    let params = snapshot.entity_find_calls.first().expect("find params recorded");
+    let params = snapshot
+        .entity_find_calls
+        .first()
+        .expect("find params recorded");
     assert_eq!(query_value(params, "fields"), Some("code,sg_status_list"));
     assert_eq!(
         params.search,
@@ -707,7 +720,10 @@ async fn entity_find_merges_top_level_presets_with_filter_dsl() {
     .expect("filter presets should merge with filter_dsl");
 
     let snapshot = transport.snapshot();
-    let params = snapshot.entity_find_calls.first().expect("find params recorded");
+    let params = snapshot
+        .entity_find_calls
+        .first()
+        .expect("find params recorded");
     assert_eq!(
         params.search,
         Some(json!({
@@ -823,10 +839,8 @@ async fn entity_find_one_returns_null_when_no_match_exists() {
 
 #[tokio::test]
 async fn entity_write_commands_apply_dry_run_and_policy_guards() {
-
     let transport = RecordingTransport::default();
     let app = App::new(transport.clone());
-
 
     let create_dry_run = app
         .entity_create(
@@ -867,14 +881,19 @@ async fn entity_write_commands_apply_dry_run_and_policy_guards() {
     assert_eq!(create_dry_run["dry_run"], true);
     assert_eq!(create_dry_run["plan"]["path"], "/api/v1.1/entity/versions");
     assert_eq!(update_dry_run["plan"]["path"], "/api/v1.1/entity/tasks/42");
-    assert_eq!(delete_dry_run["plan"]["path"], "/api/v1.1/entity/playlists/99");
+    assert_eq!(
+        delete_dry_run["plan"]["path"],
+        "/api/v1.1/entity/playlists/99"
+    );
     assert_eq!(revive_dry_run["plan"]["path"], "/api3/json");
     assert_eq!(revive_dry_run["plan"]["body"]["method_name"], "revive");
     assert_eq!(revive_response, json!(true));
     assert_eq!(delete_error.envelope().code, "POLICY_BLOCKED");
-    assert_eq!(transport.snapshot().entity_revive_calls, vec![("Shot".to_string(), 860)]);
+    assert_eq!(
+        transport.snapshot().entity_revive_calls,
+        vec![("Shot".to_string(), 860)]
+    );
 }
-
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn entity_batch_get_runs_concurrently_and_preserves_order() {
@@ -894,7 +913,10 @@ async fn entity_batch_get_runs_concurrently_and_preserves_order() {
         .collect::<Vec<_>>();
 
     assert_eq!(ids, vec![1, 2, 3, 4]);
-    assert!(transport.max_in_flight() > 1, "batch get should execute concurrently");
+    assert!(
+        transport.max_in_flight() > 1,
+        "batch get should execute concurrently"
+    );
 }
 
 #[tokio::test]

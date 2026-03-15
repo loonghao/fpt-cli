@@ -27,8 +27,8 @@ fn parses_nested_boolean_expression_to_search_filters() {
 
 #[test]
 fn parses_keyword_operators_and_array_values() {
-    let filters = parse_filter_dsl("sg_status in ['ip', 'wtg'] and id >= 10")
-        .expect("dsl should parse");
+    let filters =
+        parse_filter_dsl("sg_status in ['ip', 'wtg'] and id >= 10").expect("dsl should parse");
 
     assert_eq!(
         filters,
@@ -47,7 +47,6 @@ fn parses_keyword_operators_and_array_values() {
 #[case("(sg_status == 'ip'", "missing closing parenthesis")]
 #[case("sg_status ==", "missing operand")]
 fn rejects_invalid_dsl(#[case] input: &str, #[case] expected_message: &str) {
-
     let error = parse_filter_dsl(input).expect_err("dsl should fail");
     let message = error.envelope().message;
     assert!(

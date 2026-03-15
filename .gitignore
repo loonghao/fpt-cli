@@ -4,3 +4,4 @@ target/
 .venv/
 *.log
 .env
+dist/

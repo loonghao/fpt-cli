@@ -1,3 +1,5 @@
+#![allow(clippy::result_large_err)]
+
 pub mod app;
 pub mod capability;
 pub mod config;
@@ -10,4 +12,3 @@ pub use config::{
 };
 pub use filter_dsl::parse_filter_dsl;
 pub use transport::entity_collection_path;
-
