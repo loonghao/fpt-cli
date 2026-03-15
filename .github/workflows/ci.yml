@@ -43,8 +43,12 @@ jobs:
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
 
+      - name: Install cargo-hakari
+        run: vx cargo install cargo-hakari --locked
+
       - name: Run quality checks
         run: vx just ci
+
 
   test:
     name: Test (${{ matrix.os }})
