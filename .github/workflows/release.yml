@@ -33,7 +33,8 @@ jobs:
       - name: Verify Cargo version matches tag
         shell: bash
         run: |
-          cargo_version="$(vx python - <<'PY'
+          cargo_version="$(vx uv run python - <<'PY'
+
           import tomllib
           from pathlib import Path
 
