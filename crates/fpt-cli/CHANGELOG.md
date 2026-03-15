@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.2.1](https://github.com/loonghao/fpt-cli/compare/v0.2.0...v0.2.1) (2026-03-15)
+
+
+### Bug Fixes
+
+* **ci:** publish release and skills from release-please ([9ae31aa](https://github.com/loonghao/fpt-cli/commit/9ae31aaf857621c2ecd90b83ddbe543bf35681ff))
+* **ci:** publish release and skills from release-please ([c39377f](https://github.com/loonghao/fpt-cli/commit/c39377f078e3a6b9dfda10190f2b7d36d8ab3c25))
+* unify release artifact publishing ([18b0476](https://github.com/loonghao/fpt-cli/commit/18b0476020ff0ba1662012bc0fc8ba773631e179))
+
+
+### Documentation
+
+* align skill install paths with installers ([7034e7d](https://github.com/loonghao/fpt-cli/commit/7034e7d8b941f1fb30722203d5974a04bcc245ce))
+* harden OpenClaw skill install guidance ([d35bdd9](https://github.com/loonghao/fpt-cli/commit/d35bdd9077f50fa1f48fdc3fab27e0d6afce8bea))
+
 ## [0.2.0](https://github.com/loonghao/fpt-cli/compare/v0.1.0...v0.2.0) (2026-03-15)
 
 
