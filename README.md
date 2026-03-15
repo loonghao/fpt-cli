@@ -8,6 +8,9 @@ A Rust CLI for Autodesk Flow Production Tracking (**ShotGrid / FPT**) designed f
 
 This repository is also a practical validation and exploration of the ideas discussed in [MCP Is Dead, Long Live the CLI](https://ejholmes.github.io/2026/02/28/mcp-is-dead-long-live-the-cli.html).
 
+It is also my primary validation and comparison project around MCP-oriented capabilities. For a direct MCP-based counterpart, see [shotgrid-mcp-server](https://github.com/loonghao/shotgrid-mcp-server).
+
+
 ### Current status
 
 This repository is the first implementation stage and already includes:

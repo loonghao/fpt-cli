@@ -8,6 +8,9 @@
 
 这个仓库同时也是对文章 [MCP Is Dead, Long Live the CLI](https://ejholmes.github.io/2026/02/28/mcp-is-dead-long-live-the-cli.html) 中相关观点的一次实践验证与持续探索。
 
+它也是我围绕 MCP 能力做验证与对比尝试的主要项目；如果你想看一个更直接的 MCP 方案，可以参考 [shotgrid-mcp-server](https://github.com/loonghao/shotgrid-mcp-server)。
+
+
 ### 当前状态
 
 

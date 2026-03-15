@@ -19,6 +19,15 @@ lint:
 test:
     vx cargo test --workspace
 
+hakari-generate:
+    vx cargo hakari generate
+    vx cargo hakari manage-deps -y
+
+hakari-check:
+    vx cargo hakari generate --diff
+    vx cargo hakari manage-deps --dry-run
+    vx cargo hakari verify
+
 pre-commit-install:
     vx python -m pip install pre-commit
     vx python -m pre_commit install --install-hooks --hook-type pre-commit --hook-type pre-push
@@ -28,10 +37,12 @@ pre-commit-run:
 
 ci:
     vx just fmt-check
+    vx just hakari-check
     vx just check
     vx just lint
     vx just test
     vx just package-skills
+
 
 package-skills:
     vx uv run python scripts/package_openclaw_skill.py skills dist/skills --all
