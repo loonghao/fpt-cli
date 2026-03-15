@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.3](https://github.com/loonghao/fpt-cli/compare/v0.2.2...v0.2.3) (2026-03-15)
+
+
+### Bug Fixes
+
+* **ci:** add build test job and update Cargo.lock ([9125559](https://github.com/loonghao/fpt-cli/commit/9125559426a6704a1af05b147fc52d1affadf652))
+
 ## [0.2.2](https://github.com/loonghao/fpt-cli/compare/v0.2.1...v0.2.2) (2026-03-15)
 
 
