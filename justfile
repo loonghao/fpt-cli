@@ -61,10 +61,21 @@ clawhub-sync:
 build-release-locked *args:
     vx cargo build --release --locked -p fpt-cli {{args}}
 
+build-release-target target:
+    vx cargo build --release --locked -p fpt-cli --target {{target}}
+
+release-version:
+    vx uv run python scripts/release_metadata.py version
+
+release-matrix:
+    vx uv run python scripts/release_metadata.py matrix
+
+verify-release-tag tag:
+    vx uv run python scripts/release_metadata.py verify-tag {{tag}}
+
 run *args:
     vx cargo run -p fpt-cli -- {{args}}
 
 
 capabilities:
     vx cargo run -p fpt-cli -- capabilities --output json
-

@@ -23,9 +23,12 @@ env:
   CARGO_NET_RETRY: "10"
 
 jobs:
-  verify-tag:
-    name: Verify Tag Version
+  prepare-release:
+    name: Prepare Release Metadata
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.metadata.outputs.version }}
+      matrix: ${{ steps.metadata.outputs.matrix }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -40,51 +43,25 @@ jobs:
       - name: Setup tools (vx)
         run: vx setup
 
-      - name: Verify Cargo version matches tag
+      - name: Verify release tag and load matrix
+        id: metadata
         shell: bash
         env:
           RELEASE_TAG: ${{ inputs.tag_name }}
         run: |
-          cargo_version="$(vx uv run python - <<'PY'
-
-          import tomllib
-          from pathlib import Path
-
-          data = tomllib.loads(Path('Cargo.toml').read_text(encoding='utf-8'))
-          print(data['workspace']['package']['version'])
-          PY
-          )"
-
-          expected_tag="v${cargo_version}"
-          if [[ "${RELEASE_TAG}" != "${expected_tag}" ]]; then
-            echo "Tag ${RELEASE_TAG} does not match workspace version ${cargo_version}" >&2
-            exit 1
-          fi
+          vx uv run python scripts/release_metadata.py verify-tag "${RELEASE_TAG}"
+          release_version="$(vx uv run python scripts/release_metadata.py version)"
+          matrix_json="$(vx uv run python scripts/release_metadata.py matrix)"
+          echo "version=${release_version}" >> "$GITHUB_OUTPUT"
+          echo "matrix=${matrix_json}" >> "$GITHUB_OUTPUT"
 
   build:
     name: Build ${{ matrix.target }}
     runs-on: ${{ matrix.os }}
-    needs: verify-tag
+    needs: prepare-release
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
-            archive_name: fpt-x86_64-unknown-linux-gnu.tar.gz
-            binary_name: fpt
-          - os: windows-latest
-            target: x86_64-pc-windows-msvc
-            archive_name: fpt-x86_64-pc-windows-msvc.zip
-            binary_name: fpt.exe
-          - os: macos-13
-            target: x86_64-apple-darwin
-            archive_name: fpt-x86_64-apple-darwin.tar.gz
-            binary_name: fpt
-          - os: macos-14
-            target: aarch64-apple-darwin
-            archive_name: fpt-aarch64-apple-darwin.tar.gz
-            binary_name: fpt
+      matrix: ${{ fromJSON(needs.prepare-release.outputs.matrix) }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -113,7 +90,7 @@ jobs:
           shared-key: release-${{ matrix.target }}
 
       - name: Build release binary
-        run: vx cargo build --release --locked -p fpt-cli --target ${{ matrix.target }}
+        run: vx just build-release-target ${{ matrix.target }}
 
       - name: Package tarball
         if: runner.os != 'Windows'
@@ -130,7 +107,7 @@ jobs:
           Compress-Archive -Path "target/${{ matrix.target }}/release/${{ matrix.binary_name }}" -DestinationPath "dist/${{ matrix.archive_name }}" -Force
 
       - name: Upload release artifact
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v6
         with:
           name: ${{ matrix.target }}
           path: dist/${{ matrix.archive_name }}
@@ -139,10 +116,12 @@ jobs:
   github-release:
     name: Upload GitHub Release assets
     runs-on: ubuntu-latest
-    needs: build
+    needs:
+      - prepare-release
+      - build
     steps:
       - name: Download build artifacts
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@v6
         with:
           path: artifacts
           pattern: '*'

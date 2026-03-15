@@ -22,8 +22,8 @@ jobs:
     name: Release Please
     runs-on: ubuntu-latest
     outputs:
-      release_created: ${{ steps.release.outputs['crates/fpt-cli--release_created'] }}
-      tag_name: ${{ steps.release.outputs['crates/fpt-cli--tag_name'] }}
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
     steps:
       - name: Run release-please
         id: release
