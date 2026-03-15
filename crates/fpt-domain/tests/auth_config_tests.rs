@@ -48,8 +48,6 @@ impl Drop for EnvGuard {
     }
 }
 
-
-
 #[test]
 fn resolves_script_auth_with_explicit_mode() {
     let settings = ConnectionSettings::resolve(ConnectionOverrides {
@@ -195,5 +193,3 @@ fn prefers_fpt_env_over_sg_env_when_both_present() {
         other => panic!("unexpected credentials: {other:?}"),
     }
 }
-
-

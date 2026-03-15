@@ -1,8 +1,8 @@
 use fpt_core::{AppError, Result};
 use futures::stream::{self, StreamExt};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
-use crate::config::{api_version_or_default, ConnectionOverrides, ConnectionSettings};
+use crate::config::{ConnectionOverrides, ConnectionSettings, api_version_or_default};
 use crate::transport::{
     RequestPlan, ShotgridTransport, plan_entity_create, plan_entity_delete, plan_entity_update,
 };
@@ -299,7 +299,9 @@ fn parse_batch_find_input(input: Value) -> Result<Vec<Value>> {
         Value::Object(object) => {
             let requests = object
                 .get("requests")
-                .ok_or_else(|| AppError::invalid_input("entity batch find requires a `requests` field"))?
+                .ok_or_else(|| {
+                    AppError::invalid_input("entity batch find requires a `requests` field")
+                })?
                 .as_array()
                 .ok_or_else(|| AppError::invalid_input("`requests` must be an array"))?
                 .clone();
@@ -317,7 +319,9 @@ fn parse_batch_create_input(input: Value) -> Result<Vec<Value>> {
         Value::Object(object) => {
             let items = object
                 .get("items")
-                .ok_or_else(|| AppError::invalid_input("entity batch create requires an `items` field"))?
+                .ok_or_else(|| {
+                    AppError::invalid_input("entity batch create requires an `items` field")
+                })?
                 .as_array()
                 .ok_or_else(|| AppError::invalid_input("`items` must be an array"))?
                 .clone();
@@ -335,7 +339,9 @@ fn parse_batch_update_input(input: Value) -> Result<Vec<BatchUpdateItem>> {
         Value::Object(object) => {
             let items = object
                 .get("items")
-                .ok_or_else(|| AppError::invalid_input("entity batch update requires an `items` field"))?
+                .ok_or_else(|| {
+                    AppError::invalid_input("entity batch update requires an `items` field")
+                })?
                 .as_array()
                 .ok_or_else(|| AppError::invalid_input("`items` must be an array"))?
                 .clone();
@@ -374,15 +380,12 @@ fn parse_batch_update_input(input: Value) -> Result<Vec<BatchUpdateItem>> {
                         ))
                     })
                 })?;
-            let body = object
-                .get("body")
-                .cloned()
-                .ok_or_else(|| {
-                    AppError::invalid_input(format!(
-                        "item {} in entity batch update is missing `body`",
-                        index + 1
-                    ))
-                })?;
+            let body = object.get("body").cloned().ok_or_else(|| {
+                AppError::invalid_input(format!(
+                    "item {} in entity batch update is missing `body`",
+                    index + 1
+                ))
+            })?;
             Ok(BatchUpdateItem { id, body })
         })
         .collect()
@@ -394,7 +397,9 @@ fn parse_batch_delete_input(input: Value) -> Result<Vec<u64>> {
         Value::Object(object) => {
             let ids = object
                 .get("ids")
-                .ok_or_else(|| AppError::invalid_input("entity batch delete requires an `ids` field"))?
+                .ok_or_else(|| {
+                    AppError::invalid_input("entity batch delete requires an `ids` field")
+                })?
                 .as_array()
                 .ok_or_else(|| AppError::invalid_input("`ids` must be an array"))?;
             u64_list(ids, "ids")

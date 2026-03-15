@@ -20,7 +20,6 @@ static COMMANDS: &[CommandSpec] = &[
     entity::ENTITY_FIND_ONE_SPEC,
     entity::ENTITY_SUMMARIZE_SPEC,
     entity::ENTITY_CREATE_SPEC,
-
     entity::ENTITY_UPDATE_SPEC,
     entity::ENTITY_DELETE_SPEC,
     entity::ENTITY_REVIVE_SPEC,

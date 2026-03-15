@@ -1,10 +1,13 @@
 use fpt_core::{AppError, Result};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 use crate::filter_dsl::parse_filter_dsl;
 use crate::transport::FindParams;
 
-pub(super) fn build_find_params(input: Option<Value>, filter_dsl: Option<String>) -> Result<FindParams> {
+pub(super) fn build_find_params(
+    input: Option<Value>,
+    filter_dsl: Option<String>,
+) -> Result<FindParams> {
     let mut params = FindParams::default();
 
     let Some(input) = input else {
@@ -29,7 +32,10 @@ pub(super) fn build_find_params(input: Option<Value>, filter_dsl: Option<String>
                 .ok_or_else(|| AppError::invalid_input("`filter_dsl` must be a string"))
         })
         .transpose()?;
-    let inline_search = object.get("search").map(normalize_search_body).transpose()?;
+    let inline_search = object
+        .get("search")
+        .map(normalize_search_body)
+        .transpose()?;
     let top_level_presets = object
         .get("additional_filter_presets")
         .map(|value| normalize_filter_presets(value, "`additional_filter_presets`"))
@@ -58,7 +64,9 @@ pub(super) fn build_find_params(input: Option<Value>, filter_dsl: Option<String>
     if let Some(include) = object.get("include") {
         let include = string_list(include, "include")?;
         if !include.is_empty() {
-            params.query.push(("include".to_string(), include.join(",")));
+            params
+                .query
+                .push(("include".to_string(), include.join(",")));
         }
     }
 
@@ -88,7 +96,8 @@ pub(super) fn build_find_params(input: Option<Value>, filter_dsl: Option<String>
     }
 
     if let Some(filters) = object.get("filters") {
-        if effective_filter_dsl.is_some() || inline_search.is_some() || top_level_presets.is_some() {
+        if effective_filter_dsl.is_some() || inline_search.is_some() || top_level_presets.is_some()
+        {
             return Err(AppError::invalid_input(
                 "`filters` cannot be used together with `filter_dsl`, `search`, or `additional_filter_presets`",
             ));
@@ -122,10 +131,9 @@ pub(super) fn build_find_params(input: Option<Value>, filter_dsl: Option<String>
             .as_object()
             .ok_or_else(|| AppError::invalid_input("`query` must be an object"))?;
         for (key, value) in query {
-            params.query.push((
-                key.clone(),
-                value_to_query(value, &format!("query.{key}"))?,
-            ));
+            params
+                .query
+                .push((key.clone(), value_to_query(value, &format!("query.{key}"))?));
         }
     }
 
@@ -166,7 +174,9 @@ pub(super) fn upsert_query_param(query: &mut Vec<(String, String)>, key: &str, v
 
 pub(super) fn extract_find_one_response(response: Value) -> Result<Value> {
     let Some(data) = response.get("data") else {
-        return Err(AppError::api("ShotGrid find response is missing `data`").with_details(response));
+        return Err(
+            AppError::api("ShotGrid find response is missing `data`").with_details(response)
+        );
     };
 
     match data {

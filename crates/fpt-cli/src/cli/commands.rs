@@ -4,7 +4,11 @@ use super::common::OutputFormatArg;
 use super::connection::ConnectionArgs;
 
 #[derive(Debug, Parser)]
-#[command(name = "fpt", version, about = "Flow Production Tracking CLI for OpenClaw")]
+#[command(
+    name = "fpt",
+    version,
+    about = "Flow Production Tracking CLI for OpenClaw"
+)]
 pub struct Cli {
     #[command(flatten)]
     pub connection: ConnectionArgs,
@@ -43,7 +47,10 @@ pub struct SelfUpdateArgs {
     #[arg(long, help = "Only check whether a newer release is available")]
     pub check: bool,
 
-    #[arg(long, help = "Install a specific release version instead of the latest release")]
+    #[arg(
+        long,
+        help = "Install a specific release version instead of the latest release"
+    )]
     pub version: Option<String>,
 
     #[arg(long, help = "Override the GitHub repository in owner/repo format")]
@@ -100,7 +107,6 @@ pub enum EntityCommands {
         input: String,
     },
     Create {
-
         entity: String,
         #[arg(long)]
         input: String,

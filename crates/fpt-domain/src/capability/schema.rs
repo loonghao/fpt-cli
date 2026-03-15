@@ -4,9 +4,8 @@ const SCHEMA_ENTITIES_EXAMPLES: &[&str] = &[
     "fpt schema entities --site ... --auth-mode script --script-name ... --script-key ...",
     "fpt schema entities --site ... --auth-mode user-password --username ... --password ...",
 ];
-const SCHEMA_FIELDS_EXAMPLES: &[&str] = &[
-    "fpt schema fields Shot --site ... --auth-mode script --script-name ... --script-key ...",
-];
+const SCHEMA_FIELDS_EXAMPLES: &[&str] =
+    &["fpt schema fields Shot --site ... --auth-mode script --script-name ... --script-key ..."];
 
 const SCHEMA_NOTES: &[&str] = &[
     "Schema endpoints currently return raw ShotGrid REST JSON",

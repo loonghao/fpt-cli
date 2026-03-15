@@ -44,7 +44,9 @@ fn entity_batch_update_dry_run_outputs_multiple_request_plans() {
 
     command.assert().success().stdout(
         predicate::str::contains("\"dry_run\":true")
-            .and(predicate::str::contains("\"operation\":\"entity.batch.update\""))
+            .and(predicate::str::contains(
+                "\"operation\":\"entity.batch.update\"",
+            ))
             .and(predicate::str::contains("/api/v1.1/entity/tasks/42"))
             .and(predicate::str::contains("/api/v1.1/entity/tasks/43")),
     );
@@ -54,14 +56,7 @@ fn entity_batch_update_dry_run_outputs_multiple_request_plans() {
 fn batch_delete_without_yes_is_blocked() {
     let mut command = Command::cargo_bin("fpt").expect("binary exists");
     command.args([
-        "entity",
-        "batch",
-        "delete",
-        "Task",
-        "--input",
-        "[42,43]",
-        "--output",
-        "json",
+        "entity", "batch", "delete", "Task", "--input", "[42,43]", "--output", "json",
     ]);
 
     command

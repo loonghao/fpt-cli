@@ -9,13 +9,11 @@ pub enum OutputFormat {
     PrettyJson,
 }
 
-
 impl OutputFormat {
     pub const fn is_pretty(self) -> bool {
         matches!(self, Self::PrettyJson)
     }
 }
-
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]

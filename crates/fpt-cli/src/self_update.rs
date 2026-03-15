@@ -4,10 +4,10 @@ use fpt_core::{AppError, Result};
 use reqwest::header::{ACCEPT, AUTHORIZATION, HeaderMap, HeaderValue, USER_AGENT};
 use semver::Version;
 use serde::Deserialize;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 use std::env;
-use std::fs::{self, File};
+use std::fs::File;
 use std::io::{self, Write};
 
 use std::path::{Path, PathBuf};
@@ -62,8 +62,11 @@ pub async fn run(args: SelfUpdateArgs) -> Result<Value> {
     let target = detect_target()?;
     let current_version = Version::parse(env!("CARGO_PKG_VERSION"))
         .map_err(|error| AppError::internal(format!("failed to parse current version: {error}")))?;
-    let current_exe = env::current_exe()
-        .map_err(|error| AppError::internal(format!("failed to resolve current executable path: {error}")))?;
+    let current_exe = env::current_exe().map_err(|error| {
+        AppError::internal(format!(
+            "failed to resolve current executable path: {error}"
+        ))
+    })?;
     let requested_version = args.version.clone().map(normalize_version);
     let client = build_http_client()?;
     let release = fetch_release(&client, &owner, &repo, requested_version.as_deref()).await?;
@@ -115,8 +118,12 @@ pub async fn run(args: SelfUpdateArgs) -> Result<Value> {
         }));
     }
 
-    let checksum_asset = release.assets.iter().find(|asset| asset.name == CHECKSUM_ASSET_NAME);
-    let temp_dir = tempdir().map_err(|error| AppError::internal(format!("failed to create temp dir: {error}")))?;
+    let checksum_asset = release
+        .assets
+        .iter()
+        .find(|asset| asset.name == CHECKSUM_ASSET_NAME);
+    let temp_dir = tempdir()
+        .map_err(|error| AppError::internal(format!("failed to create temp dir: {error}")))?;
     let archive_path = temp_dir.path().join(&asset.name);
     let archive_bytes = download_bytes(&client, &asset.browser_download_url).await?;
     write_bytes(&archive_path, &archive_bytes)?;
@@ -130,8 +137,9 @@ pub async fn run(args: SelfUpdateArgs) -> Result<Value> {
     };
 
     let extracted_binary = extract_binary(&archive_path, target, temp_dir.path())?;
-    self_replace::self_replace(&extracted_binary)
-        .map_err(|error| AppError::internal(format!("failed to replace current executable: {error}")))?;
+    self_replace::self_replace(&extracted_binary).map_err(|error| {
+        AppError::internal(format!("failed to replace current executable: {error}"))
+    })?;
 
     Ok(json!({
         "command": "self-update",
@@ -152,9 +160,9 @@ pub async fn run(args: SelfUpdateArgs) -> Result<Value> {
 }
 
 fn split_repository(repository: &str) -> Result<(String, String)> {
-    let (owner, repo) = repository.split_once('/').ok_or_else(|| {
-        AppError::invalid_input("repository override must use owner/repo format")
-    })?;
+    let (owner, repo) = repository
+        .split_once('/')
+        .ok_or_else(|| AppError::invalid_input("repository override must use owner/repo format"))?;
 
     if owner.is_empty() || repo.is_empty() {
         return Err(AppError::invalid_input(
@@ -217,8 +225,9 @@ fn build_http_client() -> Result<reqwest::Client> {
     let mut headers = HeaderMap::new();
     headers.insert(
         USER_AGENT,
-        HeaderValue::from_str(&format!("fpt-cli/{}", env!("CARGO_PKG_VERSION")))
-            .map_err(|error| AppError::internal(format!("failed to build user-agent header: {error}")))?,
+        HeaderValue::from_str(&format!("fpt-cli/{}", env!("CARGO_PKG_VERSION"))).map_err(
+            |error| AppError::internal(format!("failed to build user-agent header: {error}")),
+        )?,
     );
     headers.insert(
         ACCEPT,
@@ -244,9 +253,9 @@ async fn fetch_release(
     requested_version: Option<&str>,
 ) -> Result<GitHubRelease> {
     let url = match requested_version {
-        Some(version) => format!(
-            "https://api.github.com/repos/{owner}/{repo}/releases/tags/{version}"
-        ),
+        Some(version) => {
+            format!("https://api.github.com/repos/{owner}/{repo}/releases/tags/{version}")
+        }
         None => format!("https://api.github.com/repos/{owner}/{repo}/releases/latest"),
     };
 
@@ -277,14 +286,15 @@ async fn download_bytes(client: &reqwest::Client, url: &str) -> Result<Vec<u8>> 
         .get(url)
         .header(ACCEPT, "application/octet-stream")
         .send()
-
         .await
         .map_err(|error| AppError::network(format!("failed to download release asset: {error}")))?
         .error_for_status()
         .map_err(|error| AppError::network(format!("failed to download release asset: {error}")))?
         .bytes()
         .await
-        .map_err(|error| AppError::network(format!("failed to read release asset body: {error}")))?;
+        .map_err(|error| {
+            AppError::network(format!("failed to read release asset body: {error}"))
+        })?;
 
     Ok(bytes.to_vec())
 }
@@ -303,10 +313,18 @@ async fn download_text(client: &reqwest::Client, url: &str) -> Result<String> {
 }
 
 fn write_bytes(path: &Path, bytes: &[u8]) -> Result<()> {
-    let mut file = File::create(path)
-        .map_err(|error| AppError::internal(format!("failed to create temp file {}: {error}", path.display())))?;
-    file.write_all(bytes)
-        .map_err(|error| AppError::internal(format!("failed to write temp file {}: {error}", path.display())))
+    let mut file = File::create(path).map_err(|error| {
+        AppError::internal(format!(
+            "failed to create temp file {}: {error}",
+            path.display()
+        ))
+    })?;
+    file.write_all(bytes).map_err(|error| {
+        AppError::internal(format!(
+            "failed to write temp file {}: {error}",
+            path.display()
+        ))
+    })
 }
 
 fn verify_checksum(checksums: &str, asset_name: &str, archive_bytes: &[u8]) -> Result<()> {
@@ -337,10 +355,16 @@ fn verify_checksum(checksums: &str, asset_name: &str, archive_bytes: &[u8]) -> R
     Ok(())
 }
 
-fn extract_binary(archive_path: &Path, target: ReleaseTarget, output_dir: &Path) -> Result<PathBuf> {
+fn extract_binary(
+    archive_path: &Path,
+    target: ReleaseTarget,
+    output_dir: &Path,
+) -> Result<PathBuf> {
     let destination = output_dir.join(target.binary_name);
     match target.archive_kind {
-        ArchiveKind::TarGz => extract_tar_gz_binary(archive_path, target.binary_name, &destination)?,
+        ArchiveKind::TarGz => {
+            extract_tar_gz_binary(archive_path, target.binary_name, &destination)?
+        }
         ArchiveKind::Zip => extract_zip_binary(archive_path, target.binary_name, &destination)?,
     }
     ensure_executable(&destination)?;
@@ -349,7 +373,10 @@ fn extract_binary(archive_path: &Path, target: ReleaseTarget, output_dir: &Path)
 
 fn extract_tar_gz_binary(archive_path: &Path, binary_name: &str, destination: &Path) -> Result<()> {
     let file = File::open(archive_path).map_err(|error| {
-        AppError::internal(format!("failed to open archive {}: {error}", archive_path.display()))
+        AppError::internal(format!(
+            "failed to open archive {}: {error}",
+            archive_path.display()
+        ))
     })?;
     let decoder = GzDecoder::new(file);
     let mut archive = Archive::new(decoder);
@@ -378,7 +405,10 @@ fn extract_tar_gz_binary(archive_path: &Path, binary_name: &str, destination: &P
 
 fn extract_zip_binary(archive_path: &Path, binary_name: &str, destination: &Path) -> Result<()> {
     let file = File::open(archive_path).map_err(|error| {
-        AppError::internal(format!("failed to open archive {}: {error}", archive_path.display()))
+        AppError::internal(format!(
+            "failed to open archive {}: {error}",
+            archive_path.display()
+        ))
     })?;
     let mut archive = ZipArchive::new(file)
         .map_err(|error| AppError::internal(format!("failed to read zip archive: {error}")))?;
@@ -394,8 +424,9 @@ fn extract_zip_binary(archive_path: &Path, binary_name: &str, destination: &Path
                     destination.display()
                 ))
             })?;
-            io::copy(&mut entry, &mut output)
-                .map_err(|error| AppError::internal(format!("failed to extract zip entry: {error}")))?;
+            io::copy(&mut entry, &mut output).map_err(|error| {
+                AppError::internal(format!("failed to extract zip entry: {error}"))
+            })?;
             return Ok(());
         }
     }
@@ -408,16 +439,28 @@ fn extract_zip_binary(archive_path: &Path, binary_name: &str, destination: &Path
 }
 
 fn ensure_executable(path: &Path) -> Result<()> {
+    #[cfg(not(unix))]
+    let _ = path;
+
     #[cfg(unix)]
     {
+        use std::fs;
         use std::os::unix::fs::PermissionsExt;
 
         let mut permissions = fs::metadata(path)
-            .map_err(|error| AppError::internal(format!("failed to read metadata {}: {error}", path.display())))?
+            .map_err(|error| {
+                AppError::internal(format!(
+                    "failed to read metadata {}: {error}",
+                    path.display()
+                ))
+            })?
             .permissions();
         permissions.set_mode(0o755);
         fs::set_permissions(path, permissions).map_err(|error| {
-            AppError::internal(format!("failed to set executable permissions on {}: {error}", path.display()))
+            AppError::internal(format!(
+                "failed to set executable permissions on {}: {error}",
+                path.display()
+            ))
         })?;
     }
 

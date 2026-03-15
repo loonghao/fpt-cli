@@ -23,7 +23,6 @@ where
 
 fn normalize_work_schedule_input(input: Value) -> Result<Value> {
     let object = input
-
         .as_object()
         .cloned()
         .ok_or_else(|| AppError::invalid_input("work-schedule read input must be a JSON object"))?;
@@ -53,7 +52,9 @@ fn require_non_empty_string(
     })?;
 
     let value = value.as_str().ok_or_else(|| {
-        AppError::invalid_input(format!("`{field_name}` must be a string in YYYY-MM-DD format"))
+        AppError::invalid_input(format!(
+            "`{field_name}` must be a string in YYYY-MM-DD format"
+        ))
     })?;
 
     if value.trim().is_empty() {
@@ -71,9 +72,7 @@ fn validate_entity_link(value: &Value, field_name: &str, expected_type: &str) ->
     })?;
 
     let link_type = object.get("type").and_then(Value::as_str).ok_or_else(|| {
-        AppError::invalid_input(format!(
-            "`{field_name}` must contain a string `type` field"
-        ))
+        AppError::invalid_input(format!("`{field_name}` must contain a string `type` field"))
     })?;
     if link_type != expected_type {
         return Err(AppError::invalid_input(format!(

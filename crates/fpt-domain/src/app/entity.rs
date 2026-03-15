@@ -87,7 +87,9 @@ where
         }
 
         let config = ConnectionSettings::resolve(overrides)?;
-        self.transport.entity_update(&config, entity, id, &body).await
+        self.transport
+            .entity_update(&config, entity, id, &body)
+            .await
     }
 
     pub async fn entity_delete(

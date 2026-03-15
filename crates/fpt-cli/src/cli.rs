@@ -6,5 +6,3 @@ pub use commands::{
     AuthCommands, BatchEntityCommands, Cli, Commands, EntityCommands, InspectCommands,
     SchemaCommands, SelfUpdateArgs, ServerCommands, WorkScheduleCommands,
 };
-
-
