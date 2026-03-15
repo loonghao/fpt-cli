@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.2](https://github.com/loonghao/fpt-cli/compare/v0.2.1...v0.2.2) (2026-03-15)
+
+
+### Bug Fixes
+
+* **ci:** enable cargo-workspace plugin for release-please ([4e850a9](https://github.com/loonghao/fpt-cli/commit/4e850a9c940a87bb623e935dff67be4a813951c0))
+
 ## [0.2.1](https://github.com/loonghao/fpt-cli/compare/v0.2.0...v0.2.1) (2026-03-15)
 
 
