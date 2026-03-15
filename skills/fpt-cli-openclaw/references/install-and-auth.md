@@ -1,11 +1,16 @@
 ## Install and update `fpt-cli`
 
 ### Released binary installation
-Prefer downloading a release archive, optionally verifying `fpt-checksums.txt`, and then extracting the binary locally.
+Prefer downloading a release archive, optionally verifying `fpt-checksums.txt`, and then placing the binary into the same default install path used by the official installers.
 Avoid remote-script piping and direct remote-expression execution patterns in automated environments.
 
+Default install locations:
+- macOS / Linux installer default: `~/.local/bin/fpt`
+- Windows installer default: `%USERPROFILE%\.fpt\bin\fpt.exe`
+- Override with `FPT_INSTALL_DIR` when a different target directory is required.
 
 Release asset names:
+
 - Linux: `fpt-x86_64-unknown-linux-gnu.tar.gz`
 - Windows: `fpt-x86_64-pc-windows-msvc.zip`
 - macOS (Intel): `fpt-x86_64-apple-darwin.tar.gz`
@@ -14,20 +19,27 @@ Release asset names:
 #### macOS / Linux example
 ```bash
 export FPT_VERSION="v0.1.0"
+export FPT_INSTALL_DIR="${FPT_INSTALL_DIR:-$HOME/.local/bin}"
 curl -fLO "https://github.com/loonghao/fpt-cli/releases/download/${FPT_VERSION}/fpt-x86_64-unknown-linux-gnu.tar.gz"
 curl -fLO "https://github.com/loonghao/fpt-cli/releases/download/${FPT_VERSION}/fpt-checksums.txt"
 sha256sum -c --ignore-missing fpt-checksums.txt
 tar -xzf fpt-x86_64-unknown-linux-gnu.tar.gz
-./fpt capabilities --output json
+mkdir -p "$FPT_INSTALL_DIR"
+install -m 755 ./fpt "$FPT_INSTALL_DIR/fpt"
+"$FPT_INSTALL_DIR/fpt" capabilities --output json
 ```
 
 #### Windows PowerShell example
 ```powershell
 $FptVersion = "v0.1.0"
+$InstallDir = if ($env:FPT_INSTALL_DIR) { $env:FPT_INSTALL_DIR } else { Join-Path $env:USERPROFILE ".fpt\bin" }
 $Archive = "fpt-x86_64-pc-windows-msvc.zip"
+$ExtractDir = Join-Path $env:TEMP "fpt-extract"
 Invoke-WebRequest -Uri "https://github.com/loonghao/fpt-cli/releases/download/$FptVersion/$Archive" -OutFile $Archive
-Expand-Archive -Path $Archive -DestinationPath ".\fpt-bin" -Force
-.\fpt-bin\fpt.exe capabilities --output json
+Expand-Archive -Path $Archive -DestinationPath $ExtractDir -Force
+New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
+Copy-Item -Path (Join-Path $ExtractDir "fpt.exe") -Destination (Join-Path $InstallDir "fpt.exe") -Force
+& (Join-Path $InstallDir "fpt.exe") capabilities --output json
 ```
 
 ### In-place update
