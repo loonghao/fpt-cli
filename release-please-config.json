@@ -1,7 +1,7 @@
 {
   "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
   "packages": {
-    ".": {
+    "crates/fpt-cli": {
       "release-type": "rust",
       "package-name": "fpt-cli",
       "include-component-in-tag": false,
@@ -9,3 +9,4 @@
     }
   }
 }
+
