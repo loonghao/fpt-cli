@@ -35,7 +35,7 @@ concurrency:
 env:
   CARGO_TERM_COLOR: always
   CLAWHUB_CLI_PACKAGE: clawhub@0.7.0
-  CLAWHUB_CONFIG_PATH: ${{ runner.temp }}/clawhub/config.json
+  CLAWHUB_CONFIG_PATH: .clawhub/config.json
   CLAWHUB_DISABLE_TELEMETRY: "1"
 
 jobs:

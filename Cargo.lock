@@ -993,6 +993,7 @@ dependencies = [
  "tempfile",
  "tokio",
  "toon-format",
+ "workspace-hack",
  "zip",
 ]
 
@@ -1002,6 +1003,7 @@ version = "0.1.0"
 dependencies = [
  "serde",
  "serde_json",
+ "workspace-hack",
 ]
 
 [[package]]
@@ -1018,6 +1020,7 @@ dependencies = [
  "serde_json",
  "tokio",
  "url",
+ "workspace-hack",
 ]
 
 [[package]]
@@ -3698,6 +3701,40 @@ name = "wit-bindgen"
 version = "0.51.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d7249219f66ced02969388cf2bb044a09756a083d0fab1e566056b04d9fbcaa5"
+
+[[package]]
+name = "workspace-hack"
+version = "0.1.0"
+dependencies = [
+ "bit-set",
+ "bit-vec",
+ "bitflags",
+ "futures-channel",
+ "futures-core",
+ "futures-io",
+ "futures-sink",
+ "futures-util",
+ "lalrpop-util",
+ "libc",
+ "linux-raw-sys 0.12.1",
+ "log",
+ "memchr",
+ "mio",
+ "proc-macro2",
+ "quote",
+ "regex-automata",
+ "regex-syntax",
+ "rustix 1.1.4",
+ "serde_core",
+ "serde_json",
+ "slab",
+ "smallvec",
+ "syn 2.0.117",
+ "tokio",
+ "winapi",
+ "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
+]
 
 [[package]]
 name = "writeable"

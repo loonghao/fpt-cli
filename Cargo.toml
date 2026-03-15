@@ -3,6 +3,7 @@ members = [
   "crates/fpt-cli",
   "crates/fpt-core",
   "crates/fpt-domain",
+  "workspace-hack",
 ]
 resolver = "2"
 
