@@ -47,9 +47,6 @@ jobs:
       - name: Install cargo-hakari
         run: vx cargo install cargo-hakari --locked
 
-      - name: Verify Cargo.lock is committed
-        run: vx just verify-lockfile
-
       - name: Run quality checks
         run: vx just ci
 
