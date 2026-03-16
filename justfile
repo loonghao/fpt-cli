@@ -10,6 +10,10 @@ fmt:
 fmt-check:
     vx cargo fmt --all -- --check
 
+verify-lockfile:
+    vx cargo metadata --locked --format-version 1 --no-deps
+    git diff --exit-code -- Cargo.lock
+
 check:
     vx cargo check --workspace --locked
 
@@ -37,6 +41,7 @@ pre-commit-run:
 
 ci:
     vx just fmt-check
+    vx just verify-lockfile
     vx just hakari-check
     vx just check
     vx just lint
