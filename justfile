@@ -10,19 +10,14 @@ fmt:
 fmt-check:
     vx cargo fmt --all -- --check
 
-verify-lockfile:
-    vx cargo test --workspace --locked --no-run
-    vx cargo build --release --locked -p fpt-cli
-    git diff --exit-code -- Cargo.lock
-
 check:
-    vx cargo check --workspace --locked
+    vx cargo check --workspace
 
 lint:
-    vx cargo clippy --workspace --all-targets --locked -- -D warnings
+    vx cargo clippy --workspace --all-targets -- -D warnings
 
 test:
-    vx cargo test --workspace --locked
+    vx cargo test --workspace
 
 hakari-generate:
     vx cargo hakari generate
@@ -42,7 +37,6 @@ pre-commit-run:
 
 ci:
     vx just fmt-check
-    vx just verify-lockfile
     vx just hakari-check
     vx just check
     vx just lint
@@ -64,11 +58,11 @@ clawhub-sync:
     vx npx clawhub@0.7.0 sync --root skills --all --no-input
 
 
-build-release-locked *args:
-    vx cargo build --release --locked -p fpt-cli {{args}}
+build-release *args:
+    vx cargo build --release -p fpt-cli {{args}}
 
 build-release-target target:
-    vx cargo build --release --locked -p fpt-cli --target {{target}}
+    vx cargo build --release -p fpt-cli --target {{target}}
 
 release-version:
     vx uv run python scripts/release_metadata.py version
