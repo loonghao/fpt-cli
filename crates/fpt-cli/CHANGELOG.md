@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.6](https://github.com/loonghao/fpt-cli/compare/v0.2.5...v0.2.6) (2026-03-16)
+
+
+### Bug Fixes
+
+* **ci:** sync lockfile with workspace version ([a425815](https://github.com/loonghao/fpt-cli/commit/a4258156ba8bd7b981fe33e590c4f5e15a9808e4))
+
 ## [0.2.5](https://github.com/loonghao/fpt-cli/compare/v0.2.4...v0.2.5) (2026-03-16)
 
 
