@@ -11,7 +11,8 @@ fmt-check:
     vx cargo fmt --all -- --check
 
 verify-lockfile:
-    vx cargo metadata --locked --format-version 1 --no-deps
+    vx cargo test --workspace --locked --no-run
+    vx cargo build --release --locked -p fpt-cli
     git diff --exit-code -- Cargo.lock
 
 check:
