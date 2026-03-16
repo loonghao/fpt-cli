@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.5](https://github.com/loonghao/fpt-cli/compare/v0.2.4...v0.2.5) (2026-03-16)
+
+
+### Bug Fixes
+
+* **ci:** catch stale Cargo.lock before release ([3e96719](https://github.com/loonghao/fpt-cli/commit/3e967198655ee0d74677a67751d177adfe08558a))
+
 ## [0.2.4](https://github.com/loonghao/fpt-cli/compare/v0.2.3...v0.2.4) (2026-03-16)
 
 
