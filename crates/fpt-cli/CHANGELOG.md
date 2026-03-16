@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.4](https://github.com/loonghao/fpt-cli/compare/v0.2.3...v0.2.4) (2026-03-16)
+
+
+### Bug Fixes
+
+* add --locked to CI commands and update Cargo.lock ([024b4bc](https://github.com/loonghao/fpt-cli/commit/024b4bcef687f2e5c5fb477e2575db4400c8a926))
+
 ## [0.2.3](https://github.com/loonghao/fpt-cli/compare/v0.2.2...v0.2.3) (2026-03-15)
 
 
