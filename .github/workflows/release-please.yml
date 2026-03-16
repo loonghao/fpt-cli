@@ -1,11 +1,7 @@
 name: Release Please
 
 on:
-  workflow_run:
-    workflows:
-      - CI
-    types:
-      - completed
+  push:
     branches:
       - main
 
@@ -18,13 +14,12 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 concurrency:
-  group: release-please-${{ github.event.workflow_run.head_branch || github.ref }}
+  group: release-please-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   release-please:
     name: Release Please
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     outputs:
       release_created: ${{ steps.release.outputs.release_created }}
