@@ -11,13 +11,13 @@ fmt-check:
     vx cargo fmt --all -- --check
 
 check:
-    vx cargo check --workspace
+    vx cargo check --workspace --locked
 
 lint:
-    vx cargo clippy --workspace --all-targets -- -D warnings
+    vx cargo clippy --workspace --all-targets --locked -- -D warnings
 
 test:
-    vx cargo test --workspace
+    vx cargo test --workspace --locked
 
 hakari-generate:
     vx cargo hakari generate
