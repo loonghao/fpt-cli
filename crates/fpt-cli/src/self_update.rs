@@ -233,7 +233,7 @@ fn find_release_asset<'a>(
     release
         .assets
         .iter()
-        .find(|asset| candidates.iter().any(|candidate| asset.name == *candidate))
+        .find(|asset| candidates.contains(&asset.name))
         .ok_or_else(|| {
             AppError::unsupported(format!(
                 "release `{}` does not include a compatible asset for target `{}`; expected one of: {}",
