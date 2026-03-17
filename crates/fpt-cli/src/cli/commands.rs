@@ -1,6 +1,6 @@
 use clap::{Args, Parser, Subcommand};
 
-use super::common::OutputFormatArg;
+use super::common::{AuthModeArg, OutputFormatArg};
 use super::connection::ConnectionArgs;
 
 #[derive(Debug, Parser)]
@@ -53,11 +53,25 @@ pub enum Commands {
     Note(NoteCommands),
     #[command(subcommand)]
     Hierarchy(HierarchyCommands),
+    #[command(subcommand, name = "self")]
+    SelfCommand(SelfCommands),
+    #[command(subcommand)]
+    Config(ConfigCommands),
     #[command(
         name = "self-update",
-        about = "Check or install the released fpt binary for the current platform"
+        about = "Compatibility alias for `fpt self update`",
+        hide = true
     )]
     SelfUpdate(SelfUpdateArgs),
+}
+
+#[derive(Debug, Subcommand)]
+pub enum SelfCommands {
+    #[command(
+        name = "update",
+        about = "Check or install the released fpt binary for the current platform"
+    )]
+    Update(SelfUpdateArgs),
 }
 
 #[derive(Debug, Args, Clone)]
@@ -73,6 +87,81 @@ pub struct SelfUpdateArgs {
 
     #[arg(long, help = "Override the GitHub repository in owner/repo format")]
     pub repository: Option<String>,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum ConfigCommands {
+    #[command(name = "get", about = "Show the effective persisted CLI configuration")]
+    Get,
+    #[command(name = "path", about = "Show the config file path")]
+    Path,
+    #[command(name = "set", about = "Persist CLI configuration values for later reuse")]
+    Set(ConfigSetArgs),
+    #[command(name = "clear", about = "Remove persisted CLI configuration values")]
+    Clear(ConfigClearArgs),
+}
+
+#[derive(Debug, Args, Clone, Default)]
+pub struct ConfigSetArgs {
+    #[arg(long)]
+    pub site: Option<String>,
+
+    #[arg(long = "auth-mode", value_enum)]
+    pub auth_mode: Option<AuthModeArg>,
+
+    #[arg(long = "script-name")]
+    pub script_name: Option<String>,
+
+    #[arg(long = "script-key")]
+    pub script_key: Option<String>,
+
+    #[arg(long)]
+    pub username: Option<String>,
+
+    #[arg(long)]
+    pub password: Option<String>,
+
+    #[arg(long = "auth-token")]
+    pub auth_token: Option<String>,
+
+    #[arg(long = "session-token")]
+    pub session_token: Option<String>,
+
+    #[arg(long = "api-version")]
+    pub api_version: Option<String>,
+}
+
+#[derive(Debug, Args, Clone, Default)]
+pub struct ConfigClearArgs {
+    #[arg(long)]
+    pub all: bool,
+
+    #[arg(long)]
+    pub site: bool,
+
+    #[arg(long = "auth-mode")]
+    pub auth_mode: bool,
+
+    #[arg(long = "script-name")]
+    pub script_name: bool,
+
+    #[arg(long = "script-key")]
+    pub script_key: bool,
+
+    #[arg(long)]
+    pub username: bool,
+
+    #[arg(long)]
+    pub password: bool,
+
+    #[arg(long = "auth-token")]
+    pub auth_token: bool,
+
+    #[arg(long = "session-token")]
+    pub session_token: bool,
+
+    #[arg(long = "api-version")]
+    pub api_version: bool,
 }
 
 #[derive(Debug, Subcommand)]
@@ -325,40 +414,35 @@ pub enum FollowersCommands {
     },
     #[command(
         name = "unfollow",
-        about = "Remove a user from the followers of an entity record"
+        about = "Remove a user from an entity record's followers"
     )]
     Unfollow {
         entity: String,
         id: u64,
-        #[arg(long, help = "User JSON object with type and id")]
+        #[arg(
+            long,
+            help = "User JSON object with type and id, e.g. '{\"type\":\"HumanUser\",\"id\":456}'"
+        )]
         input: String,
     },
 }
 
 #[derive(Debug, Subcommand)]
 pub enum NoteCommands {
-    #[command(
-        name = "threads",
-        about = "Get the reply thread contents for a Note record"
-    )]
+    #[command(name = "threads", about = "List all replies in a top-level Note thread")]
     Threads {
+        #[arg(help = "Top-level Note record id")]
         note_id: u64,
-        #[arg(
-            long,
-            help = "Optional query parameters as JSON (fields, entity_fields, etc.)"
-        )]
+        #[arg(long, help = "Optional query parameters as JSON (fields, page, sort, etc.)")]
         input: Option<String>,
     },
 }
 
 #[derive(Debug, Subcommand)]
 pub enum HierarchyCommands {
-    #[command(
-        name = "search",
-        about = "Search the ShotGrid entity hierarchy navigation tree"
-    )]
+    #[command(name = "search", about = "Search project hierarchy with a structured JSON query")]
     Search {
-        #[arg(long, help = "Hierarchy search body as JSON")]
+        #[arg(long)]
         input: String,
     },
 }

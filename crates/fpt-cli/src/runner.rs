@@ -1,9 +1,10 @@
 use crate::cli::{
     ActivityCommands, AuthCommands, BatchEntityCommands, Cli, Commands, DownloadCommands,
     EntityCommands, EventLogCommands, FollowersCommands, HierarchyCommands, InspectCommands,
-    NoteCommands, PreferencesCommands, SchemaCommands, ServerCommands, ThumbnailCommands,
-    UploadCommands, WorkScheduleCommands,
+    NoteCommands, PreferencesCommands, SchemaCommands, SelfCommands, ServerCommands,
+    ThumbnailCommands, UploadCommands, WorkScheduleCommands,
 };
+use crate::config;
 use crate::self_update;
 use fpt_core::{AppError, Result, read_json_input};
 use fpt_domain::App;
@@ -225,10 +226,18 @@ pub async fn run(cli: Cli) -> Result<Value> {
                 app.hierarchy_search(connection, body).await
             }
         },
+        Commands::SelfCommand(command) => match command {
+            SelfCommands::Update(args) => self_update::run(args).await,
+        },
+        Commands::Config(command) => config::run(command),
         Commands::SelfUpdate(args) => self_update::run(args).await,
     }
 }
 
 fn required_json_input(input: String) -> Result<Value> {
-    read_json_input(Some(&input))?.ok_or_else(|| AppError::invalid_input("missing JSON input"))
+    read_json_input(Some(&input))?.ok_or_else(|| {
+        AppError::invalid_input(
+            "this command requires a JSON input payload; provide inline JSON, `@file.json`, or `@-` for stdin",
+        )
+    })
 }

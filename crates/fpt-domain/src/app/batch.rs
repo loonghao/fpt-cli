@@ -210,8 +210,10 @@ where
 
         if !yes {
             return Err(AppError::policy_blocked(
-                "batch delete operations require an explicit `--yes`, or use `--dry-run` to inspect the plan first",
-            ));
+                "entity batch delete is a destructive operation; pass `--yes` to execute it, or use `--dry-run` to inspect the request plan first",
+            )
+            .with_operation("entity_batch_delete")
+            .with_hint("Add `--yes` to confirm the batch deletion, or `--dry-run` to preview the request plans without executing them."));
         }
 
         let config = ConnectionSettings::resolve(overrides)?;
@@ -277,9 +279,19 @@ fn parse_batch_get_input(input: Value) -> Result<(Vec<u64>, Option<Vec<String>>)
         Value::Object(object) => {
             let ids = object
                 .get("ids")
-                .ok_or_else(|| AppError::invalid_input("entity batch get requires an `ids` field"))?
+                .ok_or_else(|| {
+                    AppError::invalid_input(
+                        "entity batch get input is missing required field `ids`",
+                    )
+                    .with_operation("parse_batch_get_input")
+                    .with_missing_fields(["ids"])
+                    .with_expected_shape("a JSON object containing `ids` (array of positive integers) and optional `fields`")
+                })?
                 .as_array()
-                .ok_or_else(|| AppError::invalid_input("`ids` must be an array"))?;
+                .ok_or_else(|| AppError::invalid_input("`ids` must be a JSON array of positive integers")
+                    .with_operation("parse_batch_get_input")
+                    .with_invalid_field("ids")
+                    .with_expected_shape("a JSON array of positive integers"))?;
             let ids = u64_list(ids, "ids")?;
             let fields = object
                 .get("fields")
@@ -288,69 +300,101 @@ fn parse_batch_get_input(input: Value) -> Result<(Vec<u64>, Option<Vec<String>>)
             Ok((ids, fields.filter(|items| !items.is_empty())))
         }
         _ => Err(AppError::invalid_input(
-            "entity batch get input must be a JSON array or an object containing `ids`",
-        )),
+            "entity batch get input must be either a JSON array of ids or an object containing `ids` and optional `fields`",
+        )
+        .with_operation("parse_batch_get_input")
+        .with_expected_shape("a JSON array of positive integers, or a JSON object containing `ids` and optional `fields`")),
     }
 }
 
 fn parse_batch_find_input(input: Value) -> Result<Vec<Value>> {
     match input {
-        Value::Array(values) => object_items(values, "entity batch find"),
+        Value::Array(values) => object_items(values, "entity batch find requests"),
         Value::Object(object) => {
             let requests = object
                 .get("requests")
                 .ok_or_else(|| {
-                    AppError::invalid_input("entity batch find requires a `requests` field")
+                    AppError::invalid_input(
+                        "entity batch find input is missing required field `requests`",
+                    )
+                    .with_operation("parse_batch_find_input")
+                    .with_missing_fields(["requests"])
+                    .with_expected_shape("a JSON object containing `requests` (array of find request objects)")
                 })?
                 .as_array()
-                .ok_or_else(|| AppError::invalid_input("`requests` must be an array"))?
+                .ok_or_else(|| AppError::invalid_input("`requests` must be a JSON array of objects")
+                    .with_operation("parse_batch_find_input")
+                    .with_invalid_field("requests")
+                    .with_expected_shape("a JSON array of find request objects"))?
                 .clone();
             object_items(requests, "requests")
         }
         _ => Err(AppError::invalid_input(
-            "entity batch find input must be a JSON array or an object containing `requests`",
-        )),
+            "entity batch find input must be either a JSON array of request objects or an object containing `requests`",
+        )
+        .with_operation("parse_batch_find_input")
+        .with_expected_shape("a JSON array of request objects, or a JSON object containing `requests`")),
     }
 }
 
 fn parse_batch_create_input(input: Value) -> Result<Vec<Value>> {
     match input {
-        Value::Array(values) => non_empty_items(values, "entity batch create"),
+        Value::Array(values) => non_empty_items(values, "entity batch create items"),
         Value::Object(object) => {
             let items = object
                 .get("items")
                 .ok_or_else(|| {
-                    AppError::invalid_input("entity batch create requires an `items` field")
+                    AppError::invalid_input(
+                        "entity batch create input is missing required field `items`",
+                    )
+                    .with_operation("parse_batch_create_input")
+                    .with_missing_fields(["items"])
+                    .with_expected_shape("a JSON object containing `items` (array of entity body objects)")
                 })?
                 .as_array()
-                .ok_or_else(|| AppError::invalid_input("`items` must be an array"))?
+                .ok_or_else(|| AppError::invalid_input("`items` must be a JSON array of objects")
+                    .with_operation("parse_batch_create_input")
+                    .with_invalid_field("items")
+                    .with_expected_shape("a JSON array of entity body objects"))?
                 .clone();
             non_empty_items(items, "items")
         }
         _ => Err(AppError::invalid_input(
-            "entity batch create input must be a JSON array or an object containing `items`",
-        )),
+            "entity batch create input must be either a JSON array of item bodies or an object containing `items`",
+        )
+        .with_operation("parse_batch_create_input")
+        .with_expected_shape("a JSON array of entity body objects, or a JSON object containing `items`")),
     }
 }
 
 fn parse_batch_update_input(input: Value) -> Result<Vec<BatchUpdateItem>> {
     let items = match input {
-        Value::Array(values) => non_empty_items(values, "entity batch update")?,
+        Value::Array(values) => non_empty_items(values, "entity batch update items")?,
         Value::Object(object) => {
             let items = object
                 .get("items")
                 .ok_or_else(|| {
-                    AppError::invalid_input("entity batch update requires an `items` field")
+                    AppError::invalid_input(
+                        "entity batch update input is missing required field `items`",
+                    )
+                    .with_operation("parse_batch_update_input")
+                    .with_missing_fields(["items"])
+                    .with_expected_shape("a JSON object containing `items` (array of update objects with `id` and `body`)")
                 })?
                 .as_array()
-                .ok_or_else(|| AppError::invalid_input("`items` must be an array"))?
+                .ok_or_else(|| AppError::invalid_input("`items` must be a JSON array of objects")
+                    .with_operation("parse_batch_update_input")
+                    .with_invalid_field("items")
+                    .with_expected_shape("a JSON array of update objects with `id` and `body`"))?
                 .clone();
             non_empty_items(items, "items")?
         }
         _ => {
             return Err(AppError::invalid_input(
-                "entity batch update input must be a JSON array or an object containing `items`",
-            ));
+                "entity batch update input must be either a JSON array of update objects or an object containing `items`",
+            )
+            .with_operation("parse_batch_update_input")
+            .with_expected_shape("a JSON array of update objects, or a JSON object containing `items`"));
         }
     };
 
@@ -360,17 +404,22 @@ fn parse_batch_update_input(input: Value) -> Result<Vec<BatchUpdateItem>> {
         .map(|(index, item)| {
             let object = item.as_object().ok_or_else(|| {
                 AppError::invalid_input(format!(
-                    "item {} in entity batch update must be an object",
+                    "item {} in entity batch update must be a JSON object with `id` and `body` fields",
                     index + 1
                 ))
+                .with_operation("parse_batch_update_input")
+                .with_invalid_field("items")
+                .with_expected_shape("each item must be a JSON object containing `id` (positive integer) and `body` (object)")
             })?;
             let id = object
                 .get("id")
                 .ok_or_else(|| {
                     AppError::invalid_input(format!(
-                        "item {} in entity batch update is missing `id`",
+                        "item {} in entity batch update is missing required field `id`",
                         index + 1
                     ))
+                    .with_operation("parse_batch_update_input")
+                    .with_missing_fields(["id"])
                 })
                 .and_then(|value| {
                     value.as_u64().ok_or_else(|| {
@@ -378,13 +427,18 @@ fn parse_batch_update_input(input: Value) -> Result<Vec<BatchUpdateItem>> {
                             "`id` in item {} of entity batch update must be a positive integer",
                             index + 1
                         ))
+                        .with_operation("parse_batch_update_input")
+                        .with_invalid_field("id")
+                        .with_expected_shape("a positive integer")
                     })
                 })?;
             let body = object.get("body").cloned().ok_or_else(|| {
                 AppError::invalid_input(format!(
-                    "item {} in entity batch update is missing `body`",
+                    "item {} in entity batch update is missing required field `body`",
                     index + 1
                 ))
+                .with_operation("parse_batch_update_input")
+                .with_missing_fields(["body"])
             })?;
             Ok(BatchUpdateItem { id, body })
         })
@@ -398,23 +452,36 @@ fn parse_batch_delete_input(input: Value) -> Result<Vec<u64>> {
             let ids = object
                 .get("ids")
                 .ok_or_else(|| {
-                    AppError::invalid_input("entity batch delete requires an `ids` field")
+                    AppError::invalid_input(
+                        "entity batch delete input is missing required field `ids`",
+                    )
+                    .with_operation("parse_batch_delete_input")
+                    .with_missing_fields(["ids"])
+                    .with_expected_shape("a JSON object containing `ids` (array of positive integers)")
                 })?
                 .as_array()
-                .ok_or_else(|| AppError::invalid_input("`ids` must be an array"))?;
+                .ok_or_else(|| AppError::invalid_input("`ids` must be a JSON array of positive integers")
+                    .with_operation("parse_batch_delete_input")
+                    .with_invalid_field("ids")
+                    .with_expected_shape("a JSON array of positive integers"))?;
             u64_list(ids, "ids")
         }
         _ => Err(AppError::invalid_input(
-            "entity batch delete input must be a JSON array or an object containing `ids`",
-        )),
+            "entity batch delete input must be either a JSON array of ids or an object containing `ids`",
+        )
+        .with_operation("parse_batch_delete_input")
+        .with_expected_shape("a JSON array of positive integers, or a JSON object containing `ids`")),
     }
 }
 
 fn non_empty_items(values: Vec<Value>, field_name: &str) -> Result<Vec<Value>> {
     if values.is_empty() {
         return Err(AppError::invalid_input(format!(
-            "`{field_name}` cannot be an empty array"
-        )));
+            "`{field_name}` must not be an empty array"
+        ))
+        .with_operation("validate_batch_input")
+        .with_invalid_field(field_name)
+        .with_hint("Provide at least one item in the array."));
     }
     Ok(values)
 }
@@ -424,9 +491,12 @@ fn object_items(values: Vec<Value>, field_name: &str) -> Result<Vec<Value>> {
     for (index, value) in values.iter().enumerate() {
         if !value.is_object() {
             return Err(AppError::invalid_input(format!(
-                "item {} in `{field_name}` must be an object",
+                "item {} in `{field_name}` must be a JSON object",
                 index + 1
-            )));
+            ))
+            .with_operation("validate_batch_input")
+            .with_invalid_field(field_name)
+            .with_expected_shape("each item must be a JSON object"));
         }
     }
     Ok(values)
@@ -435,8 +505,11 @@ fn object_items(values: Vec<Value>, field_name: &str) -> Result<Vec<Value>> {
 fn u64_list(values: &[Value], field_name: &str) -> Result<Vec<u64>> {
     if values.is_empty() {
         return Err(AppError::invalid_input(format!(
-            "`{field_name}` cannot be an empty array"
-        )));
+            "`{field_name}` must not be an empty array"
+        ))
+        .with_operation("validate_batch_input")
+        .with_invalid_field(field_name)
+        .with_hint("Provide at least one id in the array."));
     }
 
     values
@@ -448,6 +521,9 @@ fn u64_list(values: &[Value], field_name: &str) -> Result<Vec<u64>> {
                     "item {} in `{field_name}` must be a positive integer",
                     index + 1
                 ))
+                .with_operation("validate_batch_input")
+                .with_invalid_field(field_name)
+                .with_expected_shape("a positive integer")
             })
         })
         .collect()
@@ -466,15 +542,23 @@ fn string_list(value: &Value, field_name: &str) -> Result<Vec<String>> {
 
     let array = value.as_array().ok_or_else(|| {
         AppError::invalid_input(format!(
-            "`{field_name}` must be a string or an array of strings"
+            "`{field_name}` must be either a comma-separated string or an array of strings"
         ))
+        .with_operation("validate_batch_input")
+        .with_invalid_field(field_name)
+        .with_expected_shape("either a comma-separated string or an array of strings")
     })?;
 
     array
         .iter()
         .map(|value| {
             value.as_str().map(ToString::to_string).ok_or_else(|| {
-                AppError::invalid_input(format!("`{field_name}` may contain only strings"))
+                AppError::invalid_input(format!(
+                    "`{field_name}` array items must all be strings"
+                ))
+                .with_operation("validate_batch_input")
+                .with_invalid_field(field_name)
+                .with_expected_shape("an array containing only strings")
             })
         })
         .collect()

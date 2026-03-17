@@ -53,18 +53,25 @@ fn build_query_params(input: Option<Value>) -> Result<Vec<(String, String)>> {
         return Ok(Vec::new());
     };
 
-    let object = input
-        .as_object()
-        .ok_or_else(|| AppError::invalid_input("activity/event-log input must be a JSON object"))?;
+    let object = input.as_object().ok_or_else(|| {
+        AppError::invalid_input(
+            "activity and event-log input must be a JSON object containing query parameters",
+        )
+        .with_operation("build_query_params")
+        .with_expected_shape("a JSON object containing fields like `fields`, `entity_fields`, `sort`, or `page`")
+    })?;
 
     let mut params: Vec<(String, String)> = Vec::new();
 
     for (key, value) in object {
         match key.as_str() {
             "page" => {
-                let page = value
-                    .as_object()
-                    .ok_or_else(|| AppError::invalid_input("`page` must be an object"))?;
+                let page = value.as_object().ok_or_else(|| {
+                    AppError::invalid_input("`page` must be a JSON object like `{\"number\": 1, \"size\": 50}`")
+                        .with_operation("build_query_params")
+                        .with_invalid_field("page")
+                        .with_expected_shape("a JSON object like `{\"number\": 1, \"size\": 50}`")
+                })?;
                 if let Some(number) = page.get("number") {
                     params.push((
                         "page[number]".to_string(),
@@ -99,8 +106,11 @@ fn scalar_to_string(value: &Value, field_name: &str) -> Result<String> {
         Value::Number(n) => Ok(n.to_string()),
         Value::Bool(b) => Ok(b.to_string()),
         _ => Err(AppError::invalid_input(format!(
-            "`{field_name}` must be a scalar value (string, number, or bool)"
-        ))),
+            "`{field_name}` must be a scalar query value of type string, number, or boolean"
+        ))
+        .with_operation("build_query_params")
+        .with_invalid_field(field_name)
+        .with_expected_shape("a scalar value of type string, number, or boolean")),
     }
 }
 
@@ -110,16 +120,24 @@ fn string_list_to_csv(value: &Value, field_name: &str) -> Result<String> {
     }
     let array = value.as_array().ok_or_else(|| {
         AppError::invalid_input(format!(
-            "`{field_name}` must be a string or an array of strings"
+            "`{field_name}` must be either a comma-separated string or an array of strings"
         ))
+        .with_operation("build_query_params")
+        .with_invalid_field(field_name)
+        .with_expected_shape("either a comma-separated string or an array of strings")
     })?;
     let items: Result<Vec<String>> = array
         .iter()
         .map(|v| {
             v.as_str().map(ToString::to_string).ok_or_else(|| {
-                AppError::invalid_input(format!("`{field_name}` items must be strings"))
+                AppError::invalid_input(format!(
+                    "`{field_name}` array items must all be strings"
+                ))
+                .with_operation("build_query_params")
+                .with_invalid_field(field_name)
+                .with_expected_shape("an array containing only strings")
             })
         })
         .collect();
-    Ok(items?.join(","))
+    items.map(|items| items.join(","))
 }

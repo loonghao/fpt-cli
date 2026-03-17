@@ -60,33 +60,26 @@ pub async fn run(args: SelfUpdateArgs) -> Result<Value> {
         .unwrap_or_else(|| DEFAULT_REPOSITORY.to_string());
     let (owner, repo) = split_repository(&repository)?;
     let target = detect_target()?;
-    let current_version = Version::parse(env!("CARGO_PKG_VERSION"))
-        .map_err(|error| AppError::internal(format!("failed to parse current version: {error}")))?;
+    let current_version = Version::parse(env!("CARGO_PKG_VERSION")).map_err(|error| {
+        AppError::internal(format!(
+            "could not parse the current CLI version from build metadata: {error}"
+        ))
+    })?;
     let current_exe = env::current_exe().map_err(|error| {
         AppError::internal(format!(
-            "failed to resolve current executable path: {error}"
+            "could not resolve the current executable path: {error}"
         ))
     })?;
     let requested_version = args.version.clone().map(normalize_version);
     let client = build_http_client()?;
     let release = fetch_release(&client, &owner, &repo, requested_version.as_deref()).await?;
     let release_version = parse_release_version(&release.tag_name)?;
-    let asset_name = asset_name_for(target);
-    let asset = release
-        .assets
-        .iter()
-        .find(|asset| asset.name == asset_name)
-        .ok_or_else(|| {
-            AppError::unsupported(format!(
-                "release {} does not provide asset {} for target {}",
-                release.tag_name, asset_name, target.triple
-            ))
-        })?;
+    let asset = find_release_asset(&release, target, &release_version)?;
     let update_available = release_version > current_version;
 
     if args.check {
         return Ok(json!({
-            "command": "self-update",
+            "command": "self.update",
             "status": if update_available { "update_available" } else { "already_latest" },
             "repository": repository,
             "requested_version": requested_version,
@@ -105,7 +98,7 @@ pub async fn run(args: SelfUpdateArgs) -> Result<Value> {
 
     if !update_available && requested_version.is_none() {
         return Ok(json!({
-            "command": "self-update",
+            "command": "self.update",
             "status": "already_latest",
             "repository": repository,
             "current_version": current_version.to_string(),
@@ -122,8 +115,11 @@ pub async fn run(args: SelfUpdateArgs) -> Result<Value> {
         .assets
         .iter()
         .find(|asset| asset.name == CHECKSUM_ASSET_NAME);
-    let temp_dir = tempdir()
-        .map_err(|error| AppError::internal(format!("failed to create temp dir: {error}")))?;
+    let temp_dir = tempdir().map_err(|error| {
+        AppError::internal(format!(
+            "could not create a temporary directory for self-update: {error}"
+        ))
+    })?;
     let archive_path = temp_dir.path().join(&asset.name);
     let archive_bytes = download_bytes(&client, &asset.browser_download_url).await?;
     write_bytes(&archive_path, &archive_bytes)?;
@@ -138,11 +134,13 @@ pub async fn run(args: SelfUpdateArgs) -> Result<Value> {
 
     let extracted_binary = extract_binary(&archive_path, target, temp_dir.path())?;
     self_replace::self_replace(&extracted_binary).map_err(|error| {
-        AppError::internal(format!("failed to replace current executable: {error}"))
+        AppError::internal(format!(
+            "could not replace the current executable during self-update: {error}"
+        ))
     })?;
 
     Ok(json!({
-        "command": "self-update",
+        "command": "self.update",
         "status": if release_version > current_version { "updated" } else { "reinstalled" },
         "repository": repository,
         "requested_version": requested_version,
@@ -160,14 +158,24 @@ pub async fn run(args: SelfUpdateArgs) -> Result<Value> {
 }
 
 fn split_repository(repository: &str) -> Result<(String, String)> {
-    let (owner, repo) = repository
-        .split_once('/')
-        .ok_or_else(|| AppError::invalid_input("repository override must use owner/repo format"))?;
+    let (owner, repo) = repository.split_once('/').ok_or_else(|| {
+        AppError::invalid_input(
+            "repository override must use the format `owner/repo`",
+        )
+        .with_operation("split_repository")
+        .with_invalid_field("repository")
+        .with_received_value(repository)
+        .with_expected_shape("`owner/repo`, for example `loonghao/fpt-cli`")
+    })?;
 
     if owner.is_empty() || repo.is_empty() {
         return Err(AppError::invalid_input(
-            "repository override must use owner/repo format",
-        ));
+            "repository override must use the format `owner/repo`",
+        )
+        .with_operation("split_repository")
+        .with_invalid_field("repository")
+        .with_received_value(repository)
+        .with_expected_shape("`owner/repo`, for example `loonghao/fpt-cli`"));
     }
 
     Ok((owner.to_string(), repo.to_string()))
@@ -203,14 +211,57 @@ fn detect_target() -> Result<ReleaseTarget> {
             binary_name: "fpt",
         }),
         _ => Err(AppError::unsupported(format!(
-            "self-update is currently supported for {} (current host: {arch}-{os})",
+            "self-update is only supported for targets {}; current host is `{arch}-{os}`",
             SUPPORTED_TARGETS.join(", ")
-        ))),
+        ))
+        .with_operation("detect_target")
+        .with_detail("os", os)
+        .with_detail("arch", arch)
+        .with_allowed_values(SUPPORTED_TARGETS.iter().copied())
+        .with_hint("Download a pre-built binary for your platform from the GitHub releases page, or build from source.")),
     }
 }
 
-fn asset_name_for(target: ReleaseTarget) -> String {
+fn find_release_asset<'a>(
+    release: &'a GitHubRelease,
+    target: ReleaseTarget,
+    version: &Version,
+) -> Result<&'a GitHubReleaseAsset> {
+    let candidates = [
+        versioned_asset_name_for(target, version),
+        legacy_asset_name_for(target),
+    ];
+
+    release
+        .assets
+        .iter()
+        .find(|asset| candidates.iter().any(|candidate| asset.name == *candidate))
+        .ok_or_else(|| {
+            AppError::unsupported(format!(
+                "release `{}` does not include a compatible asset for target `{}`; expected one of: {}",
+                release.tag_name,
+                target.triple,
+                candidates.join(", ")
+            ))
+            .with_operation("find_release_asset")
+            .with_detail("tag_name", &release.tag_name)
+            .with_detail("target", target.triple)
+            .with_allowed_values(candidates.iter().map(String::as_str))
+            .with_hint("Check the GitHub releases page to confirm which assets are available for this release.")
+        })
+}
+
+fn legacy_asset_name_for(target: ReleaseTarget) -> String {
     format!("fpt-{}.{}", target.triple, target.archive_extension)
+}
+
+fn versioned_asset_name_for(target: ReleaseTarget, version: &Version) -> String {
+    format!(
+        "fpt-v{}-{}.{}",
+        version,
+        target.triple,
+        target.archive_extension
+    )
 }
 
 fn normalize_version(version: String) -> String {
@@ -226,7 +277,11 @@ fn build_http_client() -> Result<reqwest::Client> {
     headers.insert(
         USER_AGENT,
         HeaderValue::from_str(&format!("fpt-cli/{}", env!("CARGO_PKG_VERSION"))).map_err(
-            |error| AppError::internal(format!("failed to build user-agent header: {error}")),
+            |error| {
+                AppError::internal(format!(
+                    "could not build the GitHub user-agent header: {error}"
+                ))
+            },
         )?,
     );
     headers.insert(
@@ -235,15 +290,21 @@ fn build_http_client() -> Result<reqwest::Client> {
     );
 
     if let Ok(token) = env::var("GITHUB_TOKEN") {
-        let value = HeaderValue::from_str(&format!("Bearer {token}"))
-            .map_err(|error| AppError::invalid_input(format!("invalid GITHUB_TOKEN: {error}")))?;
+        let value = HeaderValue::from_str(&format!("Bearer {token}")).map_err(|error| {
+            AppError::invalid_input(format!(
+                "environment variable `GITHUB_TOKEN` is not a valid HTTP header value: {error}"
+            ))
+            .with_operation("build_http_client")
+            .with_invalid_field("GITHUB_TOKEN")
+            .with_hint("Ensure `GITHUB_TOKEN` contains only ASCII characters and no whitespace.")
+        })?;
         headers.insert(AUTHORIZATION, value);
     }
 
     reqwest::Client::builder()
         .default_headers(headers)
         .build()
-        .map_err(|error| AppError::internal(format!("failed to create HTTP client: {error}")))
+        .map_err(|error| AppError::internal(format!("could not create the GitHub HTTP client: {error}")))
 }
 
 async fn fetch_release(
@@ -263,19 +324,33 @@ async fn fetch_release(
         .get(url)
         .send()
         .await
-        .map_err(|error| AppError::network(format!("failed to query release metadata: {error}")))?
+        .map_err(|error| AppError::network(format!("could not request GitHub release metadata: {error}"))
+            .with_operation("fetch_release")
+            .with_transport("rest")
+            .with_resource(format!("repos/{owner}/{repo}/releases"))
+            .retryable(true)
+        )?
         .error_for_status()
-        .map_err(|error| AppError::network(format!("failed to query release metadata: {error}")))?
+        .map_err(|error| AppError::network(format!("GitHub release metadata request failed: {error}"))
+            .with_operation("fetch_release")
+            .with_transport("rest")
+            .with_resource(format!("repos/{owner}/{repo}/releases"))
+            .with_hint("Check the repository name and ensure the release tag exists.")
+        )?
         .json::<GitHubRelease>()
         .await
-        .map_err(|error| AppError::network(format!("failed to decode release metadata: {error}")))
+        .map_err(|error| AppError::network(format!("could not decode GitHub release metadata as JSON: {error}"))
+            .with_operation("fetch_release")
+            .with_transport("rest")
+            .with_expected_shape("a GitHub release JSON object with `tag_name`, `html_url`, and `assets`")
+        )
 }
 
 fn parse_release_version(tag_name: &str) -> Result<Version> {
     let version = tag_name.strip_prefix('v').unwrap_or(tag_name);
     Version::parse(version).map_err(|error| {
         AppError::internal(format!(
-            "failed to parse release tag {} as semantic version: {error}",
+            "release tag `{}` is not a valid semantic version: {error}",
             tag_name
         ))
     })
@@ -287,13 +362,15 @@ async fn download_bytes(client: &reqwest::Client, url: &str) -> Result<Vec<u8>> 
         .header(ACCEPT, "application/octet-stream")
         .send()
         .await
-        .map_err(|error| AppError::network(format!("failed to download release asset: {error}")))?
+        .map_err(|error| AppError::network(format!("could not download the release asset: {error}")))?
         .error_for_status()
-        .map_err(|error| AppError::network(format!("failed to download release asset: {error}")))?
+        .map_err(|error| AppError::network(format!("release asset download failed: {error}")))?
         .bytes()
         .await
         .map_err(|error| {
-            AppError::network(format!("failed to read release asset body: {error}"))
+            AppError::network(format!(
+                "could not read the downloaded release asset body: {error}"
+            ))
         })?;
 
     Ok(bytes.to_vec())
@@ -304,24 +381,24 @@ async fn download_text(client: &reqwest::Client, url: &str) -> Result<String> {
         .get(url)
         .send()
         .await
-        .map_err(|error| AppError::network(format!("failed to download checksum file: {error}")))?
+        .map_err(|error| AppError::network(format!("could not download the checksum file: {error}")))?
         .error_for_status()
-        .map_err(|error| AppError::network(format!("failed to download checksum file: {error}")))?
+        .map_err(|error| AppError::network(format!("checksum file download failed: {error}")))?
         .text()
         .await
-        .map_err(|error| AppError::network(format!("failed to read checksum file: {error}")))
+        .map_err(|error| AppError::network(format!("could not read the checksum file body: {error}")))
 }
 
 fn write_bytes(path: &Path, bytes: &[u8]) -> Result<()> {
     let mut file = File::create(path).map_err(|error| {
         AppError::internal(format!(
-            "failed to create temp file {}: {error}",
+            "could not create temporary file `{}`: {error}",
             path.display()
         ))
     })?;
     file.write_all(bytes).map_err(|error| {
         AppError::internal(format!(
-            "failed to write temp file {}: {error}",
+            "could not write temporary file `{}`: {error}",
             path.display()
         ))
     })
@@ -339,17 +416,25 @@ fn verify_checksum(checksums: &str, asset_name: &str, archive_bytes: &[u8]) -> R
         .next()
         .ok_or_else(|| {
             AppError::internal(format!(
-                "checksum entry for {} was not found in {}",
-                asset_name, CHECKSUM_ASSET_NAME
+                "checksum file `{}` does not contain an entry for asset `{}`",
+                CHECKSUM_ASSET_NAME, asset_name
             ))
+            .with_operation("verify_checksum")
+            .with_resource(CHECKSUM_ASSET_NAME)
+            .with_detail("asset_name", asset_name)
         })?;
 
     let actual = format!("{:x}", Sha256::digest(archive_bytes));
     if actual != expected {
         return Err(AppError::network(format!(
-            "checksum mismatch for {}: expected {}, got {}",
+            "checksum verification failed for `{}`; expected `{}`, got `{}`",
             asset_name, expected, actual
-        )));
+        ))
+        .with_operation("verify_checksum")
+        .with_resource(asset_name)
+        .with_detail("expected_checksum", &expected)
+        .with_detail("actual_checksum", &actual)
+        .with_hint("The downloaded asset may be corrupted or tampered with. Try re-running the update."));
     }
 
     Ok(())
@@ -374,7 +459,7 @@ fn extract_binary(
 fn extract_tar_gz_binary(archive_path: &Path, binary_name: &str, destination: &Path) -> Result<()> {
     let file = File::open(archive_path).map_err(|error| {
         AppError::internal(format!(
-            "failed to open archive {}: {error}",
+            "could not open release archive `{}`: {error}",
             archive_path.display()
         ))
     })?;
@@ -387,7 +472,7 @@ fn extract_tar_gz_binary(archive_path: &Path, binary_name: &str, destination: &P
         if path.file_name().and_then(|value| value.to_str()) == Some(binary_name) {
             let mut output = File::create(destination).map_err(|error| {
                 AppError::internal(format!(
-                    "failed to create extracted binary {}: {error}",
+                    "could not create extracted binary `{}`: {error}",
                     destination.display()
                 ))
             })?;
@@ -397,7 +482,7 @@ fn extract_tar_gz_binary(archive_path: &Path, binary_name: &str, destination: &P
     }
 
     Err(AppError::internal(format!(
-        "binary {} was not found in archive {}",
+        "binary `{}` was not found inside archive `{}`",
         binary_name,
         archive_path.display()
     )))
@@ -406,33 +491,34 @@ fn extract_tar_gz_binary(archive_path: &Path, binary_name: &str, destination: &P
 fn extract_zip_binary(archive_path: &Path, binary_name: &str, destination: &Path) -> Result<()> {
     let file = File::open(archive_path).map_err(|error| {
         AppError::internal(format!(
-            "failed to open archive {}: {error}",
+            "could not open release archive `{}`: {error}",
             archive_path.display()
         ))
     })?;
-    let mut archive = ZipArchive::new(file)
-        .map_err(|error| AppError::internal(format!("failed to read zip archive: {error}")))?;
+    let mut archive = ZipArchive::new(file).map_err(|error| {
+        AppError::internal(format!("could not read the zip archive structure: {error}"))
+    })?;
 
     for index in 0..archive.len() {
-        let mut entry = archive
-            .by_index(index)
-            .map_err(|error| AppError::internal(format!("failed to read zip entry: {error}")))?;
+        let mut entry = archive.by_index(index).map_err(|error| {
+            AppError::internal(format!("could not read zip entry {index}: {error}"))
+        })?;
         if entry.name().ends_with(binary_name) && !entry.is_dir() {
             let mut output = File::create(destination).map_err(|error| {
                 AppError::internal(format!(
-                    "failed to create extracted binary {}: {error}",
+                    "could not create extracted binary `{}`: {error}",
                     destination.display()
                 ))
             })?;
             io::copy(&mut entry, &mut output).map_err(|error| {
-                AppError::internal(format!("failed to extract zip entry: {error}"))
+                AppError::internal(format!("could not extract zip entry to disk: {error}"))
             })?;
             return Ok(());
         }
     }
 
     Err(AppError::internal(format!(
-        "binary {} was not found in archive {}",
+        "binary `{}` was not found inside archive `{}`",
         binary_name,
         archive_path.display()
     )))
@@ -450,7 +536,7 @@ fn ensure_executable(path: &Path) -> Result<()> {
         let mut permissions = fs::metadata(path)
             .map_err(|error| {
                 AppError::internal(format!(
-                    "failed to read metadata {}: {error}",
+                    "could not read file metadata for `{}`: {error}",
                     path.display()
                 ))
             })?
@@ -458,7 +544,7 @@ fn ensure_executable(path: &Path) -> Result<()> {
         permissions.set_mode(0o755);
         fs::set_permissions(path, permissions).map_err(|error| {
             AppError::internal(format!(
-                "failed to set executable permissions on {}: {error}",
+                "could not set executable permissions on `{}`: {error}",
                 path.display()
             ))
         })?;
@@ -468,5 +554,9 @@ fn ensure_executable(path: &Path) -> Result<()> {
 }
 
 fn map_archive_error(error: impl std::fmt::Display) -> AppError {
-    AppError::internal(format!("failed to extract release archive: {error}"))
+    AppError::internal(format!(
+        "could not extract the release archive contents: {error}"
+    ))
+    .with_operation("extract_archive")
+    .with_hint("The archive may be corrupted. Try re-running the update to download a fresh copy.")
 }

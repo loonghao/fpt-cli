@@ -379,7 +379,7 @@ impl FindOneTransport {
 #[async_trait]
 impl ShotgridTransport for FindOneTransport {
     async fn auth_test(&self, _config: &ConnectionSettings) -> Result<Value> {
-        Err(AppError::not_implemented("unused"))
+        Ok(json!({"ok": true}))
     }
 
     async fn server_info(&self, _site: &str) -> Result<Value> {
@@ -584,7 +584,232 @@ impl ShotgridTransport for FindOneTransport {
     }
 
     async fn hierarchy(&self, _config: &ConnectionSettings, _body: &Value) -> Result<Value> {
-        Err(AppError::not_implemented("unused"))
+        Ok(json!({}))
+    }
+}
+
+#[derive(Debug, Clone, Default)]
+struct NoteThreadsNotFoundTransport;
+
+#[async_trait]
+impl ShotgridTransport for NoteThreadsNotFoundTransport {
+    async fn auth_test(&self, _config: &ConnectionSettings) -> Result<Value> {
+        Ok(json!({"ok": true}))
+    }
+
+    async fn server_info(&self, _site: &str) -> Result<Value> {
+        Ok(json!({}))
+    }
+
+    async fn schema_entities(&self, _config: &ConnectionSettings) -> Result<Value> {
+        Ok(json!({}))
+    }
+
+    async fn schema_fields(&self, _config: &ConnectionSettings, _entity: &str) -> Result<Value> {
+        Ok(json!({}))
+    }
+
+    async fn entity_get(
+        &self,
+        _config: &ConnectionSettings,
+        _entity: &str,
+        _id: u64,
+        _fields: Option<Vec<String>>,
+    ) -> Result<Value> {
+        Ok(json!({}))
+    }
+
+    async fn entity_find(
+        &self,
+        _config: &ConnectionSettings,
+        _entity: &str,
+        _params: FindParams,
+    ) -> Result<Value> {
+        Ok(json!({}))
+    }
+
+    async fn entity_summarize(
+        &self,
+        _config: &ConnectionSettings,
+        _entity: &str,
+        _body: &Value,
+    ) -> Result<Value> {
+        Ok(json!({}))
+    }
+
+    async fn entity_create(
+        &self,
+        _config: &ConnectionSettings,
+        _entity: &str,
+        _body: &Value,
+    ) -> Result<Value> {
+        Ok(json!({}))
+    }
+
+    async fn entity_update(
+        &self,
+        _config: &ConnectionSettings,
+        _entity: &str,
+        _id: u64,
+        _body: &Value,
+    ) -> Result<Value> {
+        Ok(json!({}))
+    }
+
+    async fn entity_delete(
+        &self,
+        _config: &ConnectionSettings,
+        _entity: &str,
+        _id: u64,
+    ) -> Result<Value> {
+        Ok(json!({}))
+    }
+
+    async fn entity_revive(
+        &self,
+        _config: &ConnectionSettings,
+        _entity: &str,
+        _id: u64,
+    ) -> Result<Value> {
+        Ok(json!({}))
+    }
+
+    async fn work_schedule_read(
+        &self,
+        _config: &ConnectionSettings,
+        _body: &Value,
+    ) -> Result<Value> {
+        Ok(json!({}))
+    }
+
+    async fn upload_url(
+        &self,
+        _config: &ConnectionSettings,
+        _request: UploadUrlRequest<'_>,
+    ) -> Result<Value> {
+        Ok(json!({}))
+    }
+
+    async fn download_url(
+        &self,
+        _config: &ConnectionSettings,
+        _entity: &str,
+        _id: u64,
+        _field_name: &str,
+    ) -> Result<Value> {
+        Ok(json!({}))
+    }
+
+    async fn thumbnail_url(
+        &self,
+        _config: &ConnectionSettings,
+        _entity: &str,
+        _id: u64,
+    ) -> Result<Value> {
+        Ok(json!({}))
+    }
+
+    async fn activity_stream(
+        &self,
+        _config: &ConnectionSettings,
+        _entity: &str,
+        _id: u64,
+        _params: &[(String, String)],
+    ) -> Result<Value> {
+        Ok(json!({}))
+    }
+
+    async fn event_log_entries(
+        &self,
+        _config: &ConnectionSettings,
+        _params: &[(String, String)],
+    ) -> Result<Value> {
+        Ok(json!({}))
+    }
+
+    async fn preferences_get(&self, _config: &ConnectionSettings) -> Result<Value> {
+        Ok(json!({}))
+    }
+
+    async fn entity_followers(
+        &self,
+        _config: &ConnectionSettings,
+        _entity: &str,
+        _id: u64,
+    ) -> Result<Value> {
+        Ok(json!({}))
+    }
+
+    async fn entity_follow(
+        &self,
+        _config: &ConnectionSettings,
+        _entity: &str,
+        _id: u64,
+        _user: &Value,
+    ) -> Result<Value> {
+        Ok(json!({}))
+    }
+
+    async fn entity_unfollow(
+        &self,
+        _config: &ConnectionSettings,
+        _entity: &str,
+        _id: u64,
+        _user: &Value,
+    ) -> Result<Value> {
+        Ok(json!({}))
+    }
+
+    async fn note_threads(
+        &self,
+        _config: &ConnectionSettings,
+        note_id: u64,
+        _params: &[(String, String)],
+    ) -> Result<Value> {
+        Err(
+            AppError::api("ShotGrid API 请求失败 (404 Not Found)")
+                .with_transport("rest")
+                .with_details(json!({
+                    "errors": [
+                        {
+                            "status": 404,
+                            "detail": format!("Note: {note_id} not found")
+                        }
+                    ]
+                })),
+        )
+    }
+
+    async fn schema_field_create(
+        &self,
+        _config: &ConnectionSettings,
+        _entity: &str,
+        _body: &Value,
+    ) -> Result<Value> {
+        Ok(json!({}))
+    }
+
+    async fn schema_field_update(
+        &self,
+        _config: &ConnectionSettings,
+        _entity: &str,
+        _field_name: &str,
+        _body: &Value,
+    ) -> Result<Value> {
+        Ok(json!({}))
+    }
+
+    async fn schema_field_delete(
+        &self,
+        _config: &ConnectionSettings,
+        _entity: &str,
+        _field_name: &str,
+    ) -> Result<Value> {
+        Ok(json!({}))
+    }
+
+    async fn hierarchy(&self, _config: &ConnectionSettings, _body: &Value) -> Result<Value> {
+        Ok(json!({}))
     }
 }
 
@@ -1483,6 +1708,25 @@ async fn note_threads_delegates_to_transport() {
         .expect("note threads succeeds");
     assert_eq!(result["note_id"], 100);
     assert!(result["data"].as_array().expect("data array").is_empty());
+}
+
+#[tokio::test]
+async fn note_threads_not_found_error_mentions_top_level_note_id() {
+    let app = App::new(NoteThreadsNotFoundTransport);
+    let err = app
+        .note_threads(overrides(), 1, None)
+        .await
+        .expect_err("missing note should be translated");
+
+    assert_eq!(err.envelope().code, "API_ERROR");
+    assert_eq!(err.envelope().transport.as_deref(), Some("rest"));
+    assert!(
+        err.envelope()
+            .message
+            .contains("not a top-level Note record id"),
+        "unexpected message: {}",
+        err.envelope().message
+    );
 }
 
 #[tokio::test]

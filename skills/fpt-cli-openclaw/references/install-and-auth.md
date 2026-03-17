@@ -11,19 +11,20 @@ Default install locations:
 
 Release asset names:
 
-- Linux: `fpt-x86_64-unknown-linux-gnu.tar.gz`
-- Windows: `fpt-x86_64-pc-windows-msvc.zip`
-- macOS (Intel): `fpt-x86_64-apple-darwin.tar.gz`
-- macOS (Apple Silicon): `fpt-aarch64-apple-darwin.tar.gz`
+- Linux: `fpt-v0.1.0-x86_64-unknown-linux-gnu.tar.gz`
+- Windows: `fpt-v0.1.0-x86_64-pc-windows-msvc.zip`
+- macOS (Intel): `fpt-v0.1.0-x86_64-apple-darwin.tar.gz`
+- macOS (Apple Silicon): `fpt-v0.1.0-aarch64-apple-darwin.tar.gz`
 
 #### macOS / Linux example
 ```bash
 export FPT_VERSION="v0.1.0"
 export FPT_INSTALL_DIR="${FPT_INSTALL_DIR:-$HOME/.local/bin}"
-curl -fLO "https://github.com/loonghao/fpt-cli/releases/download/${FPT_VERSION}/fpt-x86_64-unknown-linux-gnu.tar.gz"
+export FPT_ARCHIVE="fpt-${FPT_VERSION}-x86_64-unknown-linux-gnu.tar.gz"
+curl -fLO "https://github.com/loonghao/fpt-cli/releases/download/${FPT_VERSION}/${FPT_ARCHIVE}"
 curl -fLO "https://github.com/loonghao/fpt-cli/releases/download/${FPT_VERSION}/fpt-checksums.txt"
 sha256sum -c --ignore-missing fpt-checksums.txt
-tar -xzf fpt-x86_64-unknown-linux-gnu.tar.gz
+tar -xzf "${FPT_ARCHIVE}"
 mkdir -p "$FPT_INSTALL_DIR"
 install -m 755 ./fpt "$FPT_INSTALL_DIR/fpt"
 "$FPT_INSTALL_DIR/fpt" capabilities --output json
@@ -33,7 +34,7 @@ install -m 755 ./fpt "$FPT_INSTALL_DIR/fpt"
 ```powershell
 $FptVersion = "v0.1.0"
 $InstallDir = if ($env:FPT_INSTALL_DIR) { $env:FPT_INSTALL_DIR } else { Join-Path $env:USERPROFILE ".fpt\bin" }
-$Archive = "fpt-x86_64-pc-windows-msvc.zip"
+$Archive = "fpt-$FptVersion-x86_64-pc-windows-msvc.zip"
 $ExtractDir = Join-Path $env:TEMP "fpt-extract"
 Invoke-WebRequest -Uri "https://github.com/loonghao/fpt-cli/releases/download/$FptVersion/$Archive" -OutFile $Archive
 Expand-Archive -Path $Archive -DestinationPath $ExtractDir -Force
@@ -46,8 +47,8 @@ Copy-Item -Path (Join-Path $ExtractDir "fpt.exe") -Destination (Join-Path $Insta
 Use the released binary's self-update command when `fpt` is already installed.
 
 ```bash
-fpt self-update --check --output pretty-json
-fpt self-update
+fpt self update --check --output pretty-json
+fpt self update
 ```
 
 

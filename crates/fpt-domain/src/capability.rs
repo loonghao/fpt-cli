@@ -49,6 +49,10 @@ static COMMANDS: &[CommandSpec] = &[
     activity::EVENT_LOG_ENTRIES_SPEC,
     activity::PREFERENCES_GET_SPEC,
     self_update::SELF_UPDATE_SPEC,
+    self_update::CONFIG_GET_SPEC,
+    self_update::CONFIG_PATH_SPEC,
+    self_update::CONFIG_SET_SPEC,
+    self_update::CONFIG_CLEAR_SPEC,
 ];
 
 pub fn command_specs() -> &'static [CommandSpec] {

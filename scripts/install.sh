@@ -54,13 +54,16 @@ esac
 ASSET="fpt-${TARGET}.tar.gz"
 case "$VERSION" in
     latest|'')
-        DOWNLOAD_URL="https://github.com/${REPOSITORY}/releases/latest/download/${ASSET}"
+        DOWNLOAD_ASSET="$ASSET"
+        DOWNLOAD_URL="https://github.com/${REPOSITORY}/releases/latest/download/${DOWNLOAD_ASSET}"
         ;;
     v*)
-        DOWNLOAD_URL="https://github.com/${REPOSITORY}/releases/download/${VERSION}/${ASSET}"
+        DOWNLOAD_ASSET="fpt-${VERSION}-${TARGET}.tar.gz"
+        DOWNLOAD_URL="https://github.com/${REPOSITORY}/releases/download/${VERSION}/${DOWNLOAD_ASSET}"
         ;;
     *)
-        DOWNLOAD_URL="https://github.com/${REPOSITORY}/releases/download/v${VERSION}/${ASSET}"
+        DOWNLOAD_ASSET="fpt-v${VERSION}-${TARGET}.tar.gz"
+        DOWNLOAD_URL="https://github.com/${REPOSITORY}/releases/download/v${VERSION}/${DOWNLOAD_ASSET}"
         ;;
 esac
 
@@ -70,10 +73,10 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
-ARCHIVE_PATH="$TMP_DIR/$ASSET"
+ARCHIVE_PATH="$TMP_DIR/$DOWNLOAD_ASSET"
 mkdir -p "$INSTALL_DIR"
 
-echo "Downloading ${ASSET} from ${DOWNLOAD_URL}"
+echo "Downloading ${DOWNLOAD_ASSET} from ${DOWNLOAD_URL}"
 curl -fsSL "$DOWNLOAD_URL" -o "$ARCHIVE_PATH"
 tar -xzf "$ARCHIVE_PATH" -C "$TMP_DIR"
 install -m 755 "$TMP_DIR/fpt" "$INSTALL_DIR/fpt"

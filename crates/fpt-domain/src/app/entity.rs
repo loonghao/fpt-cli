@@ -110,8 +110,10 @@ where
 
         if !yes {
             return Err(AppError::policy_blocked(
-                "删除操作需要显式传入 `--yes`，或先使用 `--dry-run` 查看计划",
-            ));
+                "entity delete is a destructive operation; pass `--yes` to execute it, or use `--dry-run` to inspect the request plan first",
+            )
+            .with_operation("entity_delete")
+            .with_hint("Add `--yes` to confirm the deletion, or `--dry-run` to preview the request without executing it."));
         }
 
         let config = ConnectionSettings::resolve(overrides)?;
