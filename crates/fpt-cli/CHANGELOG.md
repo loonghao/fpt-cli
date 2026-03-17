@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.2.8](https://github.com/loonghao/fpt-cli/compare/v0.2.7...v0.2.8) (2026-03-17)
+
+
+### Features
+
+* enrich all AppError callsites with structured details fields ([9065ff5](https://github.com/loonghao/fpt-cli/commit/9065ff5faae47f4d1d54cc2fd3e46d11a40dd8bd))
+
+
+### Bug Fixes
+
+* **test:** isolate infers_user_password_auth test from persisted config and env vars ([f04be7b](https://github.com/loonghao/fpt-cli/commit/f04be7b9478d3e6e4faf9126c86c7e7210acf848))
+* use candidates.contains() instead of iter().any() per clippy ([e543059](https://github.com/loonghao/fpt-cli/commit/e5430599dd75579b5e6b325212e86e811719a8de))
+
 ## [0.2.7](https://github.com/loonghao/fpt-cli/compare/v0.2.6...v0.2.7) (2026-03-17)
 
 
