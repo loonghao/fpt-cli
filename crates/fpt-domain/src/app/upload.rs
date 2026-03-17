@@ -2,7 +2,7 @@ use fpt_core::Result;
 use serde_json::Value;
 
 use crate::config::{ConnectionOverrides, ConnectionSettings};
-use crate::transport::ShotgridTransport;
+use crate::transport::{ShotgridTransport, UploadUrlRequest};
 
 use super::App;
 
@@ -13,25 +13,10 @@ where
     pub async fn upload_url(
         &self,
         overrides: ConnectionOverrides,
-        entity: &str,
-        id: u64,
-        field_name: &str,
-        file_name: &str,
-        content_type: Option<&str>,
-        multipart_upload: bool,
+        request: UploadUrlRequest<'_>,
     ) -> Result<Value> {
         let config = ConnectionSettings::resolve(overrides)?;
-        self.transport
-            .upload_url(
-                &config,
-                entity,
-                id,
-                field_name,
-                file_name,
-                content_type,
-                multipart_upload,
-            )
-            .await
+        self.transport.upload_url(&config, request).await
     }
 
     pub async fn download_url(

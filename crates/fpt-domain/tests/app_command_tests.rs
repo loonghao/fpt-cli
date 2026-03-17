@@ -6,7 +6,7 @@ use std::time::Duration;
 
 use async_trait::async_trait;
 use fpt_core::{AppError, Result};
-use fpt_domain::transport::{FindParams, ShotgridTransport};
+use fpt_domain::transport::{FindParams, ShotgridTransport, UploadUrlRequest};
 use fpt_domain::{App, AuthMode, ConnectionOverrides, ConnectionSettings};
 
 use serde_json::{Value, json};
@@ -233,14 +233,14 @@ impl ShotgridTransport for RecordingTransport {
     async fn upload_url(
         &self,
         _config: &ConnectionSettings,
-        entity: &str,
-        id: u64,
-        field_name: &str,
-        file_name: &str,
-        _content_type: Option<&str>,
-        _multipart_upload: bool,
+        request: UploadUrlRequest<'_>,
     ) -> Result<Value> {
-        Ok(json!({"entity": entity, "id": id, "field_name": field_name, "file_name": file_name}))
+        Ok(json!({
+            "entity": request.entity,
+            "id": request.id,
+            "field_name": request.field_name,
+            "file_name": request.file_name
+        }))
     }
 
     async fn download_url(
@@ -250,7 +250,9 @@ impl ShotgridTransport for RecordingTransport {
         id: u64,
         field_name: &str,
     ) -> Result<Value> {
-        Ok(json!({"entity": entity, "id": id, "field_name": field_name, "download_url": "https://example.com/file"}))
+        Ok(
+            json!({"entity": entity, "id": id, "field_name": field_name, "download_url": "https://example.com/file"}),
+        )
     }
 
     async fn thumbnail_url(
@@ -350,11 +352,7 @@ impl ShotgridTransport for RecordingTransport {
         Ok(json!({"entity": entity, "field_name": field_name, "deleted": true}))
     }
 
-    async fn hierarchy(
-        &self,
-        _config: &ConnectionSettings,
-        body: &Value,
-    ) -> Result<Value> {
+    async fn hierarchy(&self, _config: &ConnectionSettings, body: &Value) -> Result<Value> {
         Ok(json!({"data": body}))
     }
 }
@@ -473,12 +471,7 @@ impl ShotgridTransport for FindOneTransport {
     async fn upload_url(
         &self,
         _config: &ConnectionSettings,
-        _entity: &str,
-        _id: u64,
-        _field_name: &str,
-        _file_name: &str,
-        _content_type: Option<&str>,
-        _multipart_upload: bool,
+        _request: UploadUrlRequest<'_>,
     ) -> Result<Value> {
         Err(AppError::not_implemented("unused"))
     }
@@ -590,11 +583,7 @@ impl ShotgridTransport for FindOneTransport {
         Err(AppError::not_implemented("unused"))
     }
 
-    async fn hierarchy(
-        &self,
-        _config: &ConnectionSettings,
-        _body: &Value,
-    ) -> Result<Value> {
+    async fn hierarchy(&self, _config: &ConnectionSettings, _body: &Value) -> Result<Value> {
         Err(AppError::not_implemented("unused"))
     }
 }
@@ -717,12 +706,7 @@ impl ShotgridTransport for SlowGetTransport {
     async fn upload_url(
         &self,
         _config: &ConnectionSettings,
-        _entity: &str,
-        _id: u64,
-        _field_name: &str,
-        _file_name: &str,
-        _content_type: Option<&str>,
-        _multipart_upload: bool,
+        _request: UploadUrlRequest<'_>,
     ) -> Result<Value> {
         Err(AppError::not_implemented("unused"))
     }
@@ -834,11 +818,7 @@ impl ShotgridTransport for SlowGetTransport {
         Err(AppError::not_implemented("unused"))
     }
 
-    async fn hierarchy(
-        &self,
-        _config: &ConnectionSettings,
-        _body: &Value,
-    ) -> Result<Value> {
+    async fn hierarchy(&self, _config: &ConnectionSettings, _body: &Value) -> Result<Value> {
         Err(AppError::not_implemented("unused"))
     }
 }
@@ -1378,12 +1358,14 @@ async fn upload_url_delegates_to_transport() {
     let result = app
         .upload_url(
             overrides(),
-            "Version",
-            10,
-            "sg_uploaded_movie",
-            "clip.mp4",
-            Some("video/mp4"),
-            false,
+            UploadUrlRequest {
+                entity: "Version",
+                id: 10,
+                field_name: "sg_uploaded_movie",
+                file_name: "clip.mp4",
+                content_type: Some("video/mp4"),
+                multipart_upload: false,
+            },
         )
         .await
         .expect("upload url succeeds");
@@ -1458,7 +1440,12 @@ async fn entity_followers_delegates_to_transport() {
         .expect("entity followers succeeds");
     assert_eq!(result["entity"], "Shot");
     assert_eq!(result["id"], 42);
-    assert!(result["followers"].as_array().expect("followers array").is_empty());
+    assert!(
+        result["followers"]
+            .as_array()
+            .expect("followers array")
+            .is_empty()
+    );
 }
 
 #[tokio::test]
@@ -1577,12 +1564,17 @@ fn filter_dsl_trailing_content_is_rejected() {
     let result = fpt_domain::parse_filter_dsl("code == 'a' leftover");
     assert!(result.is_err());
     let msg = result.unwrap_err().envelope().message;
-    assert!(msg.contains("trailing"), "error should mention trailing content: {msg}");
+    assert!(
+        msg.contains("trailing"),
+        "error should mention trailing content: {msg}"
+    );
 }
 
 #[test]
 fn filter_dsl_nested_parentheses_work() {
-    let result = fpt_domain::parse_filter_dsl("(code == 'a' and (status == 'ip' or status == 'fin'))").unwrap();
+    let result =
+        fpt_domain::parse_filter_dsl("(code == 'a' and (status == 'ip' or status == 'fin'))")
+            .unwrap();
     let conditions = result["conditions"].as_array().expect("root conditions");
     assert_eq!(conditions.len(), 2);
     let inner = &conditions[1];
@@ -1599,7 +1591,9 @@ fn filter_dsl_not_in_operator() {
 
 #[test]
 fn filter_dsl_null_and_boolean_values() {
-    let result = fpt_domain::parse_filter_dsl("active == true and deleted == false and notes == null").unwrap();
+    let result =
+        fpt_domain::parse_filter_dsl("active == true and deleted == false and notes == null")
+            .unwrap();
     let conditions = result["conditions"].as_array().expect("conditions");
     assert_eq!(conditions.len(), 3);
     assert_eq!(conditions[0][2], json!(true));
@@ -1618,10 +1612,10 @@ fn filter_dsl_negative_number() {
 
 #[test]
 fn filter_dsl_float_number() {
-    let result = fpt_domain::parse_filter_dsl("score >= 3.14").unwrap();
+    let result = fpt_domain::parse_filter_dsl("score >= 3.141592653589793").unwrap();
     let cond = &result["conditions"][0];
     assert_eq!(cond[1], "greater_than_or_equal");
-    assert_eq!(cond[2], json!(3.14));
+    assert_eq!(cond[2], json!(std::f64::consts::PI));
 }
 
 #[test]

@@ -93,21 +93,32 @@ pub enum ServerCommands {
 #[derive(Debug, Subcommand)]
 pub enum SchemaCommands {
     Entities,
-    Fields { entity: String },
-    #[command(name = "field-create", about = "Create a new custom field on an entity type")]
+    Fields {
+        entity: String,
+    },
+    #[command(
+        name = "field-create",
+        about = "Create a new custom field on an entity type"
+    )]
     FieldCreate {
         entity: String,
         #[arg(long)]
         input: String,
     },
-    #[command(name = "field-update", about = "Update properties of an existing custom field")]
+    #[command(
+        name = "field-update",
+        about = "Update properties of an existing custom field"
+    )]
     FieldUpdate {
         entity: String,
         field_name: String,
         #[arg(long)]
         input: String,
     },
-    #[command(name = "field-delete", about = "Delete a custom field from an entity type")]
+    #[command(
+        name = "field-delete",
+        about = "Delete a custom field from an entity type"
+    )]
     FieldDelete {
         entity: String,
         field_name: String,
@@ -222,7 +233,10 @@ pub enum BatchEntityCommands {
 
 #[derive(Debug, Subcommand)]
 pub enum UploadCommands {
-    #[command(name = "url", about = "Get a pre-signed upload URL for an entity field attachment")]
+    #[command(
+        name = "url",
+        about = "Get a pre-signed upload URL for an entity field attachment"
+    )]
     Url {
         entity: String,
         id: u64,
@@ -237,7 +251,10 @@ pub enum UploadCommands {
 
 #[derive(Debug, Subcommand)]
 pub enum DownloadCommands {
-    #[command(name = "url", about = "Get a pre-signed download URL for an entity field attachment")]
+    #[command(
+        name = "url",
+        about = "Get a pre-signed download URL for an entity field attachment"
+    )]
     Url {
         entity: String,
         id: u64,
@@ -247,20 +264,26 @@ pub enum DownloadCommands {
 
 #[derive(Debug, Subcommand)]
 pub enum ThumbnailCommands {
-    #[command(name = "url", about = "Get the thumbnail image URL for an entity record")]
-    Url {
-        entity: String,
-        id: u64,
-    },
+    #[command(
+        name = "url",
+        about = "Get the thumbnail image URL for an entity record"
+    )]
+    Url { entity: String, id: u64 },
 }
 
 #[derive(Debug, Subcommand)]
 pub enum ActivityCommands {
-    #[command(name = "stream", about = "Fetch the activity stream for a specific entity record")]
+    #[command(
+        name = "stream",
+        about = "Fetch the activity stream for a specific entity record"
+    )]
     Stream {
         entity: String,
         id: u64,
-        #[arg(long, help = "Optional query parameters as JSON (page, fields, entity_fields, etc.)")]
+        #[arg(
+            long,
+            help = "Optional query parameters as JSON (page, fields, entity_fields, etc.)"
+        )]
         input: Option<String>,
     },
 }
@@ -269,7 +292,10 @@ pub enum ActivityCommands {
 pub enum EventLogCommands {
     #[command(name = "entries", about = "Query ShotGrid event log entries")]
     Entries {
-        #[arg(long, help = "Optional query parameters as JSON (fields, sort, page, etc.)")]
+        #[arg(
+            long,
+            help = "Optional query parameters as JSON (fields, sort, page, etc.)"
+        )]
         input: Option<String>,
     },
 }
@@ -283,18 +309,24 @@ pub enum PreferencesCommands {
 #[derive(Debug, Subcommand)]
 pub enum FollowersCommands {
     #[command(name = "list", about = "List all followers of an entity record")]
-    List {
-        entity: String,
-        id: u64,
-    },
-    #[command(name = "follow", about = "Add a user as a follower of an entity record")]
+    List { entity: String, id: u64 },
+    #[command(
+        name = "follow",
+        about = "Add a user as a follower of an entity record"
+    )]
     Follow {
         entity: String,
         id: u64,
-        #[arg(long, help = "User JSON object with type and id, e.g. '{\"type\":\"HumanUser\",\"id\":456}'")]
+        #[arg(
+            long,
+            help = "User JSON object with type and id, e.g. '{\"type\":\"HumanUser\",\"id\":456}'"
+        )]
         input: String,
     },
-    #[command(name = "unfollow", about = "Remove a user from the followers of an entity record")]
+    #[command(
+        name = "unfollow",
+        about = "Remove a user from the followers of an entity record"
+    )]
     Unfollow {
         entity: String,
         id: u64,
@@ -305,17 +337,26 @@ pub enum FollowersCommands {
 
 #[derive(Debug, Subcommand)]
 pub enum NoteCommands {
-    #[command(name = "threads", about = "Get the reply thread contents for a Note record")]
+    #[command(
+        name = "threads",
+        about = "Get the reply thread contents for a Note record"
+    )]
     Threads {
         note_id: u64,
-        #[arg(long, help = "Optional query parameters as JSON (fields, entity_fields, etc.)")]
+        #[arg(
+            long,
+            help = "Optional query parameters as JSON (fields, entity_fields, etc.)"
+        )]
         input: Option<String>,
     },
 }
 
 #[derive(Debug, Subcommand)]
 pub enum HierarchyCommands {
-    #[command(name = "search", about = "Search the ShotGrid entity hierarchy navigation tree")]
+    #[command(
+        name = "search",
+        about = "Search the ShotGrid entity hierarchy navigation tree"
+    )]
     Search {
         #[arg(long, help = "Hierarchy search body as JSON")]
         input: String,

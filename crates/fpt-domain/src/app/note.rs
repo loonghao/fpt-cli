@@ -18,9 +18,7 @@ where
     ) -> Result<Value> {
         let config = ConnectionSettings::resolve(overrides)?;
         let params = build_note_query_params(input)?;
-        self.transport
-            .note_threads(&config, note_id, &params)
-            .await
+        self.transport.note_threads(&config, note_id, &params).await
     }
 }
 
@@ -77,9 +75,9 @@ fn string_list_to_csv(value: &Value, field_name: &str) -> Result<String> {
     let items: Result<Vec<String>> = array
         .iter()
         .map(|v| {
-            v.as_str()
-                .map(ToString::to_string)
-                .ok_or_else(|| AppError::invalid_input(format!("`{field_name}` items must be strings")))
+            v.as_str().map(ToString::to_string).ok_or_else(|| {
+                AppError::invalid_input(format!("`{field_name}` items must be strings"))
+            })
         })
         .collect();
     Ok(items?.join(","))

@@ -7,6 +7,7 @@ use crate::cli::{
 use crate::self_update;
 use fpt_core::{AppError, Result, read_json_input};
 use fpt_domain::App;
+use fpt_domain::transport::UploadUrlRequest;
 use serde_json::Value;
 
 pub async fn run(cli: Cli) -> Result<Value> {
@@ -40,10 +41,7 @@ pub async fn run(cli: Cli) -> Result<Value> {
                 app.schema_field_update(connection, &entity, &field_name, body)
                     .await
             }
-            SchemaCommands::FieldDelete {
-                entity,
-                field_name,
-            } => {
+            SchemaCommands::FieldDelete { entity, field_name } => {
                 app.schema_field_delete(connection, &entity, &field_name)
                     .await
             }
@@ -163,12 +161,14 @@ pub async fn run(cli: Cli) -> Result<Value> {
             } => {
                 app.upload_url(
                     connection,
-                    &entity,
-                    id,
-                    &field_name,
-                    &file_name,
-                    content_type.as_deref(),
-                    multipart,
+                    UploadUrlRequest {
+                        entity: &entity,
+                        id,
+                        field_name: &field_name,
+                        file_name: &file_name,
+                        content_type: content_type.as_deref(),
+                        multipart_upload: multipart,
+                    },
                 )
                 .await
             }

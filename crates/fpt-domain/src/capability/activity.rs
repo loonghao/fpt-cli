@@ -12,9 +12,8 @@ const EVENT_LOG_ENTRIES_EXAMPLES: &[&str] = &[
     "fpt event-log entries --filter 'event_type[is]=Shotgun_Shot_Change' --site ...",
 ];
 
-const PREFERENCES_GET_EXAMPLES: &[&str] = &[
-    "fpt preferences get --site ... --auth-mode script --script-name ... --script-key ...",
-];
+const PREFERENCES_GET_EXAMPLES: &[&str] =
+    &["fpt preferences get --site ... --auth-mode script --script-name ... --script-key ..."];
 
 const ACTIVITY_STREAM_NOTES: &[&str] = &[
     "Uses the REST endpoint GET /entity/{type}/{id}/activity_stream",

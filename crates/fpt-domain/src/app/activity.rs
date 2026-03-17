@@ -66,10 +66,16 @@ fn build_query_params(input: Option<Value>) -> Result<Vec<(String, String)>> {
                     .as_object()
                     .ok_or_else(|| AppError::invalid_input("`page` must be an object"))?;
                 if let Some(number) = page.get("number") {
-                    params.push(("page[number]".to_string(), scalar_to_string(number, "page.number")?));
+                    params.push((
+                        "page[number]".to_string(),
+                        scalar_to_string(number, "page.number")?,
+                    ));
                 }
                 if let Some(size) = page.get("size") {
-                    params.push(("page[size]".to_string(), scalar_to_string(size, "page.size")?));
+                    params.push((
+                        "page[size]".to_string(),
+                        scalar_to_string(size, "page.size")?,
+                    ));
                 }
             }
             "fields" | "entity_fields" => {
@@ -110,9 +116,9 @@ fn string_list_to_csv(value: &Value, field_name: &str) -> Result<String> {
     let items: Result<Vec<String>> = array
         .iter()
         .map(|v| {
-            v.as_str()
-                .map(ToString::to_string)
-                .ok_or_else(|| AppError::invalid_input(format!("`{field_name}` items must be strings")))
+            v.as_str().map(ToString::to_string).ok_or_else(|| {
+                AppError::invalid_input(format!("`{field_name}` items must be strings"))
+            })
         })
         .collect();
     Ok(items?.join(","))
