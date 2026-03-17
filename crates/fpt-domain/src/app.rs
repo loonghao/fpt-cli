@@ -85,7 +85,7 @@ where
 
     pub fn inspect_command(&self, name: &str) -> Result<Value> {
         let spec = find_command_spec(name)
-            .ok_or_else(|| AppError::unsupported(format!("未知命令 `{name}`")))?;
+            .ok_or_else(|| AppError::unsupported(format!("unknown command `{name}`")))?;
         Ok(json!(spec))
     }
 }

@@ -225,13 +225,13 @@ impl<'a> Parser<'a> {
             '{' => self.parse_object(),
             '-' | '0'..='9' => self.parse_number(),
             _ => {
-                let ident = self.parse_identifier("值")?.to_ascii_lowercase();
+                let ident = self.parse_identifier("value")?.to_ascii_lowercase();
                 match ident.as_str() {
                     "true" => Ok(Value::Bool(true)),
                     "false" => Ok(Value::Bool(false)),
                     "null" => Ok(Value::Null),
                     _ => Err(AppError::invalid_input(format!(
-                        "filter_dsl 语法错误: 不支持的值 `{ident}`，请使用字符串/数字/布尔/null/JSON对象（位置 {}）",
+                        "filter_dsl syntax error: unsupported value `{ident}`, expected string/number/bool/null/JSON object (position {})",
                         self.pos
                     ))),
                 }
@@ -244,7 +244,7 @@ impl<'a> Parser<'a> {
     /// Supports the ShotGrid entity-link shorthand:
     ///   `project is {"type": "Project", "id": 123}`
     fn parse_object(&mut self) -> Result<Value> {
-        self.expect_char('{', "对象起始 `{`")?;
+        self.expect_char('{', "opening `{` of object")?;
         self.skip_whitespace();
 
         let mut map = serde_json::Map::new();
@@ -259,13 +259,13 @@ impl<'a> Parser<'a> {
                 Some('"') | Some('\'') => self.parse_string()?,
                 _ => {
                     return self.error(
-                        "JSON对象的键必须是带引号的字符串，例如 {\"type\": \"Project\", \"id\": 123}",
+                        "JSON object keys must be quoted strings, e.g. {\"type\": \"Project\", \"id\": 123}",
                     );
                 }
             };
             self.skip_whitespace();
             if !self.consume_char(':') {
-                return self.error("JSON对象键值对之间缺少 `:`");
+                return self.error("missing `:` between JSON object key and value");
             }
             let value = self.parse_value()?;
             map.insert(key, value);
@@ -274,7 +274,7 @@ impl<'a> Parser<'a> {
                 break;
             }
             if !self.consume_char(',') {
-                return self.error("JSON对象条目之间缺少 `,` 或结束 `}`");
+                return self.error("missing `,` or closing `}` in JSON object");
             }
         }
 
@@ -282,7 +282,7 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_array(&mut self) -> Result<Value> {
-        self.expect_char('[', "数组起始 `[`")?;
+        self.expect_char('[', "opening `[` of array")?;
         self.skip_whitespace();
 
         let mut values = Vec::new();
@@ -297,7 +297,7 @@ impl<'a> Parser<'a> {
             if self.consume_char(']') {
                 break;
             }
-            self.expect_char(',', "数组分隔符 `,`")?;
+            self.expect_char(',', "array separator `,`")?;
         }
 
         Ok(Value::Array(values))
@@ -323,7 +323,7 @@ impl<'a> Parser<'a> {
         }
 
         if !has_integer {
-            return self.error("数字格式不正确");
+            return self.error("invalid number format");
         }
 
         if self.consume_char('.') {
@@ -340,20 +340,20 @@ impl<'a> Parser<'a> {
             }
 
             if !has_fraction {
-                return self.error("浮点数格式不正确");
+                return self.error("invalid float format");
             }
 
             let value = literal
                 .parse::<f64>()
-                .map_err(|error| AppError::invalid_input(format!("数字解析失败: {error}")))?;
+                .map_err(|error| AppError::invalid_input(format!("number parse error: {error}")))?;
             let number = Number::from_f64(value)
-                .ok_or_else(|| AppError::invalid_input("不支持 NaN 或 Infinity"))?;
+                .ok_or_else(|| AppError::invalid_input("NaN and Infinity are not supported"))?;
             return Ok(Value::Number(number));
         }
 
         let value = literal
             .parse::<i64>()
-            .map_err(|error| AppError::invalid_input(format!("数字解析失败: {error}")))?;
+            .map_err(|error| AppError::invalid_input(format!("number parse error: {error}")))?;
         Ok(Value::Number(Number::from(value)))
     }
 
@@ -361,9 +361,9 @@ impl<'a> Parser<'a> {
         self.skip_whitespace();
         let quote = self
             .peek_char()
-            .ok_or_else(|| AppError::invalid_input("filter_dsl 语法错误: 缺少字符串开头引号"))?;
+            .ok_or_else(|| AppError::invalid_input("filter_dsl syntax error: missing opening quote for string"))?;
         if !matches!(quote, '"' | '\'') {
-            return self.error("字符串必须以引号包裹");
+            return self.error("string must be wrapped in quotes");
         }
         self.pos += 1;
 
@@ -377,7 +377,7 @@ impl<'a> Parser<'a> {
             if ch == '\\' {
                 let escaped = self
                     .peek_char()
-                    .ok_or_else(|| AppError::invalid_input("filter_dsl 语法错误: 非法转义结尾"))?;
+                    .ok_or_else(|| AppError::invalid_input("filter_dsl syntax error: illegal escape at end of input"))?;
                 self.pos += 1;
                 let normalized = match escaped {
                     '\\' => '\\',
@@ -388,7 +388,7 @@ impl<'a> Parser<'a> {
                     't' => '\t',
                     other => {
                         return Err(AppError::invalid_input(format!(
-                            "filter_dsl 语法错误: 不支持的转义字符 `\\{other}`（位置 {}）",
+                        "filter_dsl syntax error: unsupported escape character `\\{other}` (position {})",
                             self.pos
                         )));
                     }
@@ -400,18 +400,18 @@ impl<'a> Parser<'a> {
             output.push(ch);
         }
 
-        self.error("字符串缺少结束引号")
+        self.error("missing closing quote for string")
     }
 
     fn parse_identifier(&mut self, label: &str) -> Result<String> {
         self.skip_whitespace();
 
         let Some(first) = self.peek_char() else {
-            return self.error(format!("缺少{label}"));
+            return self.error(format!("missing {label}"));
         };
 
         if !is_identifier_start(first) {
-            return self.error(format!("{label}必须以字母或下划线开头"));
+            return self.error(format!("{label} must start with a letter or underscore"));
         }
 
         let mut output = String::new();
@@ -435,7 +435,7 @@ impl<'a> Parser<'a> {
         if self.consume_char(expected) {
             Ok(())
         } else {
-            self.error(format!("缺少{message}"))
+            self.error(format!("missing {message}"))
         }
     }
 
@@ -500,7 +500,7 @@ impl<'a> Parser<'a> {
 
     fn error<T>(&self, message: impl Into<String>) -> Result<T> {
         Err(AppError::invalid_input(format!(
-            "filter_dsl 语法错误: {}（位置 {}）",
+            "filter_dsl syntax error: {} (position {})",
             message.into(),
             self.pos
         )))
