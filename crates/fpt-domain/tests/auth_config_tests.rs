@@ -102,6 +102,22 @@ fn resolves_script_auth_with_explicit_mode() {
 
 #[test]
 fn infers_user_password_auth_from_username_and_password() {
+    let _lock = env_lock().lock().expect("env lock");
+    let config_path = TempConfigPath::new("infer-user-password");
+    let _guard = EnvGuard::set(&[
+        ("FPT_CONFIG_PATH", Some(config_path.path_str())),
+        ("FPT_AUTH_MODE", None),
+        ("SG_AUTH_MODE", None),
+        ("FPT_SCRIPT_NAME", None),
+        ("FPT_SCRIPT_KEY", None),
+        ("SG_SCRIPT_NAME", None),
+        ("SG_SCRIPT_KEY", None),
+        ("FPT_SESSION_TOKEN", None),
+        ("SG_SESSION_TOKEN", None),
+        ("FPT_AUTH_TOKEN", None),
+        ("SG_AUTH_TOKEN", None),
+    ]);
+
     let settings = ConnectionSettings::resolve(ConnectionOverrides {
         site: Some("https://example.shotgrid.autodesk.com".to_string()),
         username: Some("artist@example.com".to_string()),
