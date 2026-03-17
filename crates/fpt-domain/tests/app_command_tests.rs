@@ -229,6 +229,134 @@ impl ShotgridTransport for RecordingTransport {
             }
         }))
     }
+
+    async fn upload_url(
+        &self,
+        _config: &ConnectionSettings,
+        entity: &str,
+        id: u64,
+        field_name: &str,
+        file_name: &str,
+        _content_type: Option<&str>,
+        _multipart_upload: bool,
+    ) -> Result<Value> {
+        Ok(json!({"entity": entity, "id": id, "field_name": field_name, "file_name": file_name}))
+    }
+
+    async fn download_url(
+        &self,
+        _config: &ConnectionSettings,
+        entity: &str,
+        id: u64,
+        field_name: &str,
+    ) -> Result<Value> {
+        Ok(json!({"entity": entity, "id": id, "field_name": field_name, "download_url": "https://example.com/file"}))
+    }
+
+    async fn thumbnail_url(
+        &self,
+        _config: &ConnectionSettings,
+        entity: &str,
+        id: u64,
+    ) -> Result<Value> {
+        Ok(json!({"entity": entity, "id": id, "thumbnail_url": "https://example.com/thumb.jpg"}))
+    }
+
+    async fn activity_stream(
+        &self,
+        _config: &ConnectionSettings,
+        entity: &str,
+        id: u64,
+        _params: &[(String, String)],
+    ) -> Result<Value> {
+        Ok(json!({"entity": entity, "id": id, "data": []}))
+    }
+
+    async fn event_log_entries(
+        &self,
+        _config: &ConnectionSettings,
+        _params: &[(String, String)],
+    ) -> Result<Value> {
+        Ok(json!({"data": []}))
+    }
+
+    async fn preferences_get(&self, _config: &ConnectionSettings) -> Result<Value> {
+        Ok(json!({"preferences": {}}))
+    }
+
+    async fn entity_followers(
+        &self,
+        _config: &ConnectionSettings,
+        entity: &str,
+        id: u64,
+    ) -> Result<Value> {
+        Ok(json!({"entity": entity, "id": id, "followers": []}))
+    }
+
+    async fn entity_follow(
+        &self,
+        _config: &ConnectionSettings,
+        entity: &str,
+        id: u64,
+        user: &Value,
+    ) -> Result<Value> {
+        Ok(json!({"entity": entity, "id": id, "user": user}))
+    }
+
+    async fn entity_unfollow(
+        &self,
+        _config: &ConnectionSettings,
+        entity: &str,
+        id: u64,
+        user: &Value,
+    ) -> Result<Value> {
+        Ok(json!({"entity": entity, "id": id, "user": user, "unfollowed": true}))
+    }
+
+    async fn note_threads(
+        &self,
+        _config: &ConnectionSettings,
+        note_id: u64,
+        _params: &[(String, String)],
+    ) -> Result<Value> {
+        Ok(json!({"note_id": note_id, "data": []}))
+    }
+
+    async fn schema_field_create(
+        &self,
+        _config: &ConnectionSettings,
+        entity: &str,
+        body: &Value,
+    ) -> Result<Value> {
+        Ok(json!({"entity": entity, "body": body}))
+    }
+
+    async fn schema_field_update(
+        &self,
+        _config: &ConnectionSettings,
+        entity: &str,
+        field_name: &str,
+        body: &Value,
+    ) -> Result<Value> {
+        Ok(json!({"entity": entity, "field_name": field_name, "body": body}))
+    }
+
+    async fn schema_field_delete(
+        &self,
+        _config: &ConnectionSettings,
+        entity: &str,
+        field_name: &str,
+    ) -> Result<Value> {
+        Ok(json!({"entity": entity, "field_name": field_name, "deleted": true}))
+    }
+
+    async fn hierarchy(
+        &self,
+        _config: &ConnectionSettings,
+        body: &Value,
+    ) -> Result<Value> {
+        Ok(json!({"data": body}))
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -335,6 +463,134 @@ impl ShotgridTransport for FindOneTransport {
     }
 
     async fn work_schedule_read(
+        &self,
+        _config: &ConnectionSettings,
+        _body: &Value,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+
+    async fn upload_url(
+        &self,
+        _config: &ConnectionSettings,
+        _entity: &str,
+        _id: u64,
+        _field_name: &str,
+        _file_name: &str,
+        _content_type: Option<&str>,
+        _multipart_upload: bool,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+
+    async fn download_url(
+        &self,
+        _config: &ConnectionSettings,
+        _entity: &str,
+        _id: u64,
+        _field_name: &str,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+
+    async fn thumbnail_url(
+        &self,
+        _config: &ConnectionSettings,
+        _entity: &str,
+        _id: u64,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+
+    async fn activity_stream(
+        &self,
+        _config: &ConnectionSettings,
+        _entity: &str,
+        _id: u64,
+        _params: &[(String, String)],
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+
+    async fn event_log_entries(
+        &self,
+        _config: &ConnectionSettings,
+        _params: &[(String, String)],
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+
+    async fn preferences_get(&self, _config: &ConnectionSettings) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+
+    async fn entity_followers(
+        &self,
+        _config: &ConnectionSettings,
+        _entity: &str,
+        _id: u64,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+
+    async fn entity_follow(
+        &self,
+        _config: &ConnectionSettings,
+        _entity: &str,
+        _id: u64,
+        _user: &Value,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+
+    async fn entity_unfollow(
+        &self,
+        _config: &ConnectionSettings,
+        _entity: &str,
+        _id: u64,
+        _user: &Value,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+
+    async fn note_threads(
+        &self,
+        _config: &ConnectionSettings,
+        _note_id: u64,
+        _params: &[(String, String)],
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+
+    async fn schema_field_create(
+        &self,
+        _config: &ConnectionSettings,
+        _entity: &str,
+        _body: &Value,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+
+    async fn schema_field_update(
+        &self,
+        _config: &ConnectionSettings,
+        _entity: &str,
+        _field_name: &str,
+        _body: &Value,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+
+    async fn schema_field_delete(
+        &self,
+        _config: &ConnectionSettings,
+        _entity: &str,
+        _field_name: &str,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+
+    async fn hierarchy(
         &self,
         _config: &ConnectionSettings,
         _body: &Value,
@@ -451,6 +707,134 @@ impl ShotgridTransport for SlowGetTransport {
     }
 
     async fn work_schedule_read(
+        &self,
+        _config: &ConnectionSettings,
+        _body: &Value,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+
+    async fn upload_url(
+        &self,
+        _config: &ConnectionSettings,
+        _entity: &str,
+        _id: u64,
+        _field_name: &str,
+        _file_name: &str,
+        _content_type: Option<&str>,
+        _multipart_upload: bool,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+
+    async fn download_url(
+        &self,
+        _config: &ConnectionSettings,
+        _entity: &str,
+        _id: u64,
+        _field_name: &str,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+
+    async fn thumbnail_url(
+        &self,
+        _config: &ConnectionSettings,
+        _entity: &str,
+        _id: u64,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+
+    async fn activity_stream(
+        &self,
+        _config: &ConnectionSettings,
+        _entity: &str,
+        _id: u64,
+        _params: &[(String, String)],
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+
+    async fn event_log_entries(
+        &self,
+        _config: &ConnectionSettings,
+        _params: &[(String, String)],
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+
+    async fn preferences_get(&self, _config: &ConnectionSettings) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+
+    async fn entity_followers(
+        &self,
+        _config: &ConnectionSettings,
+        _entity: &str,
+        _id: u64,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+
+    async fn entity_follow(
+        &self,
+        _config: &ConnectionSettings,
+        _entity: &str,
+        _id: u64,
+        _user: &Value,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+
+    async fn entity_unfollow(
+        &self,
+        _config: &ConnectionSettings,
+        _entity: &str,
+        _id: u64,
+        _user: &Value,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+
+    async fn note_threads(
+        &self,
+        _config: &ConnectionSettings,
+        _note_id: u64,
+        _params: &[(String, String)],
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+
+    async fn schema_field_create(
+        &self,
+        _config: &ConnectionSettings,
+        _entity: &str,
+        _body: &Value,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+
+    async fn schema_field_update(
+        &self,
+        _config: &ConnectionSettings,
+        _entity: &str,
+        _field_name: &str,
+        _body: &Value,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+
+    async fn schema_field_delete(
+        &self,
+        _config: &ConnectionSettings,
+        _entity: &str,
+        _field_name: &str,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+
+    async fn hierarchy(
         &self,
         _config: &ConnectionSettings,
         _body: &Value,
@@ -982,4 +1366,374 @@ async fn entity_batch_write_commands_aggregate_partial_failures() {
     assert_eq!(update_response["results"][1]["id"], 99);
     assert_eq!(delete_response["failure_count"], 1);
     assert_eq!(delete_response["results"][1]["id"], 13);
+}
+
+// ────────────────────────────────────────────────────────────────────
+// New API coverage tests
+// ────────────────────────────────────────────────────────────────────
+
+#[tokio::test]
+async fn upload_url_delegates_to_transport() {
+    let app = App::new(RecordingTransport::default());
+    let result = app
+        .upload_url(
+            overrides(),
+            "Version",
+            10,
+            "sg_uploaded_movie",
+            "clip.mp4",
+            Some("video/mp4"),
+            false,
+        )
+        .await
+        .expect("upload url succeeds");
+    assert_eq!(result["entity"], "Version");
+    assert_eq!(result["id"], 10);
+    assert_eq!(result["field_name"], "sg_uploaded_movie");
+    assert_eq!(result["file_name"], "clip.mp4");
+}
+
+#[tokio::test]
+async fn download_url_delegates_to_transport() {
+    let app = App::new(RecordingTransport::default());
+    let result = app
+        .download_url(overrides(), "Attachment", 55, "this_file")
+        .await
+        .expect("download url succeeds");
+    assert_eq!(result["entity"], "Attachment");
+    assert_eq!(result["id"], 55);
+    assert_eq!(result["download_url"], "https://example.com/file");
+}
+
+#[tokio::test]
+async fn thumbnail_url_delegates_to_transport() {
+    let app = App::new(RecordingTransport::default());
+    let result = app
+        .thumbnail_url(overrides(), "Shot", 77)
+        .await
+        .expect("thumbnail url succeeds");
+    assert_eq!(result["entity"], "Shot");
+    assert_eq!(result["id"], 77);
+    assert_eq!(result["thumbnail_url"], "https://example.com/thumb.jpg");
+}
+
+#[tokio::test]
+async fn activity_stream_delegates_to_transport() {
+    let app = App::new(RecordingTransport::default());
+    let result = app
+        .activity_stream(overrides(), "Shot", 1, None)
+        .await
+        .expect("activity stream succeeds");
+    assert_eq!(result["entity"], "Shot");
+    assert_eq!(result["id"], 1);
+    assert!(result["data"].as_array().expect("data array").is_empty());
+}
+
+#[tokio::test]
+async fn event_log_entries_delegates_to_transport() {
+    let app = App::new(RecordingTransport::default());
+    let result = app
+        .event_log_entries(overrides(), None)
+        .await
+        .expect("event log entries succeeds");
+    assert!(result["data"].as_array().expect("data array").is_empty());
+}
+
+#[tokio::test]
+async fn preferences_get_delegates_to_transport() {
+    let app = App::new(RecordingTransport::default());
+    let result = app
+        .preferences_get(overrides())
+        .await
+        .expect("preferences get succeeds");
+    assert!(result["preferences"].is_object());
+}
+
+#[tokio::test]
+async fn entity_followers_delegates_to_transport() {
+    let app = App::new(RecordingTransport::default());
+    let result = app
+        .entity_followers(overrides(), "Shot", 42)
+        .await
+        .expect("entity followers succeeds");
+    assert_eq!(result["entity"], "Shot");
+    assert_eq!(result["id"], 42);
+    assert!(result["followers"].as_array().expect("followers array").is_empty());
+}
+
+#[tokio::test]
+async fn entity_follow_delegates_to_transport() {
+    let app = App::new(RecordingTransport::default());
+    let user = json!({"type": "HumanUser", "id": 456});
+    let result = app
+        .entity_follow(overrides(), "Shot", 42, user.clone())
+        .await
+        .expect("entity follow succeeds");
+    assert_eq!(result["entity"], "Shot");
+    assert_eq!(result["id"], 42);
+    assert_eq!(result["user"], user);
+}
+
+#[tokio::test]
+async fn entity_unfollow_delegates_to_transport() {
+    let app = App::new(RecordingTransport::default());
+    let user = json!({"type": "HumanUser", "id": 456});
+    let result = app
+        .entity_unfollow(overrides(), "Shot", 42, user.clone())
+        .await
+        .expect("entity unfollow succeeds");
+    assert_eq!(result["entity"], "Shot");
+    assert_eq!(result["id"], 42);
+    assert_eq!(result["unfollowed"], true);
+}
+
+#[tokio::test]
+async fn note_threads_delegates_to_transport() {
+    let app = App::new(RecordingTransport::default());
+    let result = app
+        .note_threads(overrides(), 100, None)
+        .await
+        .expect("note threads succeeds");
+    assert_eq!(result["note_id"], 100);
+    assert!(result["data"].as_array().expect("data array").is_empty());
+}
+
+#[tokio::test]
+async fn schema_field_create_delegates_to_transport() {
+    let app = App::new(RecordingTransport::default());
+    let body = json!({
+        "data_type": "text",
+        "properties": [{"property_name": "name", "value": "Custom Field"}]
+    });
+    let result = app
+        .schema_field_create(overrides(), "Shot", body.clone())
+        .await
+        .expect("schema field create succeeds");
+    assert_eq!(result["entity"], "Shot");
+    assert_eq!(result["body"], body);
+}
+
+#[tokio::test]
+async fn schema_field_update_delegates_to_transport() {
+    let app = App::new(RecordingTransport::default());
+    let body = json!({
+        "properties": [{"property_name": "description", "value": "Updated"}]
+    });
+    let result = app
+        .schema_field_update(overrides(), "Shot", "sg_custom", body.clone())
+        .await
+        .expect("schema field update succeeds");
+    assert_eq!(result["entity"], "Shot");
+    assert_eq!(result["field_name"], "sg_custom");
+    assert_eq!(result["body"], body);
+}
+
+#[tokio::test]
+async fn schema_field_delete_delegates_to_transport() {
+    let app = App::new(RecordingTransport::default());
+    let result = app
+        .schema_field_delete(overrides(), "Shot", "sg_obsolete")
+        .await
+        .expect("schema field delete succeeds");
+    assert_eq!(result["entity"], "Shot");
+    assert_eq!(result["field_name"], "sg_obsolete");
+    assert_eq!(result["deleted"], true);
+}
+
+#[tokio::test]
+async fn hierarchy_search_delegates_to_transport() {
+    let app = App::new(RecordingTransport::default());
+    let body = json!({
+        "root_entity": {"type": "Project", "id": 123},
+        "seed_entity_type": "Shot"
+    });
+    let result = app
+        .hierarchy_search(overrides(), body.clone())
+        .await
+        .expect("hierarchy search succeeds");
+    assert_eq!(result["data"], body);
+}
+
+// ────────────────────────────────────────────────────────────────────
+// filter_dsl edge-case tests
+// ────────────────────────────────────────────────────────────────────
+
+#[test]
+fn filter_dsl_empty_input_is_rejected() {
+    let result = fpt_domain::parse_filter_dsl("");
+    assert!(result.is_err());
+    let err = result.unwrap_err();
+    assert_eq!(err.envelope().code, "INVALID_INPUT");
+}
+
+#[test]
+fn filter_dsl_whitespace_only_is_rejected() {
+    let result = fpt_domain::parse_filter_dsl("   \t\n  ");
+    assert!(result.is_err());
+}
+
+#[test]
+fn filter_dsl_trailing_content_is_rejected() {
+    let result = fpt_domain::parse_filter_dsl("code == 'a' leftover");
+    assert!(result.is_err());
+    let msg = result.unwrap_err().envelope().message;
+    assert!(msg.contains("trailing"), "error should mention trailing content: {msg}");
+}
+
+#[test]
+fn filter_dsl_nested_parentheses_work() {
+    let result = fpt_domain::parse_filter_dsl("(code == 'a' and (status == 'ip' or status == 'fin'))").unwrap();
+    let conditions = result["conditions"].as_array().expect("root conditions");
+    assert_eq!(conditions.len(), 2);
+    let inner = &conditions[1];
+    assert_eq!(inner["logical_operator"], "or");
+}
+
+#[test]
+fn filter_dsl_not_in_operator() {
+    let result = fpt_domain::parse_filter_dsl("status not in ['ip', 'fin']").unwrap();
+    let cond = &result["conditions"][0];
+    assert_eq!(cond[1], "not_in");
+    assert_eq!(cond[2], json!(["ip", "fin"]));
+}
+
+#[test]
+fn filter_dsl_null_and_boolean_values() {
+    let result = fpt_domain::parse_filter_dsl("active == true and deleted == false and notes == null").unwrap();
+    let conditions = result["conditions"].as_array().expect("conditions");
+    assert_eq!(conditions.len(), 3);
+    assert_eq!(conditions[0][2], json!(true));
+    assert_eq!(conditions[1][2], json!(false));
+    assert_eq!(conditions[2][2], json!(null));
+}
+
+#[test]
+fn filter_dsl_negative_number() {
+    let result = fpt_domain::parse_filter_dsl("priority > -5").unwrap();
+    let cond = &result["conditions"][0];
+    assert_eq!(cond[0], "priority");
+    assert_eq!(cond[1], "greater_than");
+    assert_eq!(cond[2], json!(-5));
+}
+
+#[test]
+fn filter_dsl_float_number() {
+    let result = fpt_domain::parse_filter_dsl("score >= 3.14").unwrap();
+    let cond = &result["conditions"][0];
+    assert_eq!(cond[1], "greater_than_or_equal");
+    assert_eq!(cond[2], json!(3.14));
+}
+
+#[test]
+fn filter_dsl_escaped_quotes_in_string() {
+    let result = fpt_domain::parse_filter_dsl(r#"code == "it\'s \"fine\"""#).unwrap();
+    let cond = &result["conditions"][0];
+    assert_eq!(cond[2], "it's \"fine\"");
+}
+
+#[test]
+fn filter_dsl_dotted_field_path() {
+    let result = fpt_domain::parse_filter_dsl("project.name == 'MyProject'").unwrap();
+    let cond = &result["conditions"][0];
+    assert_eq!(cond[0], "project.name");
+}
+
+#[test]
+fn filter_dsl_all_comparison_operators() {
+    let cases = vec![
+        ("x == 1", "is"),
+        ("x != 1", "is_not"),
+        ("x > 1", "greater_than"),
+        ("x >= 1", "greater_than_or_equal"),
+        ("x < 1", "less_than"),
+        ("x <= 1", "less_than_or_equal"),
+        ("x ~ 'a'", "contains"),
+    ];
+    for (input, expected_op) in cases {
+        let result = fpt_domain::parse_filter_dsl(input).unwrap();
+        let cond = &result["conditions"][0];
+        assert_eq!(cond[1], expected_op, "failed for input: {input}");
+    }
+}
+
+// ────────────────────────────────────────────────────────────────────
+// config edge-case tests
+// ────────────────────────────────────────────────────────────────────
+
+#[test]
+fn auth_mode_from_str_covers_all_aliases() {
+    let cases = vec![
+        ("script", AuthMode::Script),
+        ("client_credentials", AuthMode::Script),
+        ("user_password", AuthMode::UserPassword),
+        ("user-password", AuthMode::UserPassword),
+        ("password", AuthMode::UserPassword),
+        ("user", AuthMode::UserPassword),
+        ("session_token", AuthMode::SessionToken),
+        ("session-token", AuthMode::SessionToken),
+        ("session", AuthMode::SessionToken),
+    ];
+    for (input, expected) in cases {
+        let parsed: AuthMode = input.parse().unwrap();
+        assert_eq!(parsed, expected, "failed for input: {input}");
+    }
+}
+
+#[test]
+fn auth_mode_from_str_rejects_unknown() {
+    let result: std::result::Result<AuthMode, _> = "magic".parse();
+    assert!(result.is_err());
+}
+
+#[test]
+fn auth_mode_grant_type_mapping() {
+    assert_eq!(AuthMode::Script.grant_type(), "client_credentials");
+    assert_eq!(AuthMode::UserPassword.grant_type(), "password");
+    assert_eq!(AuthMode::SessionToken.grant_type(), "session_token");
+}
+
+#[test]
+fn api_version_or_default_uses_v1_1() {
+    assert_eq!(fpt_domain::api_version_or_default(None), "v1.1");
+    assert_eq!(fpt_domain::api_version_or_default(Some("")), "v1.1");
+    assert_eq!(fpt_domain::api_version_or_default(Some("  ")), "v1.1");
+    assert_eq!(fpt_domain::api_version_or_default(Some("v1.0")), "v1.0");
+}
+
+#[test]
+fn connection_settings_resolve_missing_site_reports_error() {
+    let result = ConnectionSettings::resolve(ConnectionOverrides::default());
+    assert!(result.is_err());
+    let err = result.unwrap_err();
+    assert_eq!(err.envelope().code, "INVALID_INPUT");
+}
+
+#[test]
+fn connection_settings_resolve_strips_trailing_slash_from_site() {
+    let settings = ConnectionSettings::resolve(ConnectionOverrides {
+        site: Some("https://example.shotgrid.autodesk.com/".to_string()),
+        auth_mode: Some(AuthMode::Script),
+        script_name: Some("test".to_string()),
+        script_key: Some("key".to_string()),
+        ..Default::default()
+    })
+    .expect("resolve succeeds");
+    assert_eq!(settings.site, "https://example.shotgrid.autodesk.com");
+}
+
+#[test]
+fn connection_settings_summary_contains_expected_fields() {
+    let settings = ConnectionSettings::resolve(ConnectionOverrides {
+        site: Some("https://example.shotgrid.autodesk.com".to_string()),
+        auth_mode: Some(AuthMode::Script),
+        script_name: Some("test".to_string()),
+        script_key: Some("key".to_string()),
+        ..Default::default()
+    })
+    .expect("resolve succeeds");
+    let summary = settings.summary();
+    assert_eq!(summary.site, "https://example.shotgrid.autodesk.com");
+    assert_eq!(summary.auth_mode, AuthMode::Script);
+    assert_eq!(summary.principal, Some("test".to_string()));
+    assert_eq!(summary.api_version, "v1.1");
 }

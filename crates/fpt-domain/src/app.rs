@@ -1,10 +1,15 @@
+mod activity;
 mod auth;
 mod batch;
 mod entity;
 mod find;
+mod follow;
+mod hierarchy;
+mod note;
 mod schema;
 mod server;
 mod summarize;
+mod upload;
 mod work_schedule;
 
 use std::env;

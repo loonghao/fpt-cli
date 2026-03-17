@@ -96,6 +96,92 @@ pub trait ShotgridTransport {
         id: u64,
     ) -> Result<Value>;
     async fn work_schedule_read(&self, config: &ConnectionSettings, body: &Value) -> Result<Value>;
+    async fn upload_url(
+        &self,
+        config: &ConnectionSettings,
+        entity: &str,
+        id: u64,
+        field_name: &str,
+        file_name: &str,
+        content_type: Option<&str>,
+        multipart_upload: bool,
+    ) -> Result<Value>;
+    async fn download_url(
+        &self,
+        config: &ConnectionSettings,
+        entity: &str,
+        id: u64,
+        field_name: &str,
+    ) -> Result<Value>;
+    async fn thumbnail_url(
+        &self,
+        config: &ConnectionSettings,
+        entity: &str,
+        id: u64,
+    ) -> Result<Value>;
+    async fn activity_stream(
+        &self,
+        config: &ConnectionSettings,
+        entity: &str,
+        id: u64,
+        params: &[(String, String)],
+    ) -> Result<Value>;
+    async fn event_log_entries(
+        &self,
+        config: &ConnectionSettings,
+        params: &[(String, String)],
+    ) -> Result<Value>;
+    async fn preferences_get(&self, config: &ConnectionSettings) -> Result<Value>;
+    async fn entity_followers(
+        &self,
+        config: &ConnectionSettings,
+        entity: &str,
+        id: u64,
+    ) -> Result<Value>;
+    async fn entity_follow(
+        &self,
+        config: &ConnectionSettings,
+        entity: &str,
+        id: u64,
+        user: &Value,
+    ) -> Result<Value>;
+    async fn entity_unfollow(
+        &self,
+        config: &ConnectionSettings,
+        entity: &str,
+        id: u64,
+        user: &Value,
+    ) -> Result<Value>;
+    async fn note_threads(
+        &self,
+        config: &ConnectionSettings,
+        note_id: u64,
+        params: &[(String, String)],
+    ) -> Result<Value>;
+    async fn schema_field_create(
+        &self,
+        config: &ConnectionSettings,
+        entity: &str,
+        body: &Value,
+    ) -> Result<Value>;
+    async fn schema_field_update(
+        &self,
+        config: &ConnectionSettings,
+        entity: &str,
+        field_name: &str,
+        body: &Value,
+    ) -> Result<Value>;
+    async fn schema_field_delete(
+        &self,
+        config: &ConnectionSettings,
+        entity: &str,
+        field_name: &str,
+    ) -> Result<Value>;
+    async fn hierarchy(
+        &self,
+        config: &ConnectionSettings,
+        body: &Value,
+    ) -> Result<Value>;
 }
 
 #[derive(Debug, Clone)]
@@ -629,6 +715,204 @@ impl ShotgridTransport for RestTransport {
             vec![Self::rpc_auth_params(config), body.clone()],
         )
         .await
+    }
+
+    async fn upload_url(
+        &self,
+        config: &ConnectionSettings,
+        entity: &str,
+        id: u64,
+        field_name: &str,
+        file_name: &str,
+        content_type: Option<&str>,
+        multipart_upload: bool,
+    ) -> Result<Value> {
+        let path = format!(
+            "entity/{}/{}/{}/_upload",
+            entity_collection_path(entity),
+            id,
+            field_name
+        );
+        let mut query = vec![
+            ("filename".to_string(), file_name.to_string()),
+            (
+                "multipart_upload".to_string(),
+                multipart_upload.to_string(),
+            ),
+        ];
+        if let Some(ct) = content_type {
+            query.push(("content_type".to_string(), ct.to_string()));
+        }
+        self.authorized_json_request(config, Method::GET, &path, &query, None)
+            .await
+    }
+
+    async fn download_url(
+        &self,
+        config: &ConnectionSettings,
+        entity: &str,
+        id: u64,
+        field_name: &str,
+    ) -> Result<Value> {
+        let path = format!(
+            "entity/{}/{}/{}/_download",
+            entity_collection_path(entity),
+            id,
+            field_name
+        );
+        self.authorized_json_request(config, Method::GET, &path, &[], None)
+            .await
+    }
+
+    async fn thumbnail_url(
+        &self,
+        config: &ConnectionSettings,
+        entity: &str,
+        id: u64,
+    ) -> Result<Value> {
+        let path = format!(
+            "entity/{}/{}/image",
+            entity_collection_path(entity),
+            id
+        );
+        self.authorized_json_request(config, Method::GET, &path, &[], None)
+            .await
+    }
+
+    async fn activity_stream(
+        &self,
+        config: &ConnectionSettings,
+        entity: &str,
+        id: u64,
+        params: &[(String, String)],
+    ) -> Result<Value> {
+        let path = format!(
+            "entity/{}/{}/activity_stream",
+            entity_collection_path(entity),
+            id
+        );
+        self.authorized_json_request(config, Method::GET, &path, params, None)
+            .await
+    }
+
+    async fn event_log_entries(
+        &self,
+        config: &ConnectionSettings,
+        params: &[(String, String)],
+    ) -> Result<Value> {
+        self.authorized_json_request(config, Method::GET, "entity/event_log_entries", params, None)
+            .await
+    }
+
+    async fn preferences_get(&self, config: &ConnectionSettings) -> Result<Value> {
+        self.authorized_json_request(config, Method::GET, "preferences", &[], None)
+            .await
+    }
+
+    async fn entity_followers(
+        &self,
+        config: &ConnectionSettings,
+        entity: &str,
+        id: u64,
+    ) -> Result<Value> {
+        let path = format!(
+            "entity/{}/{}/followers",
+            entity_collection_path(entity),
+            id
+        );
+        self.authorized_json_request(config, Method::GET, &path, &[], None)
+            .await
+    }
+
+    async fn entity_follow(
+        &self,
+        config: &ConnectionSettings,
+        entity: &str,
+        id: u64,
+        user: &Value,
+    ) -> Result<Value> {
+        let path = format!(
+            "entity/{}/{}/followers",
+            entity_collection_path(entity),
+            id
+        );
+        self.authorized_json_request(config, Method::POST, &path, &[], Some(user))
+            .await
+    }
+
+    async fn entity_unfollow(
+        &self,
+        config: &ConnectionSettings,
+        entity: &str,
+        id: u64,
+        user: &Value,
+    ) -> Result<Value> {
+        let user_id = user
+            .get("id")
+            .and_then(Value::as_u64)
+            .ok_or_else(|| AppError::invalid_input("user object must contain a numeric `id`"))?;
+        let path = format!(
+            "entity/{}/{}/followers/{}",
+            entity_collection_path(entity),
+            id,
+            user_id
+        );
+        self.authorized_json_request(config, Method::DELETE, &path, &[], None)
+            .await
+    }
+
+    async fn note_threads(
+        &self,
+        config: &ConnectionSettings,
+        note_id: u64,
+        params: &[(String, String)],
+    ) -> Result<Value> {
+        let path = format!("entity/notes/{note_id}/thread_contents");
+        self.authorized_json_request(config, Method::GET, &path, params, None)
+            .await
+    }
+
+    async fn schema_field_create(
+        &self,
+        config: &ConnectionSettings,
+        entity: &str,
+        body: &Value,
+    ) -> Result<Value> {
+        let path = format!("schema/{entity}/fields");
+        self.authorized_json_request(config, Method::POST, &path, &[], Some(body))
+            .await
+    }
+
+    async fn schema_field_update(
+        &self,
+        config: &ConnectionSettings,
+        entity: &str,
+        field_name: &str,
+        body: &Value,
+    ) -> Result<Value> {
+        let path = format!("schema/{entity}/fields/{field_name}");
+        self.authorized_json_request(config, Method::PUT, &path, &[], Some(body))
+            .await
+    }
+
+    async fn schema_field_delete(
+        &self,
+        config: &ConnectionSettings,
+        entity: &str,
+        field_name: &str,
+    ) -> Result<Value> {
+        let path = format!("schema/{entity}/fields/{field_name}");
+        self.authorized_json_request(config, Method::DELETE, &path, &[], None)
+            .await
+    }
+
+    async fn hierarchy(
+        &self,
+        config: &ConnectionSettings,
+        body: &Value,
+    ) -> Result<Value> {
+        self.authorized_json_request(config, Method::POST, "hierarchy/_search", &[], Some(body))
+            .await
     }
 }
 

@@ -19,6 +19,12 @@ lint:
 test:
     vx cargo test --workspace
 
+coverage:
+    vx cargo llvm-cov --workspace --lcov --output-path lcov.info
+
+coverage-html:
+    vx cargo llvm-cov --workspace --html
+
 hakari-generate:
     vx cargo hakari generate
     vx cargo hakari manage-deps -y

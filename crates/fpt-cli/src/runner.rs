@@ -1,6 +1,8 @@
 use crate::cli::{
-    AuthCommands, BatchEntityCommands, Cli, Commands, EntityCommands, InspectCommands,
-    SchemaCommands, ServerCommands, WorkScheduleCommands,
+    ActivityCommands, AuthCommands, BatchEntityCommands, Cli, Commands, DownloadCommands,
+    EntityCommands, EventLogCommands, FollowersCommands, HierarchyCommands, InspectCommands,
+    NoteCommands, PreferencesCommands, SchemaCommands, ServerCommands, ThumbnailCommands,
+    UploadCommands, WorkScheduleCommands,
 };
 use crate::self_update;
 use fpt_core::{AppError, Result, read_json_input};
@@ -25,6 +27,26 @@ pub async fn run(cli: Cli) -> Result<Value> {
         Commands::Schema(command) => match command {
             SchemaCommands::Entities => app.schema_entities(connection).await,
             SchemaCommands::Fields { entity } => app.schema_fields(connection, &entity).await,
+            SchemaCommands::FieldCreate { entity, input } => {
+                let body = required_json_input(input)?;
+                app.schema_field_create(connection, &entity, body).await
+            }
+            SchemaCommands::FieldUpdate {
+                entity,
+                field_name,
+                input,
+            } => {
+                let body = required_json_input(input)?;
+                app.schema_field_update(connection, &entity, &field_name, body)
+                    .await
+            }
+            SchemaCommands::FieldDelete {
+                entity,
+                field_name,
+            } => {
+                app.schema_field_delete(connection, &entity, &field_name)
+                    .await
+            }
         },
         Commands::Entity(command) => match command {
             EntityCommands::Get { entity, id, fields } => {
@@ -128,6 +150,79 @@ pub async fn run(cli: Cli) -> Result<Value> {
             WorkScheduleCommands::Read { input } => {
                 let body = required_json_input(input)?;
                 app.work_schedule_read(connection, body).await
+            }
+        },
+        Commands::Upload(command) => match command {
+            UploadCommands::Url {
+                entity,
+                id,
+                field_name,
+                file_name,
+                content_type,
+                multipart,
+            } => {
+                app.upload_url(
+                    connection,
+                    &entity,
+                    id,
+                    &field_name,
+                    &file_name,
+                    content_type.as_deref(),
+                    multipart,
+                )
+                .await
+            }
+        },
+        Commands::Download(command) => match command {
+            DownloadCommands::Url {
+                entity,
+                id,
+                field_name,
+            } => app.download_url(connection, &entity, id, &field_name).await,
+        },
+        Commands::Thumbnail(command) => match command {
+            ThumbnailCommands::Url { entity, id } => {
+                app.thumbnail_url(connection, &entity, id).await
+            }
+        },
+        Commands::Activity(command) => match command {
+            ActivityCommands::Stream { entity, id, input } => {
+                let input = read_json_input(input.as_deref())?;
+                app.activity_stream(connection, &entity, id, input).await
+            }
+        },
+        Commands::EventLog(command) => match command {
+            EventLogCommands::Entries { input } => {
+                let input = read_json_input(input.as_deref())?;
+                app.event_log_entries(connection, input).await
+            }
+        },
+        Commands::Preferences(command) => match command {
+            PreferencesCommands::Get => app.preferences_get(connection).await,
+        },
+        Commands::Followers(command) => match command {
+            FollowersCommands::List { entity, id } => {
+                app.entity_followers(connection, &entity, id).await
+            }
+            FollowersCommands::Follow { entity, id, input } => {
+                let body = required_json_input(input)?;
+                app.entity_follow(connection, &entity, id, body).await
+            }
+            FollowersCommands::Unfollow { entity, id, input } => {
+                let body = required_json_input(input)?;
+                app.entity_unfollow(connection, &entity, id, body).await
+            }
+        },
+        Commands::Note(command) => match command {
+            NoteCommands::Threads { note_id, input } => {
+                let input = read_json_input(input.as_deref())?;
+                app.note_threads(connection, note_id, input).await
+            }
+        },
+        Commands::Hierarchy(command) => match command {
+            HierarchyCommands::Search { input } => {
+                let body = required_json_input(input)?;
+                app.hierarchy_search(connection, body).await
             }
         },
         Commands::SelfUpdate(args) => self_update::run(args).await,

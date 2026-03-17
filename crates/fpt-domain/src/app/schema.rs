@@ -23,4 +23,41 @@ where
         let config = ConnectionSettings::resolve(overrides)?;
         self.transport.schema_fields(&config, entity).await
     }
+
+    pub async fn schema_field_create(
+        &self,
+        overrides: ConnectionOverrides,
+        entity: &str,
+        body: Value,
+    ) -> Result<Value> {
+        let config = ConnectionSettings::resolve(overrides)?;
+        self.transport
+            .schema_field_create(&config, entity, &body)
+            .await
+    }
+
+    pub async fn schema_field_update(
+        &self,
+        overrides: ConnectionOverrides,
+        entity: &str,
+        field_name: &str,
+        body: Value,
+    ) -> Result<Value> {
+        let config = ConnectionSettings::resolve(overrides)?;
+        self.transport
+            .schema_field_update(&config, entity, field_name, &body)
+            .await
+    }
+
+    pub async fn schema_field_delete(
+        &self,
+        overrides: ConnectionOverrides,
+        entity: &str,
+        field_name: &str,
+    ) -> Result<Value> {
+        let config = ConnectionSettings::resolve(overrides)?;
+        self.transport
+            .schema_field_delete(&config, entity, field_name)
+            .await
+    }
 }
