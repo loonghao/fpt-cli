@@ -766,7 +766,7 @@ impl ShotgridTransport for NoteThreadsNotFoundTransport {
         note_id: u64,
         _params: &[(String, String)],
     ) -> Result<Value> {
-        Err(AppError::api("ShotGrid API 请求失败 (404 Not Found)")
+        Err(AppError::api("ShotGrid API request failed (404 Not Found)")
             .with_transport("rest")
             .with_details(json!({
                 "errors": [

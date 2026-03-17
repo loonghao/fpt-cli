@@ -1095,7 +1095,7 @@ pub fn plan_entity_create(api_version: &str, entity: &str, body: Value) -> Reque
         risk: RiskLevel::Write,
         query: Vec::new(),
         body: Some(body),
-        notes: vec!["dry-run 仅展示请求计划，不发起网络调用".to_string()],
+        notes: vec!["dry-run: shows the planned request without making a network call".to_string()],
     }
 }
 
@@ -1111,7 +1111,7 @@ pub fn plan_entity_update(api_version: &str, entity: &str, id: u64, body: Value)
         risk: RiskLevel::Write,
         query: Vec::new(),
         body: Some(body),
-        notes: vec!["dry-run 仅展示请求计划，不发起网络调用".to_string()],
+        notes: vec!["dry-run: shows the planned request without making a network call".to_string()],
     }
 }
 
@@ -1128,8 +1128,8 @@ pub fn plan_entity_delete(api_version: &str, entity: &str, id: u64) -> RequestPl
         query: Vec::new(),
         body: None,
         notes: vec![
-            "dry-run 仅展示请求计划，不发起网络调用".to_string(),
-            "真实删除需显式传入 `--yes`".to_string(),
+            "dry-run: shows the planned request without making a network call".to_string(),
+            "actual deletion requires explicit `--yes` flag".to_string(),
         ],
     }
 }
@@ -1151,8 +1151,8 @@ pub fn plan_entity_revive(entity: &str, id: u64) -> RequestPlan {
             ]
         })),
         notes: vec![
-            "dry-run 仅展示请求计划，不发起网络调用".to_string(),
-            "RPC 认证参数会在真实执行时根据连接配置注入".to_string(),
+            "dry-run: shows the planned request without making a network call".to_string(),
+            "RPC auth params are injected from the connection config at execution time".to_string(),
         ],
     }
 }
