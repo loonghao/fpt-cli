@@ -1,6 +1,6 @@
 mod activity;
 mod auth;
-mod batch;
+pub mod batch;
 mod entity;
 mod find;
 mod follow;

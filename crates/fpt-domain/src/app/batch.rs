@@ -1,3 +1,5 @@
+use std::time::Instant;
+
 use fpt_core::{AppError, Result};
 use futures::stream::{self, StreamExt};
 use serde_json::{Value, json};
@@ -7,8 +9,19 @@ use crate::transport::{
     RequestPlan, ShotgridTransport, plan_entity_create, plan_entity_delete, plan_entity_update,
 };
 
-use super::find::build_find_params;
+use super::find::{build_find_params, upsert_query_param};
 use super::{App, BatchUpdateItem, batch_concurrency_limit, sort_batch_results};
+
+/// How to handle a conflict when an entity with the key field value already exists.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum OnConflict {
+    /// Skip the item — do not create or update.
+    Skip,
+    /// Update the existing entity with the new body.
+    Update,
+    /// Return an error for the item.
+    Error,
+}
 
 impl<T> App<T>
 where
@@ -24,6 +37,7 @@ where
         let config = ConnectionSettings::resolve(overrides)?;
         let transport = &self.transport;
         let config = &config;
+        let started_at = Instant::now();
         let mut results = stream::iter(ids.into_iter().enumerate())
             .map(|(index, id)| {
                 let fields = fields.clone();
@@ -48,8 +62,9 @@ where
             .collect::<Vec<_>>()
             .await;
         sort_batch_results(&mut results);
+        let elapsed_ms = started_at.elapsed().as_millis() as u64;
 
-        Ok(batch_response("entity.batch.get", entity, results))
+        Ok(batch_response_with_stats("entity.batch.get", entity, results, elapsed_ms))
     }
 
     pub async fn entity_batch_find(
@@ -62,6 +77,7 @@ where
         let config = ConnectionSettings::resolve(overrides)?;
         let transport = &self.transport;
         let config = &config;
+        let started_at = Instant::now();
         let mut results = stream::iter(requests.into_iter().enumerate())
             .map(|(index, request)| async move {
                 match build_find_params(Some(request.clone()), None) {
@@ -91,8 +107,9 @@ where
             .collect::<Vec<_>>()
             .await;
         sort_batch_results(&mut results);
+        let elapsed_ms = started_at.elapsed().as_millis() as u64;
 
-        Ok(batch_response("entity.batch.find", entity, results))
+        Ok(batch_response_with_stats("entity.batch.find", entity, results, elapsed_ms))
     }
 
     pub async fn entity_batch_create(
@@ -115,6 +132,7 @@ where
         let config = ConnectionSettings::resolve(overrides)?;
         let transport = &self.transport;
         let config = &config;
+        let started_at = Instant::now();
         let mut results = stream::iter(items.into_iter().enumerate())
             .map(|(index, body)| async move {
                 match transport.entity_create(config, entity, &body).await {
@@ -136,8 +154,9 @@ where
             .collect::<Vec<_>>()
             .await;
         sort_batch_results(&mut results);
+        let elapsed_ms = started_at.elapsed().as_millis() as u64;
 
-        Ok(batch_response("entity.batch.create", entity, results))
+        Ok(batch_response_with_stats("entity.batch.create", entity, results, elapsed_ms))
     }
 
     pub async fn entity_batch_update(
@@ -160,6 +179,7 @@ where
         let config = ConnectionSettings::resolve(overrides)?;
         let transport = &self.transport;
         let config = &config;
+        let started_at = Instant::now();
         let mut results = stream::iter(items.into_iter().enumerate())
             .map(|(index, item)| async move {
                 match transport
@@ -186,8 +206,246 @@ where
             .collect::<Vec<_>>()
             .await;
         sort_batch_results(&mut results);
+        let elapsed_ms = started_at.elapsed().as_millis() as u64;
 
-        Ok(batch_response("entity.batch.update", entity, results))
+        Ok(batch_response_with_stats("entity.batch.update", entity, results, elapsed_ms))
+    }
+
+    pub async fn entity_batch_upsert(
+        &self,
+        overrides: ConnectionOverrides,
+        entity: &str,
+        input: Value,
+        key: &str,
+        on_conflict: OnConflict,
+        dry_run: bool,
+    ) -> Result<Value> {
+        let items = parse_batch_create_input(input)?;
+
+        if dry_run {
+            let api_version = api_version_or_default(overrides.api_version.as_deref());
+            let plans = items
+                .into_iter()
+                .map(|body| {
+                    json!({
+                        "action": "create_or_update",
+                        "key": key,
+                        "on_conflict": format!("{on_conflict:?}").to_lowercase(),
+                        "plan": plan_entity_create(&api_version, entity, body),
+                    })
+                })
+                .collect::<Vec<_>>();
+            return Ok(json!({
+                "dry_run": true,
+                "operation": "entity.batch.upsert",
+                "entity": entity,
+                "key": key,
+                "on_conflict": format!("{on_conflict:?}").to_lowercase(),
+                "count": plans.len(),
+                "plans": plans,
+            }));
+        }
+
+        let config = ConnectionSettings::resolve(overrides)?;
+        let transport = &self.transport;
+        let config = &config;
+        let key = key.to_string();
+        let mut results = stream::iter(items.into_iter().enumerate())
+            .map(|(index, body)| {
+                let key = key.clone();
+                async move {
+                    // Look up whether an entity with this key value already exists.
+                    let key_value = match body.get(&key) {
+                        Some(v) => v.clone(),
+                        None => {
+                            return json!({
+                                "index": index,
+                                "ok": false,
+                                "action": "skipped",
+                                "request": body,
+                                "error": {
+                                    "code": "INVALID_INPUT",
+                                    "message": format!("upsert key field `{key}` is missing from item {}", index + 1),
+                                },
+                            });
+                        }
+                    };
+
+                    // Build a find-one query for the key field.
+                    let filter_input = json!({
+                        "search": {
+                            "filters": {
+                                "filter_operator": "all",
+                                "filters": [[key, "is", key_value]],
+                            }
+                        }
+                    });
+                    let mut params = match build_find_params(Some(filter_input), None) {
+                        Ok(p) => p,
+                        Err(error) => {
+                            return json!({
+                                "index": index,
+                                "ok": false,
+                                "action": "error",
+                                "request": body,
+                                "error": error.envelope(),
+                            });
+                        }
+                    };
+                    upsert_query_param(&mut params.query, "page[size]", "1");
+
+                    let existing = match transport.entity_find(config, entity, params).await {
+                        Ok(response) => {
+                            // Extract first item from data array
+                            response
+                                .get("data")
+                                .and_then(|d| d.as_array())
+                                .and_then(|arr| arr.first())
+                                .cloned()
+                        }
+                        Err(error) => {
+                            return json!({
+                                "index": index,
+                                "ok": false,
+                                "action": "error",
+                                "request": body,
+                                "error": error.envelope(),
+                            });
+                        }
+                    };
+
+                    match existing {
+                        None => {
+                            // No existing entity — create it.
+                            match transport.entity_create(config, entity, &body).await {
+                                Ok(response) => json!({
+                                    "index": index,
+                                    "ok": true,
+                                    "action": "created",
+                                    "request": body,
+                                    "response": response,
+                                }),
+                                Err(error) => json!({
+                                    "index": index,
+                                    "ok": false,
+                                    "action": "error",
+                                    "request": body,
+                                    "error": error.envelope(),
+                                }),
+                            }
+                        }
+                        Some(existing_entity) => {
+                            match on_conflict {
+                                OnConflict::Skip => json!({
+                                    "index": index,
+                                    "ok": true,
+                                    "action": "skipped",
+                                    "request": body,
+                                    "existing": existing_entity,
+                                }),
+                                OnConflict::Error => {
+                                    let existing_id = existing_entity
+                                        .get("id")
+                                        .and_then(Value::as_u64)
+                                        .unwrap_or(0);
+                                    json!({
+                                        "index": index,
+                                        "ok": false,
+                                        "action": "conflict",
+                                        "request": body,
+                                        "existing": existing_entity,
+                                        "error": {
+                                            "code": "POLICY_BLOCKED",
+                                            "message": format!(
+                                                "entity with {key}={} already exists (id={existing_id}); use --on-conflict skip or update to handle conflicts",
+                                                body.get(&key).unwrap_or(&Value::Null)
+                                            ),
+                                        },
+                                    })
+                                }
+                                OnConflict::Update => {
+                                    let existing_id = match existing_entity
+                                        .get("id")
+                                        .and_then(Value::as_u64)
+                                    {
+                                        Some(id) => id,
+                                        None => {
+                                            return json!({
+                                                "index": index,
+                                                "ok": false,
+                                                "action": "error",
+                                                "request": body,
+                                                "error": {
+                                                    "code": "API_ERROR",
+                                                    "message": "existing entity is missing `id` field",
+                                                },
+                                            });
+                                        }
+                                    };
+                                    match transport
+                                        .entity_update(config, entity, existing_id, &body)
+                                        .await
+                                    {
+                                        Ok(response) => json!({
+                                            "index": index,
+                                            "ok": true,
+                                            "action": "updated",
+                                            "id": existing_id,
+                                            "request": body,
+                                            "response": response,
+                                        }),
+                                        Err(error) => json!({
+                                            "index": index,
+                                            "ok": false,
+                                            "action": "error",
+                                            "id": existing_id,
+                                            "request": body,
+                                            "error": error.envelope(),
+                                        }),
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            })
+            .buffer_unordered(batch_concurrency_limit())
+            .collect::<Vec<_>>()
+            .await;
+        sort_batch_results(&mut results);
+
+        let failure_count = results
+            .iter()
+            .filter(|item| item.get("ok").and_then(Value::as_bool) != Some(true))
+            .count();
+        let success_count = results.len().saturating_sub(failure_count);
+        let created_count = results
+            .iter()
+            .filter(|item| item.get("action").and_then(Value::as_str) == Some("created"))
+            .count();
+        let updated_count = results
+            .iter()
+            .filter(|item| item.get("action").and_then(Value::as_str) == Some("updated"))
+            .count();
+        let skipped_count = results
+            .iter()
+            .filter(|item| item.get("action").and_then(Value::as_str) == Some("skipped"))
+            .count();
+
+        Ok(json!({
+            "ok": failure_count == 0,
+            "operation": "entity.batch.upsert",
+            "entity": entity,
+            "key": key,
+            "on_conflict": format!("{on_conflict:?}").to_lowercase(),
+            "total": results.len(),
+            "success_count": success_count,
+            "failure_count": failure_count,
+            "created_count": created_count,
+            "updated_count": updated_count,
+            "skipped_count": skipped_count,
+            "results": results,
+        }))
     }
 
     pub async fn entity_batch_delete(
@@ -219,6 +477,7 @@ where
         let config = ConnectionSettings::resolve(overrides)?;
         let transport = &self.transport;
         let config = &config;
+        let started_at = Instant::now();
         let mut results = stream::iter(ids.into_iter().enumerate())
             .map(|(index, id)| async move {
                 match transport.entity_delete(config, entity, id).await {
@@ -240,25 +499,44 @@ where
             .collect::<Vec<_>>()
             .await;
         sort_batch_results(&mut results);
+        let elapsed_ms = started_at.elapsed().as_millis() as u64;
 
-        Ok(batch_response("entity.batch.delete", entity, results))
+        Ok(batch_response_with_stats("entity.batch.delete", entity, results, elapsed_ms))
     }
 }
 
-fn batch_response(operation: &str, entity: &str, results: Vec<Value>) -> Value {
+/// Build a batch response that includes execution statistics.
+///
+/// `elapsed_ms` is the total wall-clock time for the batch operation.
+pub(super) fn batch_response_with_stats(
+    operation: &str,
+    entity: &str,
+    results: Vec<Value>,
+    elapsed_ms: u64,
+) -> Value {
     let failure_count = results
         .iter()
         .filter(|item| item.get("ok").and_then(Value::as_bool) != Some(true))
         .count();
     let success_count = results.len().saturating_sub(failure_count);
+    let total = results.len();
+    let throughput_eps = if elapsed_ms > 0 {
+        (total as f64) / (elapsed_ms as f64 / 1000.0)
+    } else {
+        0.0
+    };
 
     json!({
         "ok": failure_count == 0,
         "operation": operation,
         "entity": entity,
-        "total": results.len(),
+        "total": total,
         "success_count": success_count,
         "failure_count": failure_count,
+        "stats": {
+            "elapsed_ms": elapsed_ms,
+            "throughput_eps": (throughput_eps * 100.0).round() / 100.0,
+        },
         "results": results,
     })
 }

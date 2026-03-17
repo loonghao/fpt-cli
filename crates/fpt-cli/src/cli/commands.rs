@@ -1,4 +1,4 @@
-use clap::{Args, Parser, Subcommand};
+use clap::{Args, Parser, Subcommand, ValueEnum};
 
 use super::common::{AuthModeArg, OutputFormatArg};
 use super::connection::ConnectionArgs;
@@ -321,6 +321,23 @@ pub enum BatchEntityCommands {
         #[arg(long)]
         yes: bool,
     },
+    #[command(
+        name = "upsert",
+        about = "Create or update entities based on a key field (idempotent bulk upsert)"
+    )]
+    Upsert {
+        entity: String,
+        #[arg(long)]
+        input: String,
+        /// Field name used to look up existing entities (e.g. `code`)
+        #[arg(long)]
+        key: String,
+        /// How to handle a conflict when an entity with the key value already exists
+        #[arg(long = "on-conflict", default_value = "skip")]
+        on_conflict: OnConflictArg,
+        #[arg(long)]
+        dry_run: bool,
+    },
 }
 
 #[derive(Debug, Subcommand)]
@@ -457,4 +474,15 @@ pub enum HierarchyCommands {
         #[arg(long)]
         input: String,
     },
+}
+
+/// How to handle a conflict when an entity with the key field value already exists.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
+pub enum OnConflictArg {
+    /// Skip the item — do not create or update (default)
+    Skip,
+    /// Update the existing entity with the new body
+    Update,
+    /// Return an error for the conflicting item
+    Error,
 }
