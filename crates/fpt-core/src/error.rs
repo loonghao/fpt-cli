@@ -115,8 +115,9 @@ impl AppError {
 
     pub fn with_detail(mut self, key: impl Into<String>, value: impl Serialize) -> Self {
         let key = key.into();
-        let value = serde_json::to_value(value)
-            .unwrap_or_else(|error| Value::String(format!("failed to serialize detail value: {error}")));
+        let value = serde_json::to_value(value).unwrap_or_else(|error| {
+            Value::String(format!("failed to serialize detail value: {error}"))
+        });
 
         match self.details.take() {
             Some(Value::Object(mut object)) => {

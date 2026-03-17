@@ -206,10 +206,13 @@ impl ConnectionSettings {
         let credentials = match auth_mode {
             AuthMode::Script => {
                 if script_name.trim().is_empty() {
-                    missing.push("FPT_SCRIPT_NAME / SG_SCRIPT_NAME / config script_name / --script-name");
+                    missing.push(
+                        "FPT_SCRIPT_NAME / SG_SCRIPT_NAME / config script_name / --script-name",
+                    );
                 }
                 if script_key.trim().is_empty() {
-                    missing.push("FPT_SCRIPT_KEY / SG_SCRIPT_KEY / config script_key / --script-key");
+                    missing
+                        .push("FPT_SCRIPT_KEY / SG_SCRIPT_KEY / config script_key / --script-key");
                 }
 
                 Credentials::Script {
@@ -343,13 +346,18 @@ pub fn save_persisted_config(config: &PersistedConnectionConfig) -> Result<PathB
             ))
             .with_operation("create_config_directory")
             .with_resource(parent.display().to_string())
-            .with_hint("Check directory permissions or set `FPT_CONFIG_PATH` to a writable location.")
+            .with_hint(
+                "Check directory permissions or set `FPT_CONFIG_PATH` to a writable location.",
+            )
         })?;
     }
 
-    let contents = serde_json::to_string_pretty(config)
-        .map_err(|error| AppError::internal(format!("could not serialize persisted config as JSON: {error}"))
-            .with_operation("serialize_persisted_config"))?;
+    let contents = serde_json::to_string_pretty(config).map_err(|error| {
+        AppError::internal(format!(
+            "could not serialize persisted config as JSON: {error}"
+        ))
+        .with_operation("serialize_persisted_config")
+    })?;
     fs::write(&path, format!("{contents}\n")).map_err(|error| {
         AppError::internal(format!(
             "could not write persisted config file `{}`: {error}",
@@ -373,12 +381,14 @@ pub fn resolve_site(overrides: ConnectionOverrides) -> Result<String> {
 
     if site.trim().is_empty() {
         return Err(AppError::invalid_input(
-            "missing ShotGrid site setting required for this command"
+            "missing ShotGrid site setting required for this command",
         )
         .with_operation("resolve_site")
         .with_missing_fields(["FPT_SITE / SG_SITE / config site / --site"])
         .with_invalid_field("site")
-        .with_hint("Provide the site via CLI flag, environment variable, or `fpt config set --site ...`."));
+        .with_hint(
+            "Provide the site via CLI flag, environment variable, or `fpt config set --site ...`.",
+        ));
     }
 
     Ok(site.trim_end_matches('/').to_string())

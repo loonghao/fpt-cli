@@ -95,7 +95,10 @@ pub enum ConfigCommands {
     Get,
     #[command(name = "path", about = "Show the config file path")]
     Path,
-    #[command(name = "set", about = "Persist CLI configuration values for later reuse")]
+    #[command(
+        name = "set",
+        about = "Persist CLI configuration values for later reuse"
+    )]
     Set(ConfigSetArgs),
     #[command(name = "clear", about = "Remove persisted CLI configuration values")]
     Clear(ConfigClearArgs),
@@ -429,18 +432,27 @@ pub enum FollowersCommands {
 
 #[derive(Debug, Subcommand)]
 pub enum NoteCommands {
-    #[command(name = "threads", about = "List all replies in a top-level Note thread")]
+    #[command(
+        name = "threads",
+        about = "List all replies in a top-level Note thread"
+    )]
     Threads {
         #[arg(help = "Top-level Note record id")]
         note_id: u64,
-        #[arg(long, help = "Optional query parameters as JSON (fields, page, sort, etc.)")]
+        #[arg(
+            long,
+            help = "Optional query parameters as JSON (fields, page, sort, etc.)"
+        )]
         input: Option<String>,
     },
 }
 
 #[derive(Debug, Subcommand)]
 pub enum HierarchyCommands {
-    #[command(name = "search", about = "Search project hierarchy with a structured JSON query")]
+    #[command(
+        name = "search",
+        about = "Search project hierarchy with a structured JSON query"
+    )]
     Search {
         #[arg(long)]
         input: String,

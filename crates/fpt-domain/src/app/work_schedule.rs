@@ -67,12 +67,12 @@ fn require_non_empty_string(
     })?;
 
     if value.trim().is_empty() {
-        return Err(AppError::invalid_input(format!(
-            "`{field_name}` cannot be empty"
-        ))
-        .with_operation("normalize_work_schedule_input")
-        .with_invalid_field(field_name)
-        .with_hint("Provide a date string in YYYY-MM-DD format."));
+        return Err(
+            AppError::invalid_input(format!("`{field_name}` cannot be empty"))
+                .with_operation("normalize_work_schedule_input")
+                .with_invalid_field(field_name)
+                .with_hint("Provide a date string in YYYY-MM-DD format."),
+        );
     }
 
     Ok(())
@@ -83,7 +83,9 @@ fn validate_entity_link(value: &Value, field_name: &str, expected_type: &str) ->
         AppError::invalid_input(format!("`{field_name}` must be an entity link object"))
             .with_operation("validate_entity_link")
             .with_invalid_field(field_name)
-            .with_expected_shape(format!("a JSON object with `type` = `{expected_type}` and a positive integer `id`"))
+            .with_expected_shape(format!(
+                "a JSON object with `type` = `{expected_type}` and a positive integer `id`"
+            ))
     })?;
 
     let link_type = object.get("type").and_then(Value::as_str).ok_or_else(|| {

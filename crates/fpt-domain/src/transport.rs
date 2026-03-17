@@ -296,11 +296,9 @@ impl RestTransport {
         &self,
         config: &ConnectionSettings,
     ) -> Result<Option<AccessTokenPayload>> {
-        let cache = self
-            .token_cache
-            .lock()
-            .map_err(|_| AppError::internal("token cache is poisoned")
-                .with_operation("read_token_cache"))?;
+        let cache = self.token_cache.lock().map_err(|_| {
+            AppError::internal("token cache is poisoned").with_operation("read_token_cache")
+        })?;
         let Some(cached) = cache.as_ref() else {
             return Ok(None);
         };
@@ -328,11 +326,9 @@ impl RestTransport {
             Instant::now() + Duration::from_secs(effective_seconds)
         });
 
-        let mut cache = self
-            .token_cache
-            .lock()
-            .map_err(|_| AppError::internal("token cache is poisoned")
-                .with_operation("write_token_cache"))?;
+        let mut cache = self.token_cache.lock().map_err(|_| {
+            AppError::internal("token cache is poisoned").with_operation("write_token_cache")
+        })?;
         *cache = Some(CachedAccessToken {
             cache_key: Self::token_cache_key(config),
             payload: payload.clone(),
@@ -404,12 +400,14 @@ impl RestTransport {
             .send()
             .await
             .map_err(|error| {
-                AppError::network(format!("could not request a ShotGrid access token: {error}"))
-                    .with_operation("request_access_token")
-                    .with_transport("rest")
-                    .with_resource("auth/access_token")
-                    .with_retryable_reason("transient network failure while requesting an access token")
-                    .retryable(true)
+                AppError::network(format!(
+                    "could not request a ShotGrid access token: {error}"
+                ))
+                .with_operation("request_access_token")
+                .with_transport("rest")
+                .with_resource("auth/access_token")
+                .with_retryable_reason("transient network failure while requesting an access token")
+                .retryable(true)
             })?;
 
         let body = Self::parse_response(response, "rest").await?;
@@ -483,12 +481,17 @@ impl RestTransport {
     ) -> Result<Value> {
         let token = self.access_token_response(config).await?;
         let url = self.build_url(config, path, query)?;
-        let serialized_body = serde_json::to_vec(body)
-            .map_err(|error| AppError::internal(format!("could not serialize the `_search` request body as JSON: {error}"))
-                .with_operation("serialize_search_request")
-                .with_transport("rest")
-                .with_resource(path)
-                .with_expected_shape("a JSON object or array accepted by the ShotGrid `_search` endpoint"))?;
+        let serialized_body = serde_json::to_vec(body).map_err(|error| {
+            AppError::internal(format!(
+                "could not serialize the `_search` request body as JSON: {error}"
+            ))
+            .with_operation("serialize_search_request")
+            .with_transport("rest")
+            .with_resource(path)
+            .with_expected_shape(
+                "a JSON object or array accepted by the ShotGrid `_search` endpoint",
+            )
+        })?;
 
         let response = self
             .client
@@ -500,12 +503,16 @@ impl RestTransport {
             .send()
             .await
             .map_err(|error| {
-                AppError::network(format!("could not send the ShotGrid REST `_search` request: {error}"))
-                    .with_operation("authorized_search_request")
-                    .with_transport("rest")
-                    .with_resource(path)
-                    .with_retryable_reason("transient network failure while sending a `_search` request")
-                    .retryable(true)
+                AppError::network(format!(
+                    "could not send the ShotGrid REST `_search` request: {error}"
+                ))
+                .with_operation("authorized_search_request")
+                .with_transport("rest")
+                .with_resource(path)
+                .with_retryable_reason(
+                    "transient network failure while sending a `_search` request",
+                )
+                .retryable(true)
             })?;
 
         Self::parse_response(response, "rest").await
@@ -894,14 +901,13 @@ impl ShotgridTransport for RestTransport {
         id: u64,
         user: &Value,
     ) -> Result<Value> {
-        let user_id = user
-            .get("id")
-            .and_then(Value::as_u64)
-            .ok_or_else(|| AppError::invalid_input("user object must contain a numeric `id`")
+        let user_id = user.get("id").and_then(Value::as_u64).ok_or_else(|| {
+            AppError::invalid_input("user object must contain a numeric `id`")
                 .with_operation("entity_unfollow")
                 .with_invalid_field("id")
                 .with_expected_shape("a user JSON object containing a numeric field `id`")
-                .with_detail("received_user", user.clone()))?;
+                .with_detail("received_user", user.clone())
+        })?;
         let path = format!(
             "entity/{}/{}/followers/{}",
             entity_collection_path(entity),

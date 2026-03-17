@@ -58,7 +58,9 @@ fn build_query_params(input: Option<Value>) -> Result<Vec<(String, String)>> {
             "activity and event-log input must be a JSON object containing query parameters",
         )
         .with_operation("build_query_params")
-        .with_expected_shape("a JSON object containing fields like `fields`, `entity_fields`, `sort`, or `page`")
+        .with_expected_shape(
+            "a JSON object containing fields like `fields`, `entity_fields`, `sort`, or `page`",
+        )
     })?;
 
     let mut params: Vec<(String, String)> = Vec::new();
@@ -67,10 +69,12 @@ fn build_query_params(input: Option<Value>) -> Result<Vec<(String, String)>> {
         match key.as_str() {
             "page" => {
                 let page = value.as_object().ok_or_else(|| {
-                    AppError::invalid_input("`page` must be a JSON object like `{\"number\": 1, \"size\": 50}`")
-                        .with_operation("build_query_params")
-                        .with_invalid_field("page")
-                        .with_expected_shape("a JSON object like `{\"number\": 1, \"size\": 50}`")
+                    AppError::invalid_input(
+                        "`page` must be a JSON object like `{\"number\": 1, \"size\": 50}`",
+                    )
+                    .with_operation("build_query_params")
+                    .with_invalid_field("page")
+                    .with_expected_shape("a JSON object like `{\"number\": 1, \"size\": 50}`")
                 })?;
                 if let Some(number) = page.get("number") {
                     params.push((
@@ -130,12 +134,10 @@ fn string_list_to_csv(value: &Value, field_name: &str) -> Result<String> {
         .iter()
         .map(|v| {
             v.as_str().map(ToString::to_string).ok_or_else(|| {
-                AppError::invalid_input(format!(
-                    "`{field_name}` array items must all be strings"
-                ))
-                .with_operation("build_query_params")
-                .with_invalid_field(field_name)
-                .with_expected_shape("an array containing only strings")
+                AppError::invalid_input(format!("`{field_name}` array items must all be strings"))
+                    .with_operation("build_query_params")
+                    .with_invalid_field(field_name)
+                    .with_expected_shape("an array containing only strings")
             })
         })
         .collect();
