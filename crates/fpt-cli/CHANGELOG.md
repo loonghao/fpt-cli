@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.2.7](https://github.com/loonghao/fpt-cli/compare/v0.2.6...v0.2.7) (2026-03-17)
+
+
+### Features
+
+* add missing ShotGrid API endpoints, public API facade, tests & CI coverage ([bb4cde5](https://github.com/loonghao/fpt-cli/commit/bb4cde50879f333d5f8d586b7f8bce8387bf7bcf))
+
+
+### Miscellaneous Chores
+
+* enable chore type to bump version in release-please config ([dcf27b2](https://github.com/loonghao/fpt-cli/commit/dcf27b2b58f4d08c58aec2038366856733a948b8))
+* remove --locked flags from cargo commands ([a6b5419](https://github.com/loonghao/fpt-cli/commit/a6b5419b78086f560ff349a4761e0694b9314e6f))
+* update dependencies (cargo update) ([12909a2](https://github.com/loonghao/fpt-cli/commit/12909a2072078a1f1d5bb5bcb711fef5ea3cfd57))
+
 ## [0.2.6](https://github.com/loonghao/fpt-cli/compare/v0.2.5...v0.2.6) (2026-03-16)
 
 
