@@ -34,15 +34,18 @@ Determine whether the task should use a released binary or a source checkout.
 Load credentials through environment variables instead of putting secrets directly on the command line.
 
 Preferred variables:
-- `FPT_SITE`
-- `FPT_AUTH_MODE`
-- `FPT_SCRIPT_NAME`
-- `FPT_SCRIPT_KEY`
-- `FPT_USERNAME`
-- `FPT_PASSWORD`
-- `FPT_AUTH_TOKEN`
-- `FPT_SESSION_TOKEN`
-- `FPT_API_VERSION`
+
+| Variable | Required | Auth modes | Description |
+|---|---|---|---|
+| `FPT_SITE` | **required** | all | Full URL of the ShotGrid / FPT site, e.g. `https://example.shotgrid.autodesk.com` |
+| `FPT_AUTH_MODE` | **required** | all | Auth strategy: `script`, `user_password`, or `session_token` |
+| `FPT_SCRIPT_NAME` | **required** | `script` | Name of the API script credential registered in ShotGrid |
+| `FPT_SCRIPT_KEY` | **required** | `script` | Secret key for the script credential; quote the value when it contains special characters |
+| `FPT_USERNAME` | **required** | `user_password` | ShotGrid user login (usually an email address) |
+| `FPT_PASSWORD` | **required** | `user_password` | Password for the ShotGrid user account |
+| `FPT_AUTH_TOKEN` | optional | `user_password` | One-time 2FA token; only needed when the site enforces two-factor authentication |
+| `FPT_SESSION_TOKEN` | **required** | `session_token` | A pre-obtained ShotGrid session token; use when script or password credentials are unavailable |
+| `FPT_API_VERSION` | optional | all | Override the ShotGrid REST API version, e.g. `v1.1`; defaults to the CLI built-in value when omitted |
 
 Allow `SG_*` variables only as compatibility fallback when `FPT_*` is not available.
 
