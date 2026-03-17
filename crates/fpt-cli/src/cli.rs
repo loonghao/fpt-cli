@@ -3,6 +3,8 @@ mod common;
 mod connection;
 
 pub use commands::{
-    AuthCommands, BatchEntityCommands, Cli, Commands, EntityCommands, InspectCommands,
-    SchemaCommands, SelfUpdateArgs, ServerCommands, WorkScheduleCommands,
+    ActivityCommands, AuthCommands, BatchEntityCommands, Cli, Commands, DownloadCommands,
+    EntityCommands, EventLogCommands, FollowersCommands, HierarchyCommands, InspectCommands,
+    NoteCommands, PreferencesCommands, SchemaCommands, SelfUpdateArgs, ServerCommands,
+    ThumbnailCommands, UploadCommands, WorkScheduleCommands,
 };
