@@ -46,9 +46,8 @@ const SCHEMA_FIELD_CREATE_EXAMPLES: &[&str] = &[
 const SCHEMA_FIELD_UPDATE_EXAMPLES: &[&str] = &[
     "fpt schema field-update Shot sg_custom_field --input '{\"properties\":{\"name\":{\"value\":\"Renamed Field\"}}}' --site ...",
 ];
-const SCHEMA_FIELD_DELETE_EXAMPLES: &[&str] = &[
-    "fpt schema field-delete Shot sg_custom_field --site ...",
-];
+const SCHEMA_FIELD_DELETE_EXAMPLES: &[&str] =
+    &["fpt schema field-delete Shot sg_custom_field --site ..."];
 
 const SCHEMA_FIELD_NOTES: &[&str] = &[
     "Schema field mutations require admin-level credentials",

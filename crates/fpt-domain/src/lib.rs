@@ -37,8 +37,8 @@ pub mod prelude {
     pub use fpt_core::{AppError, Result};
     pub use serde_json::{Value, json};
 
+    pub use crate::ShotgridApp;
     pub use crate::app::App;
     pub use crate::config::{AuthMode, ConnectionOverrides, ConnectionSettings};
     pub use crate::transport::{FindParams, RestTransport, ShotgridTransport};
-    pub use crate::ShotgridApp;
 }

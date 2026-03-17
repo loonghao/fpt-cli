@@ -4,13 +4,11 @@ const FOLLOWERS_EXAMPLES: &[&str] = &[
     "fpt followers list Shot 123 --site ... --auth-mode script --script-name ... --script-key ...",
 ];
 
-const FOLLOW_EXAMPLES: &[&str] = &[
-    "fpt followers follow Shot 123 --input '{\"type\":\"HumanUser\",\"id\":456}' --site ...",
-];
+const FOLLOW_EXAMPLES: &[&str] =
+    &["fpt followers follow Shot 123 --input '{\"type\":\"HumanUser\",\"id\":456}' --site ..."];
 
-const UNFOLLOW_EXAMPLES: &[&str] = &[
-    "fpt followers unfollow Shot 123 --input '{\"type\":\"HumanUser\",\"id\":456}' --site ...",
-];
+const UNFOLLOW_EXAMPLES: &[&str] =
+    &["fpt followers unfollow Shot 123 --input '{\"type\":\"HumanUser\",\"id\":456}' --site ..."];
 
 const FOLLOW_NOTES: &[&str] = &[
     "Followers endpoints manage which users are following a given entity record",

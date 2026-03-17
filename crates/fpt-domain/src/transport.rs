@@ -16,6 +16,16 @@ pub struct FindParams {
     pub search: Option<Value>,
 }
 
+#[derive(Debug, Clone, Copy)]
+pub struct UploadUrlRequest<'a> {
+    pub entity: &'a str,
+    pub id: u64,
+    pub field_name: &'a str,
+    pub file_name: &'a str,
+    pub content_type: Option<&'a str>,
+    pub multipart_upload: bool,
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub struct RequestPlan {
     pub transport: &'static str,
@@ -99,12 +109,7 @@ pub trait ShotgridTransport {
     async fn upload_url(
         &self,
         config: &ConnectionSettings,
-        entity: &str,
-        id: u64,
-        field_name: &str,
-        file_name: &str,
-        content_type: Option<&str>,
-        multipart_upload: bool,
+        request: UploadUrlRequest<'_>,
     ) -> Result<Value>;
     async fn download_url(
         &self,
@@ -177,11 +182,7 @@ pub trait ShotgridTransport {
         entity: &str,
         field_name: &str,
     ) -> Result<Value>;
-    async fn hierarchy(
-        &self,
-        config: &ConnectionSettings,
-        body: &Value,
-    ) -> Result<Value>;
+    async fn hierarchy(&self, config: &ConnectionSettings, body: &Value) -> Result<Value>;
 }
 
 #[derive(Debug, Clone)]
@@ -720,27 +721,22 @@ impl ShotgridTransport for RestTransport {
     async fn upload_url(
         &self,
         config: &ConnectionSettings,
-        entity: &str,
-        id: u64,
-        field_name: &str,
-        file_name: &str,
-        content_type: Option<&str>,
-        multipart_upload: bool,
+        request: UploadUrlRequest<'_>,
     ) -> Result<Value> {
         let path = format!(
             "entity/{}/{}/{}/_upload",
-            entity_collection_path(entity),
-            id,
-            field_name
+            entity_collection_path(request.entity),
+            request.id,
+            request.field_name
         );
         let mut query = vec![
-            ("filename".to_string(), file_name.to_string()),
+            ("filename".to_string(), request.file_name.to_string()),
             (
                 "multipart_upload".to_string(),
-                multipart_upload.to_string(),
+                request.multipart_upload.to_string(),
             ),
         ];
-        if let Some(ct) = content_type {
+        if let Some(ct) = request.content_type {
             query.push(("content_type".to_string(), ct.to_string()));
         }
         self.authorized_json_request(config, Method::GET, &path, &query, None)
@@ -770,11 +766,7 @@ impl ShotgridTransport for RestTransport {
         entity: &str,
         id: u64,
     ) -> Result<Value> {
-        let path = format!(
-            "entity/{}/{}/image",
-            entity_collection_path(entity),
-            id
-        );
+        let path = format!("entity/{}/{}/image", entity_collection_path(entity), id);
         self.authorized_json_request(config, Method::GET, &path, &[], None)
             .await
     }
@@ -800,8 +792,14 @@ impl ShotgridTransport for RestTransport {
         config: &ConnectionSettings,
         params: &[(String, String)],
     ) -> Result<Value> {
-        self.authorized_json_request(config, Method::GET, "entity/event_log_entries", params, None)
-            .await
+        self.authorized_json_request(
+            config,
+            Method::GET,
+            "entity/event_log_entries",
+            params,
+            None,
+        )
+        .await
     }
 
     async fn preferences_get(&self, config: &ConnectionSettings) -> Result<Value> {
@@ -815,11 +813,7 @@ impl ShotgridTransport for RestTransport {
         entity: &str,
         id: u64,
     ) -> Result<Value> {
-        let path = format!(
-            "entity/{}/{}/followers",
-            entity_collection_path(entity),
-            id
-        );
+        let path = format!("entity/{}/{}/followers", entity_collection_path(entity), id);
         self.authorized_json_request(config, Method::GET, &path, &[], None)
             .await
     }
@@ -831,11 +825,7 @@ impl ShotgridTransport for RestTransport {
         id: u64,
         user: &Value,
     ) -> Result<Value> {
-        let path = format!(
-            "entity/{}/{}/followers",
-            entity_collection_path(entity),
-            id
-        );
+        let path = format!("entity/{}/{}/followers", entity_collection_path(entity), id);
         self.authorized_json_request(config, Method::POST, &path, &[], Some(user))
             .await
     }
@@ -906,11 +896,7 @@ impl ShotgridTransport for RestTransport {
             .await
     }
 
-    async fn hierarchy(
-        &self,
-        config: &ConnectionSettings,
-        body: &Value,
-    ) -> Result<Value> {
+    async fn hierarchy(&self, config: &ConnectionSettings, body: &Value) -> Result<Value> {
         self.authorized_json_request(config, Method::POST, "hierarchy/_search", &[], Some(body))
             .await
     }
