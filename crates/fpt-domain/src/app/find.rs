@@ -30,15 +30,12 @@ pub(super) fn build_find_params(
     let inline_filter_dsl = object
         .get("filter_dsl")
         .map(|value| {
-            value
-                .as_str()
-                .map(ToString::to_string)
-                .ok_or_else(|| {
-                    AppError::invalid_input("`filter_dsl` must be a string expression")
-                        .with_operation("build_find_params")
-                        .with_invalid_field("filter_dsl")
-                        .with_expected_shape("a string expression")
-                })
+            value.as_str().map(ToString::to_string).ok_or_else(|| {
+                AppError::invalid_input("`filter_dsl` must be a string expression")
+                    .with_operation("build_find_params")
+                    .with_invalid_field("filter_dsl")
+                    .with_expected_shape("a string expression")
+            })
         })
         .transpose()?;
     let inline_search = object
@@ -97,10 +94,12 @@ pub(super) fn build_find_params(
 
     if let Some(page) = object.get("page") {
         let page = page.as_object().ok_or_else(|| {
-            AppError::invalid_input("`page` must be a JSON object like `{\"number\": 1, \"size\": 25}`")
-                .with_operation("build_find_params")
-                .with_invalid_field("page")
-                .with_expected_shape("a JSON object like `{\"number\": 1, \"size\": 25}`")
+            AppError::invalid_input(
+                "`page` must be a JSON object like `{\"number\": 1, \"size\": 25}`",
+            )
+            .with_operation("build_find_params")
+            .with_invalid_field("page")
+            .with_expected_shape("a JSON object like `{\"number\": 1, \"size\": 25}`")
         })?;
         if let Some(number) = page.get("number") {
             params.query.push((
@@ -179,10 +178,10 @@ pub(super) fn build_find_params(
 
     if let Some(presets) = top_level_presets {
         let search_object = search.get_or_insert_with(|| json!({}));
-        let search_map = search_object
-            .as_object_mut()
-            .ok_or_else(|| AppError::internal("normalized search payload must remain a JSON object")
-                .with_operation("build_find_params"))?;
+        let search_map = search_object.as_object_mut().ok_or_else(|| {
+            AppError::internal("normalized search payload must remain a JSON object")
+                .with_operation("build_find_params")
+        })?;
         if search_map.contains_key("additional_filter_presets") {
             return Err(AppError::invalid_input(
                 "`additional_filter_presets` cannot be provided both at the top level and inside `search`",
@@ -198,10 +197,10 @@ pub(super) fn build_find_params(
 
     if let Some(filter_dsl) = effective_filter_dsl {
         let search_object = search.get_or_insert_with(|| json!({}));
-        let search_map = search_object
-            .as_object_mut()
-            .ok_or_else(|| AppError::internal("normalized search payload must remain a JSON object")
-                .with_operation("build_find_params"))?;
+        let search_map = search_object.as_object_mut().ok_or_else(|| {
+            AppError::internal("normalized search payload must remain a JSON object")
+                .with_operation("build_find_params")
+        })?;
         search_map.insert("filters".to_string(), parse_filter_dsl(&filter_dsl)?);
     }
 
@@ -216,12 +215,12 @@ pub(super) fn upsert_query_param(query: &mut Vec<(String, String)>, key: &str, v
 
 pub(super) fn extract_find_one_response(response: Value) -> Result<Value> {
     let Some(data) = response.get("data") else {
-        return Err(AppError::api(
-            "ShotGrid find response is missing the `data` field"
-        )
-        .with_operation("extract_find_one_response")
-        .with_expected_shape("a ShotGrid response object containing a `data` field")
-        .with_detail("response_body", response));
+        return Err(
+            AppError::api("ShotGrid find response is missing the `data` field")
+                .with_operation("extract_find_one_response")
+                .with_expected_shape("a ShotGrid response object containing a `data` field")
+                .with_detail("response_body", response),
+        );
     };
 
     match data {
@@ -262,12 +261,10 @@ fn string_list(value: &Value, field_name: &str) -> Result<Vec<String>> {
         .iter()
         .map(|value| {
             value.as_str().map(ToString::to_string).ok_or_else(|| {
-                AppError::invalid_input(format!(
-                    "`{field_name}` array items must all be strings"
-                ))
-                .with_operation("build_find_params")
-                .with_invalid_field(field_name)
-                .with_expected_shape("an array containing only strings")
+                AppError::invalid_input(format!("`{field_name}` array items must all be strings"))
+                    .with_operation("build_find_params")
+                    .with_invalid_field(field_name)
+                    .with_expected_shape("an array containing only strings")
             })
         })
         .collect()
@@ -289,12 +286,12 @@ fn scalar_to_query(value: &Value, field_name: &str) -> Result<String> {
 
 fn value_to_query(value: &Value, field_name: &str) -> Result<String> {
     match value {
-        Value::Null => Err(AppError::invalid_input(format!(
-            "`{field_name}` cannot be null"
-        ))
-        .with_operation("build_find_params")
-        .with_invalid_field(field_name)
-        .with_expected_shape("a non-null scalar or array of scalar values")),
+        Value::Null => Err(
+            AppError::invalid_input(format!("`{field_name}` cannot be null"))
+                .with_operation("build_find_params")
+                .with_invalid_field(field_name)
+                .with_expected_shape("a non-null scalar or array of scalar values"),
+        ),
         Value::Array(values) => {
             let mut items = Vec::with_capacity(values.len());
             for value in values {
@@ -308,10 +305,12 @@ fn value_to_query(value: &Value, field_name: &str) -> Result<String> {
 
 fn normalize_search_body(value: &Value) -> Result<Value> {
     let mut search = value.as_object().cloned().ok_or_else(|| {
-        AppError::invalid_input("`search` must be a JSON object representing the ShotGrid search body")
-            .with_operation("normalize_search_body")
-            .with_invalid_field("search")
-            .with_expected_shape("a JSON object representing the ShotGrid search body")
+        AppError::invalid_input(
+            "`search` must be a JSON object representing the ShotGrid search body",
+        )
+        .with_operation("normalize_search_body")
+        .with_invalid_field("search")
+        .with_expected_shape("a JSON object representing the ShotGrid search body")
     })?;
 
     if let Some(filters) = search.get("filters") {

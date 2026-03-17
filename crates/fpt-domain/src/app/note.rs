@@ -39,7 +39,9 @@ fn translate_note_threads_error(error: AppError, note_id: u64) -> AppError {
                         && entry
                             .get("detail")
                             .and_then(Value::as_str)
-                            .is_some_and(|detail| detail.contains(&format!("Note: {note_id} not found")))
+                            .is_some_and(|detail| {
+                                detail.contains(&format!("Note: {note_id} not found"))
+                            })
                 })
             });
 
@@ -68,12 +70,11 @@ fn build_note_query_params(input: Option<Value>) -> Result<Vec<(String, String)>
         return Ok(Vec::new());
     };
 
-    let object = input
-        .as_object()
-        .ok_or_else(|| AppError::invalid_input("note threads input must be a JSON object")
+    let object = input.as_object().ok_or_else(|| {
+        AppError::invalid_input("note threads input must be a JSON object")
             .with_operation("build_note_query_params")
             .with_expected_shape("a JSON object containing fields like `fields` or `entity_fields`")
-        )?;
+    })?;
 
     let mut params: Vec<(String, String)> = Vec::new();
 

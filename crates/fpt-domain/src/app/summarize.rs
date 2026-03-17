@@ -25,21 +25,20 @@ where
 }
 
 fn normalize_summarize_input(input: Value) -> Result<Value> {
-    let mut object = input
-        .as_object()
-        .cloned()
-        .ok_or_else(|| AppError::invalid_input("entity summarize input must be a JSON object")
+    let mut object = input.as_object().cloned().ok_or_else(|| {
+        AppError::invalid_input("entity summarize input must be a JSON object")
             .with_operation("normalize_summarize_input")
-            .with_expected_shape("a JSON object containing `filters`, `summary_fields`, and optional `grouping`")
-        )?;
+            .with_expected_shape(
+                "a JSON object containing `filters`, `summary_fields`, and optional `grouping`",
+            )
+    })?;
 
-    let filters = object
-        .remove("filters")
-        .ok_or_else(|| AppError::invalid_input("entity summarize requires a `filters` field")
+    let filters = object.remove("filters").ok_or_else(|| {
+        AppError::invalid_input("entity summarize requires a `filters` field")
             .with_operation("normalize_summarize_input")
             .with_missing_fields(["filters"])
             .with_expected_shape("a JSON array or object of ShotGrid filter conditions")
-        )?;
+    })?;
     let filter_operator = object.remove("filter_operator");
     let normalized_filters = normalize_filters(filters, filter_operator)?;
 
@@ -47,8 +46,11 @@ fn normalize_summarize_input(input: Value) -> Result<Value> {
         AppError::invalid_input("entity summarize requires a `summary_fields` field")
             .with_operation("normalize_summarize_input")
             .with_missing_fields(["summary_fields"])
-            .with_expected_shape("a non-empty JSON array of summary descriptor objects with `field` and `type`")
-    })?;    let summaries = normalize_summary_fields(summary_fields)?;
+            .with_expected_shape(
+                "a non-empty JSON array of summary descriptor objects with `field` and `type`",
+            )
+    })?;
+    let summaries = normalize_summary_fields(summary_fields)?;
 
     let mut payload = Map::new();
     payload.insert("filters".to_string(), normalized_filters);
@@ -76,7 +78,13 @@ fn normalize_summarize_input(input: Value) -> Result<Value> {
         ))
         .with_operation("normalize_summarize_input")
         .with_invalid_field(&unexpected_key)
-        .with_allowed_values(["filters", "filter_operator", "summary_fields", "grouping", "include_archived_projects"]));
+        .with_allowed_values([
+            "filters",
+            "filter_operator",
+            "summary_fields",
+            "grouping",
+            "include_archived_projects",
+        ]));
     }
 
     Ok(Value::Object(payload))
@@ -123,23 +131,22 @@ fn normalize_filter_operator(filter_operator: Option<&Value>) -> Result<Option<S
         return Ok(None);
     };
 
-    let filter_operator = filter_operator
-        .as_str()
-        .ok_or_else(|| AppError::invalid_input("`filter_operator` must be `all` or `any`")
+    let filter_operator = filter_operator.as_str().ok_or_else(|| {
+        AppError::invalid_input("`filter_operator` must be `all` or `any`")
             .with_operation("normalize_filter_operator")
             .with_invalid_field("filter_operator")
             .with_allowed_values(["all", "any"])
-        )?;
+    })?;
 
     match filter_operator {
         "all" | "any" => Ok(Some(filter_operator.to_string())),
-        _ => Err(AppError::invalid_input(
-            "`filter_operator` must be `all` or `any`",
-        )
-        .with_operation("normalize_filter_operator")
-        .with_invalid_field("filter_operator")
-        .with_received_value(filter_operator)
-        .with_allowed_values(["all", "any"])),
+        _ => Err(
+            AppError::invalid_input("`filter_operator` must be `all` or `any`")
+                .with_operation("normalize_filter_operator")
+                .with_invalid_field("filter_operator")
+                .with_received_value(filter_operator)
+                .with_allowed_values(["all", "any"]),
+        ),
     }
 }
 
@@ -203,12 +210,12 @@ fn normalize_named_object(
 
     for key in allowed_keys {
         if !object.contains_key(*key) && *key != "direction" {
-        return Err(AppError::invalid_input(format!(
-            "`{field_name}[{index}]` requires a `{key}` field"
-        ))
-        .with_operation("normalize_named_object")
-        .with_missing_fields([*key]));
-    }
+            return Err(AppError::invalid_input(format!(
+                "`{field_name}[{index}]` requires a `{key}` field"
+            ))
+            .with_operation("normalize_named_object")
+            .with_missing_fields([*key]));
+        }
     }
 
     if let Some(unexpected_key) = object

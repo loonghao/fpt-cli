@@ -476,12 +476,12 @@ fn parse_batch_delete_input(input: Value) -> Result<Vec<u64>> {
 
 fn non_empty_items(values: Vec<Value>, field_name: &str) -> Result<Vec<Value>> {
     if values.is_empty() {
-        return Err(AppError::invalid_input(format!(
-            "`{field_name}` must not be an empty array"
-        ))
-        .with_operation("validate_batch_input")
-        .with_invalid_field(field_name)
-        .with_hint("Provide at least one item in the array."));
+        return Err(
+            AppError::invalid_input(format!("`{field_name}` must not be an empty array"))
+                .with_operation("validate_batch_input")
+                .with_invalid_field(field_name)
+                .with_hint("Provide at least one item in the array."),
+        );
     }
     Ok(values)
 }
@@ -504,12 +504,12 @@ fn object_items(values: Vec<Value>, field_name: &str) -> Result<Vec<Value>> {
 
 fn u64_list(values: &[Value], field_name: &str) -> Result<Vec<u64>> {
     if values.is_empty() {
-        return Err(AppError::invalid_input(format!(
-            "`{field_name}` must not be an empty array"
-        ))
-        .with_operation("validate_batch_input")
-        .with_invalid_field(field_name)
-        .with_hint("Provide at least one id in the array."));
+        return Err(
+            AppError::invalid_input(format!("`{field_name}` must not be an empty array"))
+                .with_operation("validate_batch_input")
+                .with_invalid_field(field_name)
+                .with_hint("Provide at least one id in the array."),
+        );
     }
 
     values
@@ -553,12 +553,10 @@ fn string_list(value: &Value, field_name: &str) -> Result<Vec<String>> {
         .iter()
         .map(|value| {
             value.as_str().map(ToString::to_string).ok_or_else(|| {
-                AppError::invalid_input(format!(
-                    "`{field_name}` array items must all be strings"
-                ))
-                .with_operation("validate_batch_input")
-                .with_invalid_field(field_name)
-                .with_expected_shape("an array containing only strings")
+                AppError::invalid_input(format!("`{field_name}` array items must all be strings"))
+                    .with_operation("validate_batch_input")
+                    .with_invalid_field(field_name)
+                    .with_expected_shape("an array containing only strings")
             })
         })
         .collect()

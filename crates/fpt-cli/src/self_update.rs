@@ -159,13 +159,11 @@ pub async fn run(args: SelfUpdateArgs) -> Result<Value> {
 
 fn split_repository(repository: &str) -> Result<(String, String)> {
     let (owner, repo) = repository.split_once('/').ok_or_else(|| {
-        AppError::invalid_input(
-            "repository override must use the format `owner/repo`",
-        )
-        .with_operation("split_repository")
-        .with_invalid_field("repository")
-        .with_received_value(repository)
-        .with_expected_shape("`owner/repo`, for example `loonghao/fpt-cli`")
+        AppError::invalid_input("repository override must use the format `owner/repo`")
+            .with_operation("split_repository")
+            .with_invalid_field("repository")
+            .with_received_value(repository)
+            .with_expected_shape("`owner/repo`, for example `loonghao/fpt-cli`")
     })?;
 
     if owner.is_empty() || repo.is_empty() {
@@ -258,9 +256,7 @@ fn legacy_asset_name_for(target: ReleaseTarget) -> String {
 fn versioned_asset_name_for(target: ReleaseTarget, version: &Version) -> String {
     format!(
         "fpt-v{}-{}.{}",
-        version,
-        target.triple,
-        target.archive_extension
+        version, target.triple, target.archive_extension
     )
 }
 
@@ -304,7 +300,9 @@ fn build_http_client() -> Result<reqwest::Client> {
     reqwest::Client::builder()
         .default_headers(headers)
         .build()
-        .map_err(|error| AppError::internal(format!("could not create the GitHub HTTP client: {error}")))
+        .map_err(|error| {
+            AppError::internal(format!("could not create the GitHub HTTP client: {error}"))
+        })
 }
 
 async fn fetch_release(
@@ -324,26 +322,35 @@ async fn fetch_release(
         .get(url)
         .send()
         .await
-        .map_err(|error| AppError::network(format!("could not request GitHub release metadata: {error}"))
+        .map_err(|error| {
+            AppError::network(format!(
+                "could not request GitHub release metadata: {error}"
+            ))
             .with_operation("fetch_release")
             .with_transport("rest")
             .with_resource(format!("repos/{owner}/{repo}/releases"))
             .retryable(true)
-        )?
+        })?
         .error_for_status()
-        .map_err(|error| AppError::network(format!("GitHub release metadata request failed: {error}"))
-            .with_operation("fetch_release")
-            .with_transport("rest")
-            .with_resource(format!("repos/{owner}/{repo}/releases"))
-            .with_hint("Check the repository name and ensure the release tag exists.")
-        )?
+        .map_err(|error| {
+            AppError::network(format!("GitHub release metadata request failed: {error}"))
+                .with_operation("fetch_release")
+                .with_transport("rest")
+                .with_resource(format!("repos/{owner}/{repo}/releases"))
+                .with_hint("Check the repository name and ensure the release tag exists.")
+        })?
         .json::<GitHubRelease>()
         .await
-        .map_err(|error| AppError::network(format!("could not decode GitHub release metadata as JSON: {error}"))
+        .map_err(|error| {
+            AppError::network(format!(
+                "could not decode GitHub release metadata as JSON: {error}"
+            ))
             .with_operation("fetch_release")
             .with_transport("rest")
-            .with_expected_shape("a GitHub release JSON object with `tag_name`, `html_url`, and `assets`")
-        )
+            .with_expected_shape(
+                "a GitHub release JSON object with `tag_name`, `html_url`, and `assets`",
+            )
+        })
 }
 
 fn parse_release_version(tag_name: &str) -> Result<Version> {
@@ -362,7 +369,9 @@ async fn download_bytes(client: &reqwest::Client, url: &str) -> Result<Vec<u8>> 
         .header(ACCEPT, "application/octet-stream")
         .send()
         .await
-        .map_err(|error| AppError::network(format!("could not download the release asset: {error}")))?
+        .map_err(|error| {
+            AppError::network(format!("could not download the release asset: {error}"))
+        })?
         .error_for_status()
         .map_err(|error| AppError::network(format!("release asset download failed: {error}")))?
         .bytes()
@@ -381,12 +390,16 @@ async fn download_text(client: &reqwest::Client, url: &str) -> Result<String> {
         .get(url)
         .send()
         .await
-        .map_err(|error| AppError::network(format!("could not download the checksum file: {error}")))?
+        .map_err(|error| {
+            AppError::network(format!("could not download the checksum file: {error}"))
+        })?
         .error_for_status()
         .map_err(|error| AppError::network(format!("checksum file download failed: {error}")))?
         .text()
         .await
-        .map_err(|error| AppError::network(format!("could not read the checksum file body: {error}")))
+        .map_err(|error| {
+            AppError::network(format!("could not read the checksum file body: {error}"))
+        })
 }
 
 fn write_bytes(path: &Path, bytes: &[u8]) -> Result<()> {
@@ -434,7 +447,9 @@ fn verify_checksum(checksums: &str, asset_name: &str, archive_bytes: &[u8]) -> R
         .with_resource(asset_name)
         .with_detail("expected_checksum", &expected)
         .with_detail("actual_checksum", &actual)
-        .with_hint("The downloaded asset may be corrupted or tampered with. Try re-running the update."));
+        .with_hint(
+            "The downloaded asset may be corrupted or tampered with. Try re-running the update.",
+        ));
     }
 
     Ok(())
