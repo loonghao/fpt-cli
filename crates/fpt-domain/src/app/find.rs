@@ -313,8 +313,11 @@ fn normalize_search_body(value: &Value) -> Result<Value> {
         .with_expected_shape("a JSON object representing the ShotGrid search body")
     })?;
 
-    if let Some(filters) = search.get("filters") {
-        validate_search_filters(filters, "`search.filters`")?;
+    if let Some(filters) = search.remove("filters") {
+        // Normalize array-form filters to the object form expected by the ShotGrid
+        // REST `_search` endpoint: {"filter_operator": "all", "filters": [...]}
+        let normalized = normalize_search_filters(filters, "`search.filters`")?;
+        search.insert("filters".to_string(), normalized);
     }
 
     if let Some(presets) = search.get("additional_filter_presets") {
@@ -328,15 +331,29 @@ fn normalize_search_body(value: &Value) -> Result<Value> {
     Ok(Value::Object(search))
 }
 
-fn validate_search_filters(value: &Value, field_name: &str) -> Result<()> {
+/// Normalize the `filters` value inside a `search` body.
+///
+/// ShotGrid REST `_search` expects filters as an object:
+///   `{"filter_operator": "all"|"any", "filters": [...]}`
+///
+/// As a convenience, a bare array is accepted and wrapped with the default
+/// `filter_operator` of `"all"`.  An object is passed through as-is after
+/// basic shape validation.
+fn normalize_search_filters(value: Value, field_name: &str) -> Result<Value> {
     match value {
-        Value::Object(_) | Value::Array(_) => Ok(()),
+        Value::Array(items) => Ok(serde_json::json!({
+            "filter_operator": "all",
+            "filters": items,
+        })),
+        Value::Object(_) => Ok(value),
         _ => Err(AppError::invalid_input(format!(
             "{field_name} must be either an object or an array"
         ))
-        .with_operation("validate_search_filters")
+        .with_operation("normalize_search_filters")
         .with_invalid_field(field_name)
-        .with_expected_shape("either an object or an array")),
+        .with_expected_shape(
+            "a JSON array of filter conditions, or an object with `filter_operator` and `filters`",
+        )),
     }
 }
 

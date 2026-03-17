@@ -222,6 +222,7 @@ impl<'a> Parser<'a> {
         match ch {
             '"' | '\'' => self.parse_string().map(Value::String),
             '[' => self.parse_array(),
+            '{' => self.parse_object(),
             '-' | '0'..='9' => self.parse_number(),
             _ => {
                 let ident = self.parse_identifier("值")?.to_ascii_lowercase();
@@ -230,12 +231,54 @@ impl<'a> Parser<'a> {
                     "false" => Ok(Value::Bool(false)),
                     "null" => Ok(Value::Null),
                     _ => Err(AppError::invalid_input(format!(
-                        "filter_dsl 语法错误: 不支持的值 `{ident}`，请使用字符串/数字/布尔/null（位置 {}）",
+                        "filter_dsl 语法错误: 不支持的值 `{ident}`，请使用字符串/数字/布尔/null/JSON对象（位置 {}）",
                         self.pos
                     ))),
                 }
             }
         }
+    }
+
+    /// Parse a JSON object literal `{...}` for use as an entity-link value.
+    ///
+    /// Supports the ShotGrid entity-link shorthand:
+    ///   `project is {"type": "Project", "id": 123}`
+    fn parse_object(&mut self) -> Result<Value> {
+        self.expect_char('{', "对象起始 `{`")?;
+        self.skip_whitespace();
+
+        let mut map = serde_json::Map::new();
+        if self.consume_char('}') {
+            return Ok(Value::Object(map));
+        }
+
+        loop {
+            self.skip_whitespace();
+            // key must be a quoted string
+            let key = match self.peek_char() {
+                Some('"') | Some('\'') => self.parse_string()?,
+                _ => {
+                    return self.error(
+                        "JSON对象的键必须是带引号的字符串，例如 {\"type\": \"Project\", \"id\": 123}",
+                    );
+                }
+            };
+            self.skip_whitespace();
+            if !self.consume_char(':') {
+                return self.error("JSON对象键值对之间缺少 `:`");
+            }
+            let value = self.parse_value()?;
+            map.insert(key, value);
+            self.skip_whitespace();
+            if self.consume_char('}') {
+                break;
+            }
+            if !self.consume_char(',') {
+                return self.error("JSON对象条目之间缺少 `,` 或结束 `}`");
+            }
+        }
+
+        Ok(Value::Object(map))
     }
 
     fn parse_array(&mut self) -> Result<Value> {

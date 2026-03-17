@@ -10,6 +10,13 @@ use url::Url;
 
 use crate::config::{ConnectionSettings, Credentials};
 
+/// Maximum number of retry attempts for rate-limited or transient failures.
+const MAX_RETRY_ATTEMPTS: u32 = 5;
+/// Base delay for exponential backoff (milliseconds).
+const RETRY_BASE_DELAY_MS: u64 = 500;
+/// Maximum backoff delay cap (milliseconds).
+const RETRY_MAX_DELAY_MS: u64 = 30_000;
+
 #[derive(Debug, Clone, Default)]
 pub struct FindParams {
     pub query: Vec<(String, String)>,
@@ -448,28 +455,46 @@ impl RestTransport {
         query: &[(String, String)],
         body: Option<&Value>,
     ) -> Result<Value> {
-        let token = self.access_token_response(config).await?;
-        let url = self.build_url(config, path, query)?;
-        let mut request = self
-            .client
-            .request(method, url)
-            .header("accept", "application/json")
-            .bearer_auth(token.access_token);
+        let max_attempts = Self::max_retry_attempts();
+        let mut attempt = 0u32;
+        loop {
+            attempt += 1;
+            let token = self.access_token_response(config).await?;
+            let url = self.build_url(config, path, query)?;
+            let mut request = self
+                .client
+                .request(method.clone(), url)
+                .header("accept", "application/json")
+                .bearer_auth(token.access_token);
 
-        if let Some(body) = body {
-            request = request.json(body);
+            if let Some(body) = body {
+                request = request.json(body);
+            }
+
+            let response = request.send().await.map_err(|error| {
+                AppError::network(format!("could not send the ShotGrid REST request: {error}"))
+                    .with_operation("authorized_json_request")
+                    .with_transport("rest")
+                    .with_resource(path)
+                    .with_retryable_reason("transient network failure while sending a REST request")
+                    .retryable(true)
+            })?;
+
+            let status = response.status();
+            if status == StatusCode::TOO_MANY_REQUESTS && attempt < max_attempts {
+                let delay = Self::backoff_delay(attempt);
+                if std::env::var("FPT_DEBUG").is_ok() {
+                    eprintln!(
+                        "[debug] rate-limited (429) on attempt {attempt}/{max_attempts}, retrying after {}ms",
+                        delay.as_millis()
+                    );
+                }
+                tokio::time::sleep(delay).await;
+                continue;
+            }
+
+            return Self::parse_response(response, "rest").await;
         }
-
-        let response = request.send().await.map_err(|error| {
-            AppError::network(format!("could not send the ShotGrid REST request: {error}"))
-                .with_operation("authorized_json_request")
-                .with_transport("rest")
-                .with_resource(path)
-                .with_retryable_reason("transient network failure while sending a REST request")
-                .retryable(true)
-        })?;
-
-        Self::parse_response(response, "rest").await
     }
 
     async fn authorized_search_request(
@@ -479,8 +504,6 @@ impl RestTransport {
         query: &[(String, String)],
         body: &Value,
     ) -> Result<Value> {
-        let token = self.access_token_response(config).await?;
-        let url = self.build_url(config, path, query)?;
         let serialized_body = serde_json::to_vec(body).map_err(|error| {
             AppError::internal(format!(
                 "could not serialize the `_search` request body as JSON: {error}"
@@ -493,29 +516,70 @@ impl RestTransport {
             )
         })?;
 
-        let response = self
-            .client
-            .request(Method::POST, url)
-            .header("accept", "application/json")
-            .header("content-type", "application/vnd+shotgun.api3_hash+json")
-            .bearer_auth(token.access_token)
-            .body(serialized_body)
-            .send()
-            .await
-            .map_err(|error| {
-                AppError::network(format!(
-                    "could not send the ShotGrid REST `_search` request: {error}"
-                ))
-                .with_operation("authorized_search_request")
-                .with_transport("rest")
-                .with_resource(path)
-                .with_retryable_reason(
-                    "transient network failure while sending a `_search` request",
-                )
-                .retryable(true)
-            })?;
+        let max_attempts = Self::max_retry_attempts();
+        let mut attempt = 0u32;
+        loop {
+            attempt += 1;
+            let token = self.access_token_response(config).await?;
+            let url = self.build_url(config, path, query)?;
 
-        Self::parse_response(response, "rest").await
+            let response = self
+                .client
+                .request(Method::POST, url)
+                .header("accept", "application/json")
+                .header("content-type", "application/vnd+shotgun.api3_hash+json")
+                .bearer_auth(token.access_token)
+                .body(serialized_body.clone())
+                .send()
+                .await
+                .map_err(|error| {
+                    AppError::network(format!(
+                        "could not send the ShotGrid REST `_search` request: {error}"
+                    ))
+                    .with_operation("authorized_search_request")
+                    .with_transport("rest")
+                    .with_resource(path)
+                    .with_retryable_reason(
+                        "transient network failure while sending a `_search` request",
+                    )
+                    .retryable(true)
+                })?;
+
+            let status = response.status();
+            if status == StatusCode::TOO_MANY_REQUESTS && attempt < max_attempts {
+                let delay = Self::backoff_delay(attempt);
+                if std::env::var("FPT_DEBUG").is_ok() {
+                    eprintln!(
+                        "[debug] rate-limited (429) on attempt {attempt}/{max_attempts}, retrying after {}ms",
+                        delay.as_millis()
+                    );
+                }
+                tokio::time::sleep(delay).await;
+                continue;
+            }
+
+            return Self::parse_response(response, "rest").await;
+        }
+    }
+
+    /// Returns the maximum number of retry attempts, configurable via `FPT_MAX_RETRIES`.
+    fn max_retry_attempts() -> u32 {
+        std::env::var("FPT_MAX_RETRIES")
+            .ok()
+            .and_then(|v| v.parse::<u32>().ok())
+            .unwrap_or(MAX_RETRY_ATTEMPTS)
+    }
+
+    /// Computes the exponential backoff delay for a given attempt number (1-based).
+    ///
+    /// Uses full jitter: `delay = random(0, min(cap, base * 2^attempt))`.
+    /// Falls back to a deterministic formula when the random source is unavailable.
+    fn backoff_delay(attempt: u32) -> Duration {
+        let exp = RETRY_BASE_DELAY_MS.saturating_mul(1u64 << attempt.min(10));
+        let capped = exp.min(RETRY_MAX_DELAY_MS);
+        // Simple deterministic jitter: use attempt as a pseudo-random seed.
+        let jitter = (attempt as u64 * 137 + 42) % (capped.max(1));
+        Duration::from_millis(jitter)
     }
 
     async fn rpc_request(
