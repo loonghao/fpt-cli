@@ -1,6 +1,7 @@
 #![allow(clippy::result_large_err)]
 
 mod cli;
+mod config;
 mod output;
 mod runner;
 mod self_update;

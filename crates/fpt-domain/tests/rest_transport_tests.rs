@@ -181,6 +181,35 @@ async fn entity_get_and_find_use_expected_read_endpoints() {
 }
 
 #[tokio::test]
+async fn note_threads_use_documented_note_thread_endpoint() {
+    let server = MockServer::start();
+    let auth = mock_auth(&server);
+    let note_threads = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1.1/entity/notes/100/thread_contents")
+            .query_param("fields", "content,user")
+            .header("authorization", "Bearer token-123");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({"data": []}));
+    });
+    let transport = RestTransport::default();
+    let config = script_config(&server);
+
+    transport
+        .note_threads(
+            &config,
+            100,
+            &[("fields".to_string(), "content,user".to_string())],
+        )
+        .await
+        .expect("note threads succeeds");
+
+    assert_eq!(auth.hits(), 1);
+    assert_eq!(note_threads.hits(), 1);
+}
+
+#[tokio::test]
 async fn rpc_methods_use_expected_paths_and_payloads() {
     let server = MockServer::start();
     let revive = server.mock(|when, then| {

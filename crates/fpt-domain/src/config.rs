@@ -1,10 +1,12 @@
 use fpt_core::{AppError, Result};
-use serde::Serialize;
-use std::{env, str::FromStr};
+use serde::{Deserialize, Serialize};
+use std::{env, fs, path::PathBuf, str::FromStr};
 
 const DEFAULT_API_VERSION: &str = "v1.1";
+const CONFIG_FILE_NAME: &str = "config.json";
+const CONFIG_DIR_NAME: &str = "fpt-cli";
 
-#[derive(Debug, Clone, Copy, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum AuthMode {
     Script,
@@ -39,8 +41,13 @@ impl FromStr for AuthMode {
             "user-password" | "user_password" | "password" | "user" => Ok(Self::UserPassword),
             "session-token" | "session_token" | "session" => Ok(Self::SessionToken),
             other => Err(AppError::invalid_input(format!(
-                "unsupported auth mode `{other}`; expected one of: script / user-password / session-token"
-            ))),
+                "unsupported auth mode `{other}`; expected one of: `script`, `user-password`, or `session-token`"
+            ))
+            .with_operation("parse_auth_mode")
+            .with_invalid_field("auth_mode")
+            .with_received_value(other)
+            .with_allowed_values(["script", "user-password", "session-token"]) 
+            .with_hint("Use one of the supported auth mode names in CLI flags, environment variables, or persisted config.")),
         }
     }
 }
@@ -55,6 +62,28 @@ pub struct ConnectionOverrides {
     pub password: Option<String>,
     pub auth_token: Option<String>,
     pub session_token: Option<String>,
+    pub api_version: Option<String>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct PersistedConnectionConfig {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub site: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub auth_mode: Option<AuthMode>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub script_name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub script_key: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub username: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub password: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub auth_token: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub session_token: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub api_version: Option<String>,
 }
 
@@ -110,6 +139,7 @@ pub struct ConnectionSummary {
 
 impl ConnectionSettings {
     pub fn resolve(overrides: ConnectionOverrides) -> Result<Self> {
+        let persisted = load_persisted_config()?;
         let env_site = env_var_compat("FPT_SITE", "SG_SITE");
         let env_auth_mode = env_var_compat("FPT_AUTH_MODE", "SG_AUTH_MODE");
         let env_script_name = env_var_compat("FPT_SCRIPT_NAME", "SG_SCRIPT_NAME");
@@ -120,42 +150,66 @@ impl ConnectionSettings {
         let env_session_token = env_var_compat("FPT_SESSION_TOKEN", "SG_SESSION_TOKEN");
         let env_api_version = env_var_compat("FPT_API_VERSION", "SG_API_VERSION");
 
-        let site = overrides.site.or(env_site).unwrap_or_default();
+        let site = overrides
+            .site
+            .or(env_site)
+            .or(persisted.site)
+            .unwrap_or_default();
         let script_name = overrides
             .script_name
             .or(env_script_name)
+            .or(persisted.script_name)
             .unwrap_or_default();
-        let script_key = overrides.script_key.or(env_script_key).unwrap_or_default();
-        let username = overrides.username.or(env_username).unwrap_or_default();
-        let password = overrides.password.or(env_password).unwrap_or_default();
-        let auth_token = overrides.auth_token.or(env_auth_token).unwrap_or_default();
+        let script_key = overrides
+            .script_key
+            .or(env_script_key)
+            .or(persisted.script_key)
+            .unwrap_or_default();
+        let username = overrides
+            .username
+            .or(env_username)
+            .or(persisted.username)
+            .unwrap_or_default();
+        let password = overrides
+            .password
+            .or(env_password)
+            .or(persisted.password)
+            .unwrap_or_default();
+        let auth_token = overrides
+            .auth_token
+            .or(env_auth_token)
+            .or(persisted.auth_token)
+            .unwrap_or_default();
         let session_token = overrides
             .session_token
             .or(env_session_token)
+            .or(persisted.session_token)
             .unwrap_or_default();
         let api_version = api_version_or_default(
             overrides
                 .api_version
                 .as_deref()
-                .or(env_api_version.as_deref()),
+                .or(env_api_version.as_deref())
+                .or(persisted.api_version.as_deref()),
         );
         let auth_mode = overrides
             .auth_mode
             .or(parse_optional_auth_mode(env_auth_mode.as_deref())?)
+            .or(persisted.auth_mode)
             .unwrap_or_else(|| infer_auth_mode(&username, &password, &auth_token, &session_token));
 
         let mut missing = Vec::new();
         if site.trim().is_empty() {
-            missing.push("FPT_SITE / SG_SITE / --site");
+            missing.push("FPT_SITE / SG_SITE / config site / --site");
         }
 
         let credentials = match auth_mode {
             AuthMode::Script => {
                 if script_name.trim().is_empty() {
-                    missing.push("FPT_SCRIPT_NAME / SG_SCRIPT_NAME / --script-name");
+                    missing.push("FPT_SCRIPT_NAME / SG_SCRIPT_NAME / config script_name / --script-name");
                 }
                 if script_key.trim().is_empty() {
-                    missing.push("FPT_SCRIPT_KEY / SG_SCRIPT_KEY / --script-key");
+                    missing.push("FPT_SCRIPT_KEY / SG_SCRIPT_KEY / config script_key / --script-key");
                 }
 
                 Credentials::Script {
@@ -165,10 +219,10 @@ impl ConnectionSettings {
             }
             AuthMode::UserPassword => {
                 if username.trim().is_empty() {
-                    missing.push("FPT_USERNAME / SG_USERNAME / --username");
+                    missing.push("FPT_USERNAME / SG_USERNAME / config username / --username");
                 }
                 if password.trim().is_empty() {
-                    missing.push("FPT_PASSWORD / SG_PASSWORD / --password");
+                    missing.push("FPT_PASSWORD / SG_PASSWORD / config password / --password");
                 }
 
                 Credentials::UserPassword {
@@ -179,7 +233,7 @@ impl ConnectionSettings {
             }
             AuthMode::SessionToken => {
                 if session_token.trim().is_empty() {
-                    missing.push("FPT_SESSION_TOKEN / SG_SESSION_TOKEN / --session-token");
+                    missing.push("FPT_SESSION_TOKEN / SG_SESSION_TOKEN / config session_token / --session-token");
                 }
 
                 Credentials::SessionToken { session_token }
@@ -187,13 +241,13 @@ impl ConnectionSettings {
         };
 
         if !missing.is_empty() {
-            return Err(
-                AppError::invalid_input("缺少 ShotGrid 连接配置").with_details(serde_json::json!({
-                    "auth_mode": auth_mode,
-                    "missing": missing,
-                    "hint": "可通过命令行参数或环境变量提供认证信息"
-                })),
-            );
+            return Err(AppError::invalid_input(
+                "missing ShotGrid connection settings required to build an authenticated request"
+            )
+            .with_operation("resolve_connection_settings")
+            .with_detail("auth_mode", auth_mode.as_str())
+            .with_missing_fields(missing)
+            .with_hint("Provide the missing values via CLI flags, environment variables, or `fpt config set`."));
         }
 
         Ok(Self {
@@ -225,22 +279,115 @@ pub fn api_version_or_default(value: Option<&str>) -> String {
         .to_string()
 }
 
+pub fn config_file_path() -> Result<PathBuf> {
+    if let Some(path) = env::var_os("FPT_CONFIG_PATH") {
+        return Ok(PathBuf::from(path));
+    }
+
+    let base_dir = if cfg!(windows) {
+        env::var_os("APPDATA")
+            .map(PathBuf::from)
+            .or_else(|| home_dir().map(|home| home.join("AppData").join("Roaming")))
+    } else {
+        env::var_os("XDG_CONFIG_HOME")
+            .map(PathBuf::from)
+            .or_else(|| home_dir().map(|home| home.join(".config")))
+    };
+
+    base_dir
+        .map(|dir| dir.join(CONFIG_DIR_NAME).join(CONFIG_FILE_NAME))
+        .ok_or_else(|| {
+            AppError::internal(
+                "could not resolve the configuration directory automatically; set `FPT_CONFIG_PATH` explicitly",
+            )
+            .with_operation("resolve_config_file_path")
+            .with_hint("Set `FPT_CONFIG_PATH` to an explicit config file path if the platform config directory cannot be resolved.")
+        })
+}
+
+pub fn load_persisted_config() -> Result<PersistedConnectionConfig> {
+    let path = config_file_path()?;
+    if !path.is_file() {
+        return Ok(PersistedConnectionConfig::default());
+    }
+
+    let content = fs::read_to_string(&path).map_err(|error| {
+        AppError::internal(format!(
+            "could not read persisted config file `{}`: {error}",
+            path.display()
+        ))
+        .with_operation("load_persisted_config")
+        .with_resource(path.display().to_string())
+        .with_hint("Check that the config file exists and is readable by the current user.")
+    })?;
+
+    serde_json::from_str(&content).map_err(|error| {
+        AppError::invalid_input(format!(
+            "persisted config file `{}` is not valid JSON: {error}",
+            path.display()
+        ))
+        .with_operation("parse_persisted_config")
+        .with_resource(path.display().to_string())
+        .with_expected_shape("a JSON object matching the persisted connection config schema")
+        .with_hint("Fix the JSON syntax in the config file or remove the invalid file and recreate it with `fpt config set`.")
+    })
+}
+
+pub fn save_persisted_config(config: &PersistedConnectionConfig) -> Result<PathBuf> {
+    let path = config_file_path()?;
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent).map_err(|error| {
+            AppError::internal(format!(
+                "could not create config directory `{}`: {error}",
+                parent.display()
+            ))
+            .with_operation("create_config_directory")
+            .with_resource(parent.display().to_string())
+            .with_hint("Check directory permissions or set `FPT_CONFIG_PATH` to a writable location.")
+        })?;
+    }
+
+    let contents = serde_json::to_string_pretty(config)
+        .map_err(|error| AppError::internal(format!("could not serialize persisted config as JSON: {error}"))
+            .with_operation("serialize_persisted_config"))?;
+    fs::write(&path, format!("{contents}\n")).map_err(|error| {
+        AppError::internal(format!(
+            "could not write persisted config file `{}`: {error}",
+            path.display()
+        ))
+        .with_operation("save_persisted_config")
+        .with_resource(path.display().to_string())
+        .with_hint("Check file permissions or set `FPT_CONFIG_PATH` to a writable location.")
+    })?;
+
+    Ok(path)
+}
+
 pub fn resolve_site(overrides: ConnectionOverrides) -> Result<String> {
+    let persisted = load_persisted_config()?;
     let site = overrides
         .site
         .or(env_var_compat("FPT_SITE", "SG_SITE"))
+        .or(persisted.site)
         .unwrap_or_default();
 
     if site.trim().is_empty() {
-        return Err(
-            AppError::invalid_input("缺少 ShotGrid 连接配置").with_details(serde_json::json!({
-                "missing": ["FPT_SITE / SG_SITE / --site"],
-                "hint": "可通过命令行参数或环境变量提供站点信息"
-            })),
-        );
+        return Err(AppError::invalid_input(
+            "missing ShotGrid site setting required for this command"
+        )
+        .with_operation("resolve_site")
+        .with_missing_fields(["FPT_SITE / SG_SITE / config site / --site"])
+        .with_invalid_field("site")
+        .with_hint("Provide the site via CLI flag, environment variable, or `fpt config set --site ...`."));
     }
 
     Ok(site.trim_end_matches('/').to_string())
+}
+
+fn home_dir() -> Option<PathBuf> {
+    env::var_os("HOME")
+        .map(PathBuf::from)
+        .or_else(|| env::var_os("USERPROFILE").map(PathBuf::from))
 }
 
 fn env_var_compat(primary: &str, fallback: &str) -> Option<String> {

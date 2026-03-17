@@ -1,5 +1,5 @@
 use serde::Serialize;
-use serde_json::Value;
+use serde_json::{Map, Value};
 use std::fmt::{Display, Formatter};
 
 pub type Result<T> = std::result::Result<T, AppError>;
@@ -69,7 +69,7 @@ impl AppError {
     pub fn new(code: ErrorCode, message: impl Into<String>) -> Self {
         Self {
             code,
-            message: message.into(),
+            message: format_error_message(code, message.into()),
             details: None,
             retryable: false,
             transport: None,
@@ -113,6 +113,101 @@ impl AppError {
         self
     }
 
+    pub fn with_detail(mut self, key: impl Into<String>, value: impl Serialize) -> Self {
+        let key = key.into();
+        let value = serde_json::to_value(value)
+            .unwrap_or_else(|error| Value::String(format!("failed to serialize detail value: {error}")));
+
+        match self.details.take() {
+            Some(Value::Object(mut object)) => {
+                object.insert(key, value);
+                self.details = Some(Value::Object(object));
+            }
+            Some(existing) => {
+                let mut object = Map::new();
+                object.insert("context".to_string(), existing);
+                object.insert(key, value);
+                self.details = Some(Value::Object(object));
+            }
+            None => {
+                let mut object = Map::new();
+                object.insert(key, value);
+                self.details = Some(Value::Object(object));
+            }
+        }
+
+        self
+    }
+
+    pub fn with_hint(self, hint: impl Into<String>) -> Self {
+        self.with_detail("hint", hint.into())
+    }
+
+    pub fn with_expected_shape(self, expected_shape: impl Into<String>) -> Self {
+        self.with_detail("expected_shape", expected_shape.into())
+    }
+
+    pub fn with_invalid_field(self, field_name: impl Into<String>) -> Self {
+        self.with_detail("invalid_field", field_name.into())
+    }
+
+    pub fn with_input_source(self, input_source: impl Into<String>) -> Self {
+        self.with_detail("input_source", input_source.into())
+    }
+
+    pub fn with_missing_fields<I, S>(self, fields: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<String>,
+    {
+        self.with_detail(
+            "missing_fields",
+            fields.into_iter().map(Into::into).collect::<Vec<_>>(),
+        )
+    }
+
+    pub fn with_conflicting_fields<I, S>(self, fields: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<String>,
+    {
+        self.with_detail(
+            "conflicting_fields",
+            fields.into_iter().map(Into::into).collect::<Vec<_>>(),
+        )
+    }
+
+    pub fn with_allowed_values<I, S>(self, values: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<String>,
+    {
+        self.with_detail(
+            "allowed_values",
+            values.into_iter().map(Into::into).collect::<Vec<_>>(),
+        )
+    }
+
+    pub fn with_operation(self, operation: impl Into<String>) -> Self {
+        self.with_detail("operation", operation.into())
+    }
+
+    pub fn with_resource(self, resource: impl Into<String>) -> Self {
+        self.with_detail("resource", resource.into())
+    }
+
+    pub fn with_http_status(self, status: u16) -> Self {
+        self.with_detail("http_status", status)
+    }
+
+    pub fn with_retryable_reason(self, reason: impl Into<String>) -> Self {
+        self.with_detail("retryable_reason", reason.into())
+    }
+
+    pub fn with_received_value(self, value: impl Serialize) -> Self {
+        self.with_detail("received", value)
+    }
+
     pub fn with_transport(mut self, transport: impl Into<String>) -> Self {
         self.transport = Some(transport.into());
         self
@@ -135,6 +230,26 @@ impl AppError {
 
     pub const fn exit_code(&self) -> i32 {
         self.code.exit_code()
+    }
+}
+
+fn format_error_message(code: ErrorCode, message: String) -> String {
+    let prefix = match code {
+        ErrorCode::InvalidInput => "Input validation failed",
+        ErrorCode::AuthFailed => "Authentication failed",
+        ErrorCode::NetworkError => "Network request failed",
+        ErrorCode::ApiError => "Remote API request failed",
+        ErrorCode::PolicyBlocked => "Operation blocked by safety policy",
+        ErrorCode::UnsupportedCapability => "Unsupported capability",
+        ErrorCode::NotImplemented => "Capability not implemented",
+        ErrorCode::InternalError => "Internal execution error",
+    };
+
+    let trimmed = message.trim();
+    if trimmed.is_empty() {
+        prefix.to_string()
+    } else {
+        format!("{prefix}: {trimmed}")
     }
 }
 

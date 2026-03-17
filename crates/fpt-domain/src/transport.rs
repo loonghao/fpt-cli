@@ -208,10 +208,18 @@ impl RestTransport {
         query: &[(String, String)],
     ) -> Result<Url> {
         let mut url = Url::parse(&format!("{}/api/{}/", config.site, config.api_version))
-            .map_err(|error| AppError::invalid_input(format!("无效的站点 URL: {error}")))?;
-        url = url
-            .join(path.trim_start_matches('/'))
-            .map_err(|error| AppError::internal(format!("无法构造 REST URL `{path}`: {error}")))?;
+            .map_err(|error| {
+                AppError::invalid_input(format!("invalid ShotGrid site URL: {error}"))
+                    .with_operation("build_rest_url")
+                    .with_invalid_field("site")
+                    .with_received_value(&config.site)
+                    .with_hint("Provide a valid ShotGrid base URL, for example `https://example.shotgrid.autodesk.com`.")
+            })?;
+        url = url.join(path.trim_start_matches('/')).map_err(|error| {
+            AppError::internal(format!("could not build REST URL `{path}`: {error}"))
+                .with_operation("build_rest_url")
+                .with_resource(path)
+        })?;
 
         if !query.is_empty() {
             let mut pairs = url.query_pairs_mut();
@@ -225,11 +233,18 @@ impl RestTransport {
 
     fn build_rpc_url(&self, site: &str) -> Result<Url> {
         let normalized_site = site.trim_end_matches('/');
-        let mut url = Url::parse(&format!("{normalized_site}/"))
-            .map_err(|error| AppError::invalid_input(format!("无效的站点 URL: {error}")))?;
-        url = url
-            .join("api3/json")
-            .map_err(|error| AppError::internal(format!("无法构造 RPC URL: {error}")))?;
+        let mut url = Url::parse(&format!("{normalized_site}/")).map_err(|error| {
+            AppError::invalid_input(format!("invalid ShotGrid site URL: {error}"))
+                .with_operation("build_rpc_url")
+                .with_invalid_field("site")
+                .with_received_value(site)
+                .with_hint("Provide a valid ShotGrid base URL, for example `https://example.shotgrid.autodesk.com`.")
+        })?;
+        url = url.join("api3/json").map_err(|error| {
+            AppError::internal(format!("could not build RPC URL: {error}"))
+                .with_operation("build_rpc_url")
+                .with_resource("api3/json")
+        })?;
         Ok(url)
     }
 
@@ -284,7 +299,8 @@ impl RestTransport {
         let cache = self
             .token_cache
             .lock()
-            .map_err(|_| AppError::internal("token cache 已损坏"))?;
+            .map_err(|_| AppError::internal("token cache is poisoned")
+                .with_operation("read_token_cache"))?;
         let Some(cached) = cache.as_ref() else {
             return Ok(None);
         };
@@ -315,7 +331,8 @@ impl RestTransport {
         let mut cache = self
             .token_cache
             .lock()
-            .map_err(|_| AppError::internal("token cache 已损坏"))?;
+            .map_err(|_| AppError::internal("token cache is poisoned")
+                .with_operation("write_token_cache"))?;
         *cache = Some(CachedAccessToken {
             cache_key: Self::token_cache_key(config),
             payload: payload.clone(),
@@ -387,8 +404,11 @@ impl RestTransport {
             .send()
             .await
             .map_err(|error| {
-                AppError::network(format!("请求 ShotGrid access token 失败: {error}"))
+                AppError::network(format!("could not request a ShotGrid access token: {error}"))
+                    .with_operation("request_access_token")
                     .with_transport("rest")
+                    .with_resource("auth/access_token")
+                    .with_retryable_reason("transient network failure while requesting an access token")
                     .retryable(true)
             })?;
 
@@ -397,9 +417,13 @@ impl RestTransport {
             .get("access_token")
             .and_then(Value::as_str)
             .ok_or_else(|| {
-                AppError::auth("ShotGrid access token 响应缺少 `access_token`")
+                AppError::auth("ShotGrid access token response is missing `access_token`")
+                    .with_operation("request_access_token")
                     .with_transport("rest")
-                    .with_details(body.clone())
+                    .with_resource("auth/access_token")
+                    .with_expected_shape("a JSON object containing a string field `access_token`")
+                    .with_hint("Verify the credentials and auth mode, then retry the authentication request.")
+                    .with_detail("response_body", body.clone())
             })?;
 
         let payload = AccessTokenPayload {
@@ -439,8 +463,11 @@ impl RestTransport {
         }
 
         let response = request.send().await.map_err(|error| {
-            AppError::network(format!("请求 ShotGrid REST API 失败: {error}"))
+            AppError::network(format!("could not send the ShotGrid REST request: {error}"))
+                .with_operation("authorized_json_request")
                 .with_transport("rest")
+                .with_resource(path)
+                .with_retryable_reason("transient network failure while sending a REST request")
                 .retryable(true)
         })?;
 
@@ -457,7 +484,11 @@ impl RestTransport {
         let token = self.access_token_response(config).await?;
         let url = self.build_url(config, path, query)?;
         let serialized_body = serde_json::to_vec(body)
-            .map_err(|error| AppError::internal(format!("序列化 _search 请求体失败: {error}")))?;
+            .map_err(|error| AppError::internal(format!("could not serialize the `_search` request body as JSON: {error}"))
+                .with_operation("serialize_search_request")
+                .with_transport("rest")
+                .with_resource(path)
+                .with_expected_shape("a JSON object or array accepted by the ShotGrid `_search` endpoint"))?;
 
         let response = self
             .client
@@ -469,8 +500,11 @@ impl RestTransport {
             .send()
             .await
             .map_err(|error| {
-                AppError::network(format!("请求 ShotGrid REST _search 失败: {error}"))
+                AppError::network(format!("could not send the ShotGrid REST `_search` request: {error}"))
+                    .with_operation("authorized_search_request")
                     .with_transport("rest")
+                    .with_resource(path)
+                    .with_retryable_reason("transient network failure while sending a `_search` request")
                     .retryable(true)
             })?;
 
@@ -497,9 +531,14 @@ impl RestTransport {
             .send()
             .await
             .map_err(|error| {
-                AppError::network(format!("请求 ShotGrid RPC 失败: {error}"))
-                    .with_transport("rpc")
-                    .retryable(true)
+                AppError::network(format!(
+                    "could not send ShotGrid RPC request `{method_name}`: {error}"
+                ))
+                .with_operation("rpc_request")
+                .with_transport("rpc")
+                .with_resource(method_name)
+                .with_retryable_reason("transient network failure while sending an RPC request")
+                .retryable(true)
             })?;
 
         let parsed = Self::parse_response(response, "rpc").await?;
@@ -509,9 +548,13 @@ impl RestTransport {
     async fn parse_response(response: Response, transport: &'static str) -> Result<Value> {
         let status = response.status();
         let text = response.text().await.map_err(|error| {
-            AppError::network(format!("读取 ShotGrid 响应失败: {error}"))
-                .with_transport(transport)
-                .retryable(true)
+            AppError::network(format!(
+                "could not read ShotGrid {transport} response body: {error}"
+            ))
+            .with_operation("parse_response")
+            .with_transport(transport)
+            .with_retryable_reason("transient network failure while reading the response body")
+            .retryable(true)
         })?;
 
         if status.is_success() {
@@ -523,9 +566,14 @@ impl RestTransport {
             }
 
             return serde_json::from_str(&text).map_err(|error| {
-                AppError::api(format!("无法解析 ShotGrid JSON 响应: {error}"))
-                    .with_transport(transport)
-                    .with_details(json!({ "raw": text }))
+                AppError::api(format!(
+                    "ShotGrid {transport} response was not valid JSON: {error}"
+                ))
+                .with_operation("parse_response")
+                .with_transport(transport)
+                .with_expected_shape("a valid JSON response body")
+                .with_hint("Inspect the raw response body to confirm whether the remote service returned HTML, plain text, or malformed JSON.")
+                .with_detail("raw_response", text.clone())
             });
         }
 
@@ -534,12 +582,21 @@ impl RestTransport {
             || (status == StatusCode::BAD_REQUEST && text.contains("authenticate"));
 
         let error = if is_auth_error {
-            AppError::auth(format!("ShotGrid 认证失败 ({status})"))
+            AppError::auth(format!(
+                "ShotGrid rejected the {transport} request with HTTP status {status}"
+            ))
         } else {
-            AppError::api(format!("ShotGrid API 请求失败 ({status})"))
+            AppError::api(format!(
+                "ShotGrid returned HTTP status {status} for the {transport} request"
+            ))
         };
 
-        Err(error.with_transport(transport).with_details(details))
+        Err(error
+            .with_operation("parse_response")
+            .with_transport(transport)
+            .with_http_status(status.as_u16())
+            .with_hint("Inspect the response details and verify the request path, permissions, and payload.")
+            .with_detail("response_body", details))
     }
 }
 
@@ -840,7 +897,11 @@ impl ShotgridTransport for RestTransport {
         let user_id = user
             .get("id")
             .and_then(Value::as_u64)
-            .ok_or_else(|| AppError::invalid_input("user object must contain a numeric `id`"))?;
+            .ok_or_else(|| AppError::invalid_input("user object must contain a numeric `id`")
+                .with_operation("entity_unfollow")
+                .with_invalid_field("id")
+                .with_expected_shape("a user JSON object containing a numeric field `id`")
+                .with_detail("received_user", user.clone()))?;
         let path = format!(
             "entity/{}/{}/followers/{}",
             entity_collection_path(entity),

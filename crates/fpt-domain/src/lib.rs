@@ -8,7 +8,8 @@ pub mod transport;
 
 pub use app::App;
 pub use config::{
-    AuthMode, ConnectionOverrides, ConnectionSettings, Credentials, api_version_or_default,
+    AuthMode, ConnectionOverrides, ConnectionSettings, Credentials, PersistedConnectionConfig,
+    api_version_or_default, config_file_path, load_persisted_config, save_persisted_config,
 };
 pub use filter_dsl::parse_filter_dsl;
 pub use transport::{

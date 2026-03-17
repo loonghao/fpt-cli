@@ -16,24 +16,26 @@ switch ($architecture) {
 
 $asset = "fpt-$target.zip"
 if ([string]::IsNullOrWhiteSpace($Version) -or $Version -eq "latest") {
-    $downloadUrl = "https://github.com/$Repository/releases/latest/download/$asset"
+    $downloadAsset = $asset
+    $downloadUrl = "https://github.com/$Repository/releases/latest/download/$downloadAsset"
 }
 else {
     if (-not $Version.StartsWith("v")) {
         $Version = "v$Version"
     }
-    $downloadUrl = "https://github.com/$Repository/releases/download/$Version/$asset"
+    $downloadAsset = "fpt-$Version-$target.zip"
+    $downloadUrl = "https://github.com/$Repository/releases/download/$Version/$downloadAsset"
 }
 
 $tempRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("fpt-install-" + [System.Guid]::NewGuid().ToString("N"))
-$archivePath = Join-Path $tempRoot $asset
+$archivePath = Join-Path $tempRoot $downloadAsset
 $extractDir = Join-Path $tempRoot "extract"
 $binaryPath = Join-Path $InstallDir "fpt.exe"
 
 try {
     New-Item -ItemType Directory -Force -Path $tempRoot, $extractDir, $InstallDir | Out-Null
 
-    Write-Host "Downloading $asset from $downloadUrl"
+    Write-Host "Downloading $downloadAsset from $downloadUrl"
     Invoke-WebRequest -Uri $downloadUrl -OutFile $archivePath
     Expand-Archive -Path $archivePath -DestinationPath $extractDir -Force
     Copy-Item -Path (Join-Path $extractDir "fpt.exe") -Destination $binaryPath -Force
