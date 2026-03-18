@@ -136,35 +136,19 @@ pub struct ConfigSetArgs {
 
 #[derive(Debug, Args, Clone, Default)]
 pub struct ConfigClearArgs {
-    #[arg(long)]
+    #[arg(long, help = "Clear all persisted configuration fields")]
     pub all: bool,
 
-    #[arg(long)]
-    pub site: bool,
-
-    #[arg(long = "auth-mode")]
-    pub auth_mode: bool,
-
-    #[arg(long = "script-name")]
-    pub script_name: bool,
-
-    #[arg(long = "script-key")]
-    pub script_key: bool,
-
-    #[arg(long)]
-    pub username: bool,
-
-    #[arg(long)]
-    pub password: bool,
-
-    #[arg(long = "auth-token")]
-    pub auth_token: bool,
-
-    #[arg(long = "session-token")]
-    pub session_token: bool,
-
-    #[arg(long = "api-version")]
-    pub api_version: bool,
+    /// Comma-separated list of field names to clear.
+    ///
+    /// Valid names: site, auth-mode, script-name, script-key,
+    /// username, password, auth-token, session-token, api-version
+    #[arg(
+        long,
+        value_delimiter = ',',
+        help = "Comma-separated list of fields to clear (e.g. --fields site,auth-mode)"
+    )]
+    pub fields: Vec<String>,
 }
 
 #[derive(Debug, Subcommand)]

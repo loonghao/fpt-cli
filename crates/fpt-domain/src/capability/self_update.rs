@@ -20,8 +20,11 @@ const CONFIG_SET_EXAMPLES: &[&str] = &[
     "fpt config set --site https://example.shotgrid.autodesk.com --auth-mode session-token --session-token token-123",
     "fpt config set --site https://example.shotgrid.autodesk.com --auth-mode user-password --username user@example.com --password secret",
 ];
-const CONFIG_CLEAR_EXAMPLES: &[&str] =
-    &["fpt config clear --session-token", "fpt config clear --all"];
+const CONFIG_CLEAR_EXAMPLES: &[&str] = &[
+    "fpt config clear --fields session-token",
+    "fpt config clear --fields site,auth-mode",
+    "fpt config clear --all",
+];
 
 const CONFIG_NOTES: &[&str] = &[
     "Persisted config is used when command-line flags and environment variables are not provided",
@@ -93,7 +96,7 @@ pub const CONFIG_CLEAR_SPEC: CommandSpec = CommandSpec {
     supports_dry_run: false,
     preferred_transport: "core",
     fallback_transport: None,
-    input: "--all or one or more field flags",
+    input: "--all or --fields <name,...>",
     output: "json",
     examples: CONFIG_CLEAR_EXAMPLES,
     notes: CONFIG_NOTES,

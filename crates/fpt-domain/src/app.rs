@@ -40,10 +40,10 @@ where
         Self { transport }
     }
 
-    pub fn capabilities(&self) -> Value {
+    pub fn capabilities(&self, cli_version: &str) -> Value {
         json!({
             "name": "fpt",
-            "version": env!("CARGO_PKG_VERSION"),
+            "version": cli_version,
             "transports": [
                 { "name": "rest", "status": "available" },
                 { "name": "rpc", "status": "planned" }

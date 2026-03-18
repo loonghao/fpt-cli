@@ -980,7 +980,7 @@ dependencies = [
 
 [[package]]
 name = "fpt-core"
-version = "0.1.0"
+version = "0.2.8"
 dependencies = [
  "serde",
  "serde_json",
@@ -989,7 +989,7 @@ dependencies = [
 
 [[package]]
 name = "fpt-domain"
-version = "0.1.0"
+version = "0.2.8"
 dependencies = [
  "async-trait",
  "fpt-core",
