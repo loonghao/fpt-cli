@@ -144,3 +144,77 @@ fn delete_without_yes_is_blocked() {
         .failure()
         .stderr(predicate::str::contains("POLICY_BLOCKED"));
 }
+
+// --- #49: capabilities version must match the CLI binary version ---
+
+#[test]
+fn capabilities_version_matches_cli_version() {
+    let expected_version = env!("CARGO_PKG_VERSION");
+    let mut command = Command::cargo_bin("fpt").expect("binary exists");
+    command.args(["capabilities", "--output", "json"]);
+
+    command.assert().success().stdout(predicate::str::contains(
+        format!("\"version\":\"{expected_version}\""),
+    ));
+}
+
+// --- #48: config clear must not panic ---
+
+#[test]
+fn config_clear_all_does_not_panic() {
+    let mut command = Command::cargo_bin("fpt").expect("binary exists");
+    command.args(["config", "clear", "--all", "--output", "json"]);
+
+    command
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("\"command\":\"config.clear\""));
+}
+
+#[test]
+fn config_clear_fields_does_not_panic() {
+    let mut command = Command::cargo_bin("fpt").expect("binary exists");
+    command.args([
+        "config",
+        "clear",
+        "--fields",
+        "site,auth-mode",
+        "--output",
+        "json",
+    ]);
+
+    command
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("\"command\":\"config.clear\""));
+}
+
+#[test]
+fn config_clear_no_args_returns_error() {
+    let mut command = Command::cargo_bin("fpt").expect("binary exists");
+    command.args(["config", "clear", "--output", "json"]);
+
+    command.assert().failure().stderr(
+        predicate::str::contains("INVALID_INPUT")
+            .and(predicate::str::contains("--all"))
+            .and(predicate::str::contains("--fields")),
+    );
+}
+
+#[test]
+fn config_clear_invalid_field_returns_error() {
+    let mut command = Command::cargo_bin("fpt").expect("binary exists");
+    command.args([
+        "config",
+        "clear",
+        "--fields",
+        "nonexistent",
+        "--output",
+        "json",
+    ]);
+
+    command.assert().failure().stderr(
+        predicate::str::contains("INVALID_INPUT")
+            .and(predicate::str::contains("unknown field name")),
+    );
+}

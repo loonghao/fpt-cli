@@ -17,7 +17,7 @@ pub async fn run(cli: Cli) -> Result<Value> {
     let connection = cli.connection.clone().into();
 
     match cli.command {
-        Commands::Capabilities => Ok(app.capabilities()),
+        Commands::Capabilities => Ok(app.capabilities(env!("CARGO_PKG_VERSION"))),
         Commands::Inspect(command) => match command {
             InspectCommands::Command { name } => app.inspect_command(&name),
         },

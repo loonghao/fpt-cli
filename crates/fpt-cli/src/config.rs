@@ -74,42 +74,69 @@ fn set_config(args: ConfigSetArgs) -> Result<Value> {
     }))
 }
 
+/// All field names accepted by `config clear --fields`.
+const VALID_CLEAR_FIELDS: &[&str] = &[
+    "site",
+    "auth-mode",
+    "script-name",
+    "script-key",
+    "username",
+    "password",
+    "auth-token",
+    "session-token",
+    "api-version",
+];
+
 fn clear_config(args: ConfigClearArgs) -> Result<Value> {
-    if !args.all && !has_any_clear_arg(&args) {
+    if !args.all && args.fields.is_empty() {
         return Err(AppError::invalid_input(
-            "`config clear` requires `--all` or at least one field flag such as `--site` or `--auth-mode`",
+            "`config clear` requires `--all` or `--fields <name,...>`; \
+             valid field names: site, auth-mode, script-name, script-key, \
+             username, password, auth-token, session-token, api-version",
         ));
+    }
+
+    // Validate field names before doing any work.
+    for name in &args.fields {
+        if !VALID_CLEAR_FIELDS.contains(&name.as_str()) {
+            return Err(AppError::invalid_input(format!(
+                "unknown field name `{name}`; valid names: {}",
+                VALID_CLEAR_FIELDS.join(", ")
+            )));
+        }
     }
 
     let mut config = load_persisted_config()?;
     if args.all {
         config = PersistedConnectionConfig::default();
     } else {
-        if args.site {
+        let f = &args.fields;
+        let has = |name: &str| f.iter().any(|n| n == name);
+        if has("site") {
             config.site = None;
         }
-        if args.auth_mode {
+        if has("auth-mode") {
             config.auth_mode = None;
         }
-        if args.script_name {
+        if has("script-name") {
             config.script_name = None;
         }
-        if args.script_key {
+        if has("script-key") {
             config.script_key = None;
         }
-        if args.username {
+        if has("username") {
             config.username = None;
         }
-        if args.password {
+        if has("password") {
             config.password = None;
         }
-        if args.auth_token {
+        if has("auth-token") {
             config.auth_token = None;
         }
-        if args.session_token {
+        if has("session-token") {
             config.session_token = None;
         }
-        if args.api_version {
+        if has("api-version") {
             config.api_version = None;
         }
     }
@@ -134,14 +161,5 @@ fn has_any_set_arg(args: &ConfigSetArgs) -> bool {
         || args.api_version.is_some()
 }
 
-fn has_any_clear_arg(args: &ConfigClearArgs) -> bool {
-    args.site
-        || args.auth_mode
-        || args.script_name
-        || args.script_key
-        || args.username
-        || args.password
-        || args.auth_token
-        || args.session_token
-        || args.api_version
-}
+
+
