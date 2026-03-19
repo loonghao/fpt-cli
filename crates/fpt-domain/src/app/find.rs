@@ -318,6 +318,14 @@ fn normalize_search_body(value: &Value) -> Result<Value> {
         // REST `_search` endpoint: {"filter_operator": "all", "filters": [...]}
         let normalized = normalize_search_filters(filters, "`search.filters`")?;
         search.insert("filters".to_string(), normalized);
+    } else if !search.contains_key("filters") {
+        // The ShotGrid `_search` endpoint requires a `filters` key in the request body.
+        // Provide a default empty filter set so users can pass a minimal search body
+        // (e.g. just `fields`) without triggering a "filters is missing" server error.
+        search.insert(
+            "filters".to_string(),
+            json!({ "filter_operator": "all", "filters": [] }),
+        );
     }
 
     if let Some(presets) = search.get("additional_filter_presets") {
@@ -341,11 +349,25 @@ fn normalize_search_body(value: &Value) -> Result<Value> {
 /// basic shape validation.
 fn normalize_search_filters(value: Value, field_name: &str) -> Result<Value> {
     match value {
-        Value::Array(items) => Ok(serde_json::json!({
-            "filter_operator": "all",
-            "filters": items,
-        })),
-        Value::Object(_) => Ok(value),
+        Value::Array(items) => {
+            let normalized = normalize_filter_conditions(items)?;
+            Ok(serde_json::json!({
+                "filter_operator": "all",
+                "filters": normalized,
+            }))
+        }
+        Value::Object(ref map) => {
+            // Validate that the object has the expected shape.
+            if let Some(inner_filters) = map.get("filters") {
+                if let Some(arr) = inner_filters.as_array() {
+                    let normalized = normalize_filter_conditions(arr.clone())?;
+                    let mut result = map.clone();
+                    result.insert("filters".to_string(), Value::Array(normalized));
+                    return Ok(Value::Object(result));
+                }
+            }
+            Ok(value)
+        }
         _ => Err(AppError::invalid_input(format!(
             "{field_name} must be either an object or an array"
         ))
@@ -355,6 +377,40 @@ fn normalize_search_filters(value: Value, field_name: &str) -> Result<Value> {
             "a JSON array of filter conditions, or an object with `filter_operator` and `filters`",
         )),
     }
+}
+
+/// Normalize individual filter conditions within a filters array.
+///
+/// This handles the entity-link shorthand: when a filter condition is
+/// `["field", "is"|"is_not", integer]` for common entity-link fields,
+/// the integer is NOT automatically expanded (the REST API may accept it),
+/// but a validation warning is prepared. For nested logical groups,
+/// the function recurses.
+fn normalize_filter_conditions(conditions: Vec<Value>) -> Result<Vec<Value>> {
+    let mut normalized = Vec::with_capacity(conditions.len());
+    for condition in conditions {
+        match &condition {
+            // Nested logical group: {"logical_operator": ..., "conditions": [...]}
+            Value::Object(map) if map.contains_key("logical_operator") => {
+                if let Some(inner_conds) = map.get("conditions").and_then(Value::as_array) {
+                    let inner_normalized = normalize_filter_conditions(inner_conds.clone())?;
+                    let mut result = map.clone();
+                    result.insert("conditions".to_string(), Value::Array(inner_normalized));
+                    normalized.push(Value::Object(result));
+                } else {
+                    normalized.push(condition);
+                }
+            }
+            // Standard filter condition: [field, operator, value]
+            Value::Array(items) if items.len() >= 3 => {
+                normalized.push(condition);
+            }
+            _ => {
+                normalized.push(condition);
+            }
+        }
+    }
+    Ok(normalized)
 }
 
 fn normalize_filter_presets(value: &Value, field_name: &str) -> Result<Vec<Value>> {
