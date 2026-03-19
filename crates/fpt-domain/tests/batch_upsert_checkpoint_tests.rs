@@ -73,10 +73,7 @@ impl UpsertTransport {
 
 #[async_trait]
 impl ShotgridTransport for UpsertTransport {
-    async fn auth_test(
-        &self,
-        _config: &fpt_domain::ConnectionSettings,
-    ) -> Result<Value> {
+    async fn auth_test(&self, _config: &fpt_domain::ConnectionSettings) -> Result<Value> {
         Ok(json!({"ok": true}))
     }
 
@@ -84,10 +81,7 @@ impl ShotgridTransport for UpsertTransport {
         Err(AppError::not_implemented("unused"))
     }
 
-    async fn schema_entities(
-        &self,
-        _config: &fpt_domain::ConnectionSettings,
-    ) -> Result<Value> {
+    async fn schema_entities(&self, _config: &fpt_domain::ConnectionSettings) -> Result<Value> {
         Err(AppError::not_implemented("unused"))
     }
 
@@ -252,10 +246,7 @@ impl ShotgridTransport for UpsertTransport {
         Err(AppError::not_implemented("unused"))
     }
 
-    async fn preferences_get(
-        &self,
-        _config: &fpt_domain::ConnectionSettings,
-    ) -> Result<Value> {
+    async fn preferences_get(&self, _config: &fpt_domain::ConnectionSettings) -> Result<Value> {
         Err(AppError::not_implemented("unused"))
     }
 
@@ -399,8 +390,7 @@ async fn upsert_resumes_from_checkpoint() {
     // Pre-seed a checkpoint file with index 0 already completed.
     std::fs::write(
         &checkpoint_path,
-        r#"{"index":0,"ok":true,"action":"created","request":{"code":"ALPHA"}}"#.to_string()
-            + "\n",
+        r#"{"index":0,"ok":true,"action":"created","request":{"code":"ALPHA"}}"#.to_string() + "\n",
     )
     .expect("write checkpoint");
 
@@ -435,8 +425,16 @@ async fn upsert_resumes_from_checkpoint() {
     assert_eq!(result["failure_count"], 0);
 
     // Only index 1 should have triggered a find + create
-    assert_eq!(transport.find_count(), 1, "only non-skipped item should be queried");
-    assert_eq!(transport.create_count(), 1, "only non-skipped item should be created");
+    assert_eq!(
+        transport.find_count(),
+        1,
+        "only non-skipped item should be queried"
+    );
+    assert_eq!(
+        transport.create_count(),
+        1,
+        "only non-skipped item should be created"
+    );
 }
 
 #[tokio::test]
@@ -454,8 +452,8 @@ async fn upsert_resume_without_checkpoint_is_error() {
             "code",
             OnConflict::Skip,
             false,
-            None,  // no checkpoint
-            true,  // resume
+            None, // no checkpoint
+            true, // resume
         )
         .await
         .expect_err("resume without checkpoint should fail");
@@ -682,7 +680,10 @@ async fn upsert_with_on_conflict_error_and_existing_entity() {
     assert_eq!(item["ok"], false);
     assert_eq!(item["action"], "conflict");
     assert!(
-        item["error"]["code"].as_str().unwrap().contains("POLICY_BLOCKED"),
+        item["error"]["code"]
+            .as_str()
+            .unwrap()
+            .contains("POLICY_BLOCKED"),
         "conflict should use POLICY_BLOCKED code"
     );
 }
@@ -854,6 +855,12 @@ async fn upsert_checkpoint_records_all_actions() {
         .collect();
 
     assert!(actions.contains(&"created"), "should have a created action");
-    assert!(actions.contains(&"updated"), "should have an updated action");
-    assert!(actions.contains(&"skipped"), "should have a skipped action (missing key)");
+    assert!(
+        actions.contains(&"updated"),
+        "should have an updated action"
+    );
+    assert!(
+        actions.contains(&"skipped"),
+        "should have a skipped action (missing key)"
+    );
 }
