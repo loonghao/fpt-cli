@@ -235,6 +235,7 @@ where
         ))
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn entity_batch_upsert(
         &self,
         overrides: ConnectionOverrides,
@@ -941,14 +942,14 @@ fn string_list(value: &Value, field_name: &str) -> Result<Vec<String>> {
 fn load_checkpoint_indices(path: &str, _key: &str) -> Result<HashSet<usize>> {
     let path = Path::new(path);
     if !path.exists() {
-        return Err(
-            AppError::invalid_input(format!(
-                "checkpoint file `{}` does not exist; cannot resume without it",
-                path.display()
-            ))
-            .with_operation("load_checkpoint_indices")
-            .with_hint("Run the upsert without `--resume` first, or provide an existing checkpoint file path."),
-        );
+        return Err(AppError::invalid_input(format!(
+            "checkpoint file `{}` does not exist; cannot resume without it",
+            path.display()
+        ))
+        .with_operation("load_checkpoint_indices")
+        .with_hint(
+            "Run the upsert without `--resume` first, or provide an existing checkpoint file path.",
+        ));
     }
 
     let file = File::open(path).map_err(|e| {

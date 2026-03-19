@@ -347,6 +347,11 @@ fn normalize_search_body(value: &Value) -> Result<Value> {
 /// As a convenience, a bare array is accepted and wrapped with the default
 /// `filter_operator` of `"all"`.  An object is passed through as-is after
 /// basic shape validation.
+///
+/// Additionally, entity-link filter conditions are validated and normalized:
+/// when a filter condition has the form `["field", "is"|"is_not", integer]`
+/// for a common entity-link field (project, entity, sg_sequence, etc.),
+/// a helpful error is returned suggesting the correct entity-link object shape.
 fn normalize_search_filters(value: Value, field_name: &str) -> Result<Value> {
     match value {
         Value::Array(items) => {
@@ -357,7 +362,7 @@ fn normalize_search_filters(value: Value, field_name: &str) -> Result<Value> {
             }))
         }
         Value::Object(ref map) => {
-            // Validate that the object has the expected shape.
+            // Validate nested filter conditions inside the object form too.
             if let Some(inner_filters) = map.get("filters") {
                 if let Some(arr) = inner_filters.as_array() {
                     let normalized = normalize_filter_conditions(arr.clone())?;
@@ -379,13 +384,43 @@ fn normalize_search_filters(value: Value, field_name: &str) -> Result<Value> {
     }
 }
 
+/// Well-known ShotGrid entity-link field name patterns.
+///
+/// Fields with these names or prefixes typically expect entity-link objects
+/// rather than bare scalar ids.
+const ENTITY_LINK_FIELD_PATTERNS: &[&str] = &[
+    "project",
+    "entity",
+    "sg_sequence",
+    "sg_shot",
+    "sg_asset",
+    "sg_task",
+    "task_template",
+    "created_by",
+    "updated_by",
+    "user",
+    "assigned_to",
+    "addressings_to",
+    "note_links",
+    "reply_content",
+    "sg_status_list_entity",
+];
+
+/// Returns `true` when a filter field name looks like it expects an entity-link
+/// object value (e.g. `project`, `entity`, `sg_sequence`, or any `*.EntityType` path).
+fn looks_like_entity_link_field(field: &str) -> bool {
+    let field_lower = field.to_ascii_lowercase();
+    ENTITY_LINK_FIELD_PATTERNS
+        .iter()
+        .any(|pattern| field_lower == *pattern)
+        || field.contains('.')
+}
+
 /// Normalize individual filter conditions within a filters array.
 ///
-/// This handles the entity-link shorthand: when a filter condition is
-/// `["field", "is"|"is_not", integer]` for common entity-link fields,
-/// the integer is NOT automatically expanded (the REST API may accept it),
-/// but a validation warning is prepared. For nested logical groups,
-/// the function recurses.
+/// For entity-link fields used with `is`/`is_not` and a bare integer,
+/// produce a clear error explaining the expected entity-link object shape.
+/// For nested logical groups, recurse.
 fn normalize_filter_conditions(conditions: Vec<Value>) -> Result<Vec<Value>> {
     let mut normalized = Vec::with_capacity(conditions.len());
     for condition in conditions {
@@ -403,6 +438,7 @@ fn normalize_filter_conditions(conditions: Vec<Value>) -> Result<Vec<Value>> {
             }
             // Standard filter condition: [field, operator, value]
             Value::Array(items) if items.len() >= 3 => {
+                validate_entity_link_condition(items)?;
                 normalized.push(condition);
             }
             _ => {
@@ -411,6 +447,87 @@ fn normalize_filter_conditions(conditions: Vec<Value>) -> Result<Vec<Value>> {
         }
     }
     Ok(normalized)
+}
+
+/// Check whether a filter condition looks like a mis-formed entity-link filter
+/// and produce a helpful error if so.
+///
+/// For example, `["project", "is", 123]` would trigger an error suggesting
+/// `{"type": "Project", "id": 123}` instead.
+fn validate_entity_link_condition(items: &[Value]) -> Result<()> {
+    if items.len() < 3 {
+        return Ok(());
+    }
+
+    let field = match items[0].as_str() {
+        Some(f) => f,
+        None => return Ok(()),
+    };
+
+    let operator = match items[1].as_str() {
+        Some(op) => op,
+        None => return Ok(()),
+    };
+
+    // Only check `is` and `is_not` operators for entity-link issues.
+    if !matches!(operator, "is" | "is_not") {
+        return Ok(());
+    }
+
+    let value = &items[2];
+
+    // If value is already an entity-link object with `type` and `id`, it's fine.
+    if value
+        .as_object()
+        .is_some_and(|obj| obj.contains_key("type") && obj.contains_key("id"))
+    {
+        return Ok(());
+    }
+
+    // If the field looks like an entity-link field and the value is a bare integer,
+    // produce a helpful error.
+    if value.is_number() && looks_like_entity_link_field(field) {
+        let id = value.as_u64().unwrap_or(0);
+        let suggested_type = infer_entity_type_from_field(field);
+        return Err(AppError::invalid_input(format!(
+            "filter field `{field}` expects an entity-link object, not a bare integer `{id}`"
+        ))
+        .with_operation("validate_entity_link_condition")
+        .with_invalid_field(field)
+        .with_expected_shape(format!(
+            "an entity-link object like {{\"type\": \"{suggested_type}\", \"id\": {id}}}"
+        ))
+        .with_hint(format!(
+            "Use `{{\"type\": \"{suggested_type}\", \"id\": {id}}}` instead of `{id}`, or in filter_dsl use `{field} is {suggested_type}:{id}`"
+        )));
+    }
+
+    Ok(())
+}
+
+/// Attempt to infer the ShotGrid entity type from a field name.
+///
+/// This is best-effort and covers common conventions:
+/// - `project` → `Project`
+/// - `entity` → `Shot` (common default, user should override)
+/// - `sg_sequence` → `Sequence`
+/// - `sg_shot` → `Shot`
+/// - `sg_asset` → `Asset`
+/// - `sg_task`, `task_template` → `Task`
+/// - `created_by`, `updated_by`, `user`, `assigned_to` → `HumanUser`
+///
+/// For unrecognized fields, returns `"Entity"` as a placeholder.
+fn infer_entity_type_from_field(field: &str) -> &'static str {
+    match field.to_ascii_lowercase().as_str() {
+        "project" => "Project",
+        "entity" => "Shot",
+        "sg_sequence" => "Sequence",
+        "sg_shot" => "Shot",
+        "sg_asset" => "Asset",
+        "sg_task" | "task_template" => "Task",
+        "created_by" | "updated_by" | "user" | "assigned_to" | "addressings_to" => "HumanUser",
+        _ => "Entity",
+    }
 }
 
 fn normalize_filter_presets(value: &Value, field_name: &str) -> Result<Vec<Value>> {

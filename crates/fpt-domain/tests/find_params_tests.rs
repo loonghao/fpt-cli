@@ -84,11 +84,7 @@ impl ShotgridTransport for RecordingTransport {
     async fn work_schedule_read(&self, _: &ConnectionSettings, _: &Value) -> Result<Value> {
         Ok(json!({}))
     }
-    async fn upload_url(
-        &self,
-        _: &ConnectionSettings,
-        _: UploadUrlRequest<'_>,
-    ) -> Result<Value> {
+    async fn upload_url(&self, _: &ConnectionSettings, _: UploadUrlRequest<'_>) -> Result<Value> {
         Ok(json!({}))
     }
     async fn download_url(
@@ -100,12 +96,7 @@ impl ShotgridTransport for RecordingTransport {
     ) -> Result<Value> {
         Ok(json!({}))
     }
-    async fn thumbnail_url(
-        &self,
-        _: &ConnectionSettings,
-        _: &str,
-        _: u64,
-    ) -> Result<Value> {
+    async fn thumbnail_url(&self, _: &ConnectionSettings, _: &str, _: u64) -> Result<Value> {
         Ok(json!({}))
     }
     async fn activity_stream(
@@ -127,12 +118,7 @@ impl ShotgridTransport for RecordingTransport {
     async fn preferences_get(&self, _: &ConnectionSettings) -> Result<Value> {
         Ok(json!({}))
     }
-    async fn entity_followers(
-        &self,
-        _: &ConnectionSettings,
-        _: &str,
-        _: u64,
-    ) -> Result<Value> {
+    async fn entity_followers(&self, _: &ConnectionSettings, _: &str, _: u64) -> Result<Value> {
         Ok(json!({}))
     }
     async fn entity_follow(
@@ -178,12 +164,7 @@ impl ShotgridTransport for RecordingTransport {
     ) -> Result<Value> {
         Ok(json!({}))
     }
-    async fn schema_field_delete(
-        &self,
-        _: &ConnectionSettings,
-        _: &str,
-        _: &str,
-    ) -> Result<Value> {
+    async fn schema_field_delete(&self, _: &ConnectionSettings, _: &str, _: &str) -> Result<Value> {
         Ok(json!({}))
     }
     async fn hierarchy(&self, _: &ConnectionSettings, _: &Value) -> Result<Value> {
@@ -284,8 +265,14 @@ fn search_input_produces_expected_search_body(
     });
 
     let state = transport.snapshot();
-    let params = state.find_calls.last().expect("should have recorded a find call");
-    let search = params.search.as_ref().expect("search body should be present");
+    let params = state
+        .find_calls
+        .last()
+        .expect("should have recorded a find call");
+    let search = params
+        .search
+        .as_ref()
+        .expect("search body should be present");
     assert_eq!(
         search.get("filters").unwrap(),
         &expected_filters,
@@ -331,7 +318,10 @@ fn filter_dsl_produces_search_body(#[case] dsl: &str) {
     });
 
     let state = transport.snapshot();
-    let params = state.find_calls.last().expect("should have recorded a find call");
+    let params = state
+        .find_calls
+        .last()
+        .expect("should have recorded a find call");
     assert!(
         params.search.is_some(),
         "filter_dsl should produce a search body"
@@ -395,7 +385,10 @@ fn find_one_uses_search_body_same_as_find() {
     });
 
     let state = transport.snapshot();
-    let params = state.find_calls.last().expect("should have recorded a find call");
+    let params = state
+        .find_calls
+        .last()
+        .expect("should have recorded a find call");
     assert!(
         params.search.is_some(),
         "find_one should also produce a search body"
@@ -428,9 +421,7 @@ fn batch_find_normalizes_search_same_as_find() {
 
     let rt = tokio::runtime::Runtime::new().unwrap();
     rt.block_on(async {
-        let _ = app
-            .entity_batch_find(overrides, "Shot", input)
-            .await;
+        let _ = app.entity_batch_find(overrides, "Shot", input).await;
     });
 
     let state = transport.snapshot();

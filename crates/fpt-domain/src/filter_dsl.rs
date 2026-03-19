@@ -225,15 +225,31 @@ impl<'a> Parser<'a> {
             '{' => self.parse_object(),
             '-' | '0'..='9' => self.parse_number(),
             _ => {
-                let ident = self.parse_identifier("value")?.to_ascii_lowercase();
-                match ident.as_str() {
+                let checkpoint = self.pos;
+                let ident = self.parse_identifier("value")?;
+                let lower = ident.to_ascii_lowercase();
+                match lower.as_str() {
                     "true" => Ok(Value::Bool(true)),
                     "false" => Ok(Value::Bool(false)),
                     "null" => Ok(Value::Null),
-                    _ => Err(AppError::invalid_input(format!(
-                        "filter_dsl syntax error: unsupported value `{ident}`, expected string/number/bool/null/JSON object (position {})",
-                        self.pos
-                    ))),
+                    _ => {
+                        // Entity-link shorthand: `EntityType:id` → {"type": "EntityType", "id": id}
+                        // Example: `Project:123` → {"type": "Project", "id": 123}
+                        self.skip_whitespace();
+                        if self.consume_char(':') {
+                            let id = self.parse_number()?;
+                            return Ok(json!({"type": ident, "id": id}));
+                        }
+
+                        self.pos = checkpoint;
+                        Err(AppError::invalid_input(format!(
+                            "filter_dsl syntax error: unsupported value `{ident}` (position {}); expected a string, number, bool, null, JSON object, or entity-link shorthand like `Project:123`",
+                            self.pos
+                        ))
+                        .with_hint(format!(
+                            "Wrap string values in quotes: '{ident}'. For entity-links, use `EntityType:id` shorthand (e.g. `Project:123`) or a full JSON object `{{\"type\": \"Project\", \"id\": 123}}`."
+                        )))
+                    }
                 }
             }
         }
