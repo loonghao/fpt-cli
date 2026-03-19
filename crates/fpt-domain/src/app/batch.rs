@@ -1,3 +1,7 @@
+use std::collections::HashSet;
+use std::fs::{File, OpenOptions};
+use std::io::{BufRead, BufReader, Write};
+use std::path::Path;
 use std::time::Instant;
 
 use fpt_core::{AppError, Result};
@@ -239,6 +243,8 @@ where
         key: &str,
         on_conflict: OnConflict,
         dry_run: bool,
+        checkpoint_path: Option<String>,
+        resume: bool,
     ) -> Result<Value> {
         let items = parse_batch_create_input(input)?;
 
@@ -266,19 +272,56 @@ where
             }));
         }
 
+        // Load checkpoint if resuming.
+        let completed_indices = if resume {
+            if let Some(ref path) = checkpoint_path {
+                load_checkpoint_indices(path, key)?
+            } else {
+                return Err(AppError::invalid_input(
+                    "`--resume` requires `--checkpoint` to specify the checkpoint file path",
+                )
+                .with_operation("entity_batch_upsert")
+                .with_hint("Provide both `--checkpoint <file>` and `--resume` to resume an interrupted upsert."));
+            }
+        } else {
+            HashSet::new()
+        };
+
+        let checkpoint_writer = checkpoint_path
+            .as_ref()
+            .map(|path| open_checkpoint_writer(path, resume))
+            .transpose()?;
+        // Wrap in a mutex for concurrent access.
+        let checkpoint_writer = checkpoint_writer.map(std::sync::Mutex::new);
+
         let config = ConnectionSettings::resolve(overrides)?;
         let transport = &self.transport;
         let config = &config;
         let key = key.to_string();
+        let started_at = Instant::now();
+        let total_items = items.len();
         let mut results = stream::iter(items.into_iter().enumerate())
             .map(|(index, body)| {
                 let key = key.clone();
+                let checkpoint_writer = &checkpoint_writer;
+                let completed_indices = &completed_indices;
                 async move {
+                    // Skip items already completed in a previous run.
+                    if completed_indices.contains(&index) {
+                        let result = json!({
+                            "index": index,
+                            "ok": true,
+                            "action": "resumed_skip",
+                            "request": body,
+                        });
+                        return result;
+                    }
+
                     // Look up whether an entity with this key value already exists.
                     let key_value = match body.get(&key) {
                         Some(v) => v.clone(),
                         None => {
-                            return json!({
+                            let result = json!({
                                 "index": index,
                                 "ok": false,
                                 "action": "skipped",
@@ -288,6 +331,8 @@ where
                                     "message": format!("upsert key field `{key}` is missing from item {}", index + 1),
                                 },
                             });
+                            write_checkpoint(checkpoint_writer, &result);
+                            return result;
                         }
                     };
 
@@ -303,13 +348,15 @@ where
                     let mut params = match build_find_params(Some(filter_input), None) {
                         Ok(p) => p,
                         Err(error) => {
-                            return json!({
+                            let result = json!({
                                 "index": index,
                                 "ok": false,
                                 "action": "error",
                                 "request": body,
                                 "error": error.envelope(),
                             });
+                            write_checkpoint(checkpoint_writer, &result);
+                            return result;
                         }
                     };
                     upsert_query_param(&mut params.query, "page[size]", "1");
@@ -324,17 +371,19 @@ where
                                 .cloned()
                         }
                         Err(error) => {
-                            return json!({
+                            let result = json!({
                                 "index": index,
                                 "ok": false,
                                 "action": "error",
                                 "request": body,
                                 "error": error.envelope(),
                             });
+                            write_checkpoint(checkpoint_writer, &result);
+                            return result;
                         }
                     };
 
-                    match existing {
+                    let result = match existing {
                         None => {
                             // No existing entity — create it.
                             match transport.entity_create(config, entity, &body).await {
@@ -426,13 +475,17 @@ where
                                 }
                             }
                         }
-                    }
+                    };
+
+                    write_checkpoint(checkpoint_writer, &result);
+                    result
                 }
             })
             .buffer_unordered(batch_concurrency_limit())
             .collect::<Vec<_>>()
             .await;
         sort_batch_results(&mut results);
+        let elapsed_ms = started_at.elapsed().as_millis() as u64;
 
         let failure_count = results
             .iter()
@@ -451,6 +504,10 @@ where
             .iter()
             .filter(|item| item.get("action").and_then(Value::as_str) == Some("skipped"))
             .count();
+        let resumed_skip_count = results
+            .iter()
+            .filter(|item| item.get("action").and_then(Value::as_str) == Some("resumed_skip"))
+            .count();
 
         Ok(json!({
             "ok": failure_count == 0,
@@ -458,12 +515,17 @@ where
             "entity": entity,
             "key": key,
             "on_conflict": format!("{on_conflict:?}").to_lowercase(),
-            "total": results.len(),
+            "total": total_items,
             "success_count": success_count,
             "failure_count": failure_count,
             "created_count": created_count,
             "updated_count": updated_count,
             "skipped_count": skipped_count,
+            "resumed_skip_count": resumed_skip_count,
+            "checkpoint": checkpoint_path,
+            "stats": {
+                "elapsed_ms": elapsed_ms,
+            },
             "results": results,
         }))
     }
@@ -863,4 +925,100 @@ fn string_list(value: &Value, field_name: &str) -> Result<Vec<String>> {
             })
         })
         .collect()
+}
+
+// ---------------------------------------------------------------------------
+// Checkpoint helpers for resumable bulk upsert
+// ---------------------------------------------------------------------------
+
+/// Read a JSONL checkpoint file and return the set of indices that were
+/// already completed in a previous run.
+///
+/// Each line in the checkpoint file is a JSON object that MUST contain an
+/// `"index"` field (non-negative integer). Lines that cannot be parsed or
+/// lack the field are silently skipped so that a partially written last line
+/// does not prevent resumption.
+fn load_checkpoint_indices(path: &str, _key: &str) -> Result<HashSet<usize>> {
+    let path = Path::new(path);
+    if !path.exists() {
+        return Err(
+            AppError::invalid_input(format!(
+                "checkpoint file `{}` does not exist; cannot resume without it",
+                path.display()
+            ))
+            .with_operation("load_checkpoint_indices")
+            .with_hint("Run the upsert without `--resume` first, or provide an existing checkpoint file path."),
+        );
+    }
+
+    let file = File::open(path).map_err(|e| {
+        AppError::internal(format!(
+            "failed to open checkpoint file `{}`: {e}",
+            path.display()
+        ))
+        .with_operation("load_checkpoint_indices")
+    })?;
+
+    let reader = BufReader::new(file);
+    let mut indices = HashSet::new();
+
+    for line in reader.lines() {
+        let line = match line {
+            Ok(l) => l,
+            Err(_) => continue, // skip unreadable lines
+        };
+        let trimmed = line.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+        if let Ok(value) = serde_json::from_str::<Value>(trimmed) {
+            if let Some(idx) = value.get("index").and_then(Value::as_u64) {
+                indices.insert(idx as usize);
+            }
+        }
+        // Silently skip malformed lines so a partial last write doesn't block resume.
+    }
+
+    Ok(indices)
+}
+
+/// Open (or create) the checkpoint file for writing.
+///
+/// When `resume` is true the file is opened in **append** mode so that new
+/// entries are added after the existing ones.  When `resume` is false the file
+/// is created (or truncated) so that a fresh checkpoint is started.
+fn open_checkpoint_writer(path: &str, resume: bool) -> Result<File> {
+    let result = if resume {
+        OpenOptions::new().create(true).append(true).open(path)
+    } else {
+        OpenOptions::new()
+            .create(true)
+            .write(true)
+            .truncate(true)
+            .open(path)
+    };
+
+    result.map_err(|e| {
+        AppError::internal(format!(
+            "failed to open checkpoint file `{path}` for writing: {e}"
+        ))
+        .with_operation("open_checkpoint_writer")
+    })
+}
+
+/// Append a single result entry to the checkpoint file as a JSONL line.
+///
+/// If the checkpoint writer is `None` (i.e. no `--checkpoint` was specified)
+/// this is a no-op.  Write errors are silently ignored because losing a
+/// checkpoint line is acceptable — the item will simply be re-processed on
+/// the next resume.
+fn write_checkpoint(writer: &Option<std::sync::Mutex<File>>, result: &Value) {
+    if let Some(mutex) = writer {
+        if let Ok(mut file) = mutex.lock() {
+            // serde_json::to_string won't fail for Value
+            if let Ok(line) = serde_json::to_string(result) {
+                let _ = writeln!(file, "{line}");
+            }
+        }
+    }
 }

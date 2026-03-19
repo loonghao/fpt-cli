@@ -150,6 +150,8 @@ pub async fn run(cli: Cli) -> Result<Value> {
                     key,
                     on_conflict,
                     dry_run,
+                    checkpoint,
+                    resume,
                 } => {
                     let body = required_json_input(input)?;
                     let on_conflict = match on_conflict {
@@ -157,8 +159,17 @@ pub async fn run(cli: Cli) -> Result<Value> {
                         OnConflictArg::Update => OnConflict::Update,
                         OnConflictArg::Error => OnConflict::Error,
                     };
-                    app.entity_batch_upsert(connection, &entity, body, &key, on_conflict, dry_run)
-                        .await
+                    app.entity_batch_upsert(
+                        connection,
+                        &entity,
+                        body,
+                        &key,
+                        on_conflict,
+                        dry_run,
+                        checkpoint,
+                        resume,
+                    )
+                    .await
                 }
             },
         },
