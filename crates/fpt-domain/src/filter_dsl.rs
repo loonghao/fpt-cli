@@ -359,9 +359,9 @@ impl<'a> Parser<'a> {
 
     fn parse_string(&mut self) -> Result<String> {
         self.skip_whitespace();
-        let quote = self
-            .peek_char()
-            .ok_or_else(|| AppError::invalid_input("filter_dsl syntax error: missing opening quote for string"))?;
+        let quote = self.peek_char().ok_or_else(|| {
+            AppError::invalid_input("filter_dsl syntax error: missing opening quote for string")
+        })?;
         if !matches!(quote, '"' | '\'') {
             return self.error("string must be wrapped in quotes");
         }
@@ -375,9 +375,11 @@ impl<'a> Parser<'a> {
             }
 
             if ch == '\\' {
-                let escaped = self
-                    .peek_char()
-                    .ok_or_else(|| AppError::invalid_input("filter_dsl syntax error: illegal escape at end of input"))?;
+                let escaped = self.peek_char().ok_or_else(|| {
+                    AppError::invalid_input(
+                        "filter_dsl syntax error: illegal escape at end of input",
+                    )
+                })?;
                 self.pos += 1;
                 let normalized = match escaped {
                     '\\' => '\\',
@@ -388,7 +390,7 @@ impl<'a> Parser<'a> {
                     't' => '\t',
                     other => {
                         return Err(AppError::invalid_input(format!(
-                        "filter_dsl syntax error: unsupported escape character `\\{other}` (position {})",
+                            "filter_dsl syntax error: unsupported escape character `\\{other}` (position {})",
                             self.pos
                         )));
                     }
