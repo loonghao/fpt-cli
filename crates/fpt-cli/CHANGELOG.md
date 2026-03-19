@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.2.9](https://github.com/loonghao/fpt-cli/compare/v0.2.8...v0.2.9) (2026-03-19)
+
+
+### Features
+
+* add resumable bulk upsert with checkpoint/resume support ([#43](https://github.com/loonghao/fpt-cli/issues/43)) ([1773651](https://github.com/loonghao/fpt-cli/commit/17736517a3ac8c6f6f1a83cab0ab36becf573923))
+* improve entity-link filter ergonomics in entity find ([78f645c](https://github.com/loonghao/fpt-cli/commit/78f645cad687bf010e44209e335115381f8c7f36)), closes [#42](https://github.com/loonghao/fpt-cli/issues/42)
+
+
+### Bug Fixes
+
+* **#41-45:** exit codes, search normalization, entity-link DSL, batch upsert, retry/stats ([0f260d5](https://github.com/loonghao/fpt-cli/commit/0f260d50d55087b6ef5d1f7e910556a1bc53ff5e))
+* isolate auth_config_tests env and apply cargo fmt ([1d4de57](https://github.com/loonghao/fpt-cli/commit/1d4de57760f942b8711f74e5610159045f316792))
+* normalize structured search payloads consistently across query commands ([16f02b8](https://github.com/loonghao/fpt-cli/commit/16f02b8bd79b838cfa776ecc5d87ce36430ea700)), closes [#44](https://github.com/loonghao/fpt-cli/issues/44)
+* resolve config clear panic, capabilities version mismatch, and harden exit codes ([#48](https://github.com/loonghao/fpt-cli/issues/48), [#49](https://github.com/loonghao/fpt-cli/issues/49), [#45](https://github.com/loonghao/fpt-cli/issues/45)) ([26da0f7](https://github.com/loonghao/fpt-cli/commit/26da0f78486f6b4655d2544b04206f0749aa7e0a))
+* **skills:** complete credential declarations in SKILL.md and install-and-auth.md ([6b4dbe5](https://github.com/loonghao/fpt-cli/commit/6b4dbe55c68bf8606bce038d200725e4bd7917a6))
+
+
+### Miscellaneous Chores
+
+* replace all Chinese strings/comments with English ([e938351](https://github.com/loonghao/fpt-cli/commit/e938351401d7ef635f125a4fb5685137d4954b5a))
+
 ## [0.2.8](https://github.com/loonghao/fpt-cli/compare/v0.2.7...v0.2.8) (2026-03-17)
 
 
