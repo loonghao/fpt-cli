@@ -999,6 +999,7 @@ dependencies = [
  "rstest",
  "serde",
  "serde_json",
+ "tempfile",
  "tokio",
  "url",
  "workspace-hack",

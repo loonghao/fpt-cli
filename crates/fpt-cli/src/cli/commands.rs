@@ -321,6 +321,14 @@ pub enum BatchEntityCommands {
         on_conflict: OnConflictArg,
         #[arg(long)]
         dry_run: bool,
+        /// Path to a JSONL checkpoint file. Each completed item is appended so
+        /// interrupted runs can be resumed safely.
+        #[arg(long)]
+        checkpoint: Option<String>,
+        /// Resume a previously interrupted upsert by reading the checkpoint file
+        /// and skipping items that were already processed.
+        #[arg(long)]
+        resume: bool,
     },
 }
 
