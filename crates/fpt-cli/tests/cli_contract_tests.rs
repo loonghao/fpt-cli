@@ -153,9 +153,12 @@ fn capabilities_version_matches_cli_version() {
     let mut command = Command::cargo_bin("fpt").expect("binary exists");
     command.args(["capabilities", "--output", "json"]);
 
-    command.assert().success().stdout(predicate::str::contains(
-        format!("\"version\":\"{expected_version}\""),
-    ));
+    command
+        .assert()
+        .success()
+        .stdout(predicate::str::contains(format!(
+            "\"version\":\"{expected_version}\""
+        )));
 }
 
 // --- #48: config clear must not panic ---

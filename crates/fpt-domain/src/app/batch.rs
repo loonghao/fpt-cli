@@ -64,7 +64,12 @@ where
         sort_batch_results(&mut results);
         let elapsed_ms = started_at.elapsed().as_millis() as u64;
 
-        Ok(batch_response_with_stats("entity.batch.get", entity, results, elapsed_ms))
+        Ok(batch_response_with_stats(
+            "entity.batch.get",
+            entity,
+            results,
+            elapsed_ms,
+        ))
     }
 
     pub async fn entity_batch_find(
@@ -109,7 +114,12 @@ where
         sort_batch_results(&mut results);
         let elapsed_ms = started_at.elapsed().as_millis() as u64;
 
-        Ok(batch_response_with_stats("entity.batch.find", entity, results, elapsed_ms))
+        Ok(batch_response_with_stats(
+            "entity.batch.find",
+            entity,
+            results,
+            elapsed_ms,
+        ))
     }
 
     pub async fn entity_batch_create(
@@ -156,7 +166,12 @@ where
         sort_batch_results(&mut results);
         let elapsed_ms = started_at.elapsed().as_millis() as u64;
 
-        Ok(batch_response_with_stats("entity.batch.create", entity, results, elapsed_ms))
+        Ok(batch_response_with_stats(
+            "entity.batch.create",
+            entity,
+            results,
+            elapsed_ms,
+        ))
     }
 
     pub async fn entity_batch_update(
@@ -208,7 +223,12 @@ where
         sort_batch_results(&mut results);
         let elapsed_ms = started_at.elapsed().as_millis() as u64;
 
-        Ok(batch_response_with_stats("entity.batch.update", entity, results, elapsed_ms))
+        Ok(batch_response_with_stats(
+            "entity.batch.update",
+            entity,
+            results,
+            elapsed_ms,
+        ))
     }
 
     pub async fn entity_batch_upsert(
@@ -501,7 +521,12 @@ where
         sort_batch_results(&mut results);
         let elapsed_ms = started_at.elapsed().as_millis() as u64;
 
-        Ok(batch_response_with_stats("entity.batch.delete", entity, results, elapsed_ms))
+        Ok(batch_response_with_stats(
+            "entity.batch.delete",
+            entity,
+            results,
+            elapsed_ms,
+        ))
     }
 }
 

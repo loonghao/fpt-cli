@@ -160,6 +160,3 @@ fn has_any_set_arg(args: &ConfigSetArgs) -> bool {
         || args.session_token.is_some()
         || args.api_version.is_some()
 }
-
-
-
