@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.11](https://github.com/loonghao/fpt-cli/compare/v0.2.10...v0.2.11) (2026-03-21)
+
+
+### Miscellaneous Chores
+
+* **deps:** bump rustls-webpki from 0.103.9 to 0.103.10 ([07880cb](https://github.com/loonghao/fpt-cli/commit/07880cb54b49fa0d89f7fdb09107ff75d269fc28))
+* **deps:** bump tar from 0.4.44 to 0.4.45 ([e76208b](https://github.com/loonghao/fpt-cli/commit/e76208b020ccfe65484f9591d86d78149991f958))
+
 ## [0.2.10](https://github.com/loonghao/fpt-cli/compare/v0.2.9...v0.2.10) (2026-03-20)
 
 
