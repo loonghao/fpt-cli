@@ -5,7 +5,6 @@ edition = { workspace = true }
 license = { workspace = true }
 rust-version = { workspace = true }
 
-
 [dependencies]
 async-trait = { workspace = true }
 fpt-core = { path = "../fpt-core" }
@@ -21,6 +20,6 @@ workspace-hack = { version = "0.1", path = "../../workspace-hack" }
 httpmock = "0.7.0"
 rstest = { workspace = true }
 tempfile = "3"
-tokio = { workspace = true }
+
 
 

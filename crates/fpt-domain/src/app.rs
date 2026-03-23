@@ -6,6 +6,7 @@ mod find;
 mod follow;
 mod hierarchy;
 mod note;
+pub(crate) mod query_utils;
 mod schema;
 mod server;
 mod summarize;

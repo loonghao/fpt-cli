@@ -572,8 +572,9 @@ impl RestTransport {
 
     /// Computes the exponential backoff delay for a given attempt number (1-based).
     ///
-    /// Uses full jitter: `delay = random(0, min(cap, base * 2^attempt))`.
-    /// Falls back to a deterministic formula when the random source is unavailable.
+    /// Uses deterministic jitter: `delay = (attempt * 137 + 42) % min(cap, base * 2^attempt)`.
+    /// This avoids a dependency on a random number generator while still spreading
+    /// out retry timings across different attempts.
     fn backoff_delay(attempt: u32) -> Duration {
         let exp = RETRY_BASE_DELAY_MS.saturating_mul(1u64 << attempt.min(10));
         let capped = exp.min(RETRY_MAX_DELAY_MS);

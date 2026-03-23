@@ -14,6 +14,7 @@ use crate::transport::{
 };
 
 use super::find::{build_find_params, upsert_query_param};
+use super::query_utils::string_list;
 use super::{App, BatchUpdateItem, batch_concurrency_limit, sort_batch_results};
 
 /// How to handle a conflict when an entity with the key field value already exists.
@@ -276,7 +277,7 @@ where
         // Load checkpoint if resuming.
         let completed_indices = if resume {
             if let Some(ref path) = checkpoint_path {
-                load_checkpoint_indices(path, key)?
+                load_checkpoint_indices(path)?
             } else {
                 return Err(AppError::invalid_input(
                     "`--resume` requires `--checkpoint` to specify the checkpoint file path",
@@ -661,7 +662,7 @@ fn parse_batch_get_input(input: Value) -> Result<(Vec<u64>, Option<Vec<String>>)
             let ids = u64_list(ids, "ids")?;
             let fields = object
                 .get("fields")
-                .map(|value| string_list(value, "fields"))
+                .map(|value| string_list(value, "fields", "parse_batch_get_input"))
                 .transpose()?;
             Ok((ids, fields.filter(|items| !items.is_empty())))
         }
@@ -895,39 +896,6 @@ fn u64_list(values: &[Value], field_name: &str) -> Result<Vec<u64>> {
         .collect()
 }
 
-fn string_list(value: &Value, field_name: &str) -> Result<Vec<String>> {
-    if let Some(value) = value.as_str() {
-        let items = value
-            .split(',')
-            .map(str::trim)
-            .filter(|value| !value.is_empty())
-            .map(ToString::to_string)
-            .collect();
-        return Ok(items);
-    }
-
-    let array = value.as_array().ok_or_else(|| {
-        AppError::invalid_input(format!(
-            "`{field_name}` must be either a comma-separated string or an array of strings"
-        ))
-        .with_operation("validate_batch_input")
-        .with_invalid_field(field_name)
-        .with_expected_shape("either a comma-separated string or an array of strings")
-    })?;
-
-    array
-        .iter()
-        .map(|value| {
-            value.as_str().map(ToString::to_string).ok_or_else(|| {
-                AppError::invalid_input(format!("`{field_name}` array items must all be strings"))
-                    .with_operation("validate_batch_input")
-                    .with_invalid_field(field_name)
-                    .with_expected_shape("an array containing only strings")
-            })
-        })
-        .collect()
-}
-
 // ---------------------------------------------------------------------------
 // Checkpoint helpers for resumable bulk upsert
 // ---------------------------------------------------------------------------
@@ -939,7 +907,7 @@ fn string_list(value: &Value, field_name: &str) -> Result<Vec<String>> {
 /// `"index"` field (non-negative integer). Lines that cannot be parsed or
 /// lack the field are silently skipped so that a partially written last line
 /// does not prevent resumption.
-fn load_checkpoint_indices(path: &str, _key: &str) -> Result<HashSet<usize>> {
+fn load_checkpoint_indices(path: &str) -> Result<HashSet<usize>> {
     let path = Path::new(path);
     if !path.exists() {
         return Err(AppError::invalid_input(format!(
