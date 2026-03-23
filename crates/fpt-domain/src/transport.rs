@@ -208,6 +208,36 @@ pub trait ShotgridTransport {
         note_id: u64,
         body: &Value,
     ) -> Result<Value>;
+    async fn entity_relationships(
+        &self,
+        config: &ConnectionSettings,
+        entity: &str,
+        id: u64,
+        related_field: &str,
+        params: &[(String, String)],
+    ) -> Result<Value>;
+    async fn user_following(
+        &self,
+        config: &ConnectionSettings,
+        user_id: u64,
+        params: &[(String, String)],
+    ) -> Result<Value>;
+    async fn project_update_last_accessed(
+        &self,
+        config: &ConnectionSettings,
+        project_id: u64,
+    ) -> Result<Value>;
+    async fn schema_entity_read(
+        &self,
+        config: &ConnectionSettings,
+        entity: &str,
+    ) -> Result<Value>;
+    async fn schema_field_revive(
+        &self,
+        config: &ConnectionSettings,
+        entity: &str,
+        field_name: &str,
+    ) -> Result<Value>;
 }
 
 #[derive(Debug, Clone)]
@@ -292,7 +322,7 @@ impl RestTransport {
                     "user_password": password,
                 });
                 if let Some(auth_token) = auth_token {
-                    payload["auth_token"] = Value::String(auth_token.clone());
+                    payload["auth_token"] = Value::String(auth_token.to_string());
                 }
                 payload
             }
@@ -366,8 +396,10 @@ impl RestTransport {
         &self,
         config: &ConnectionSettings,
     ) -> Result<AccessTokenPayload> {
+        let debug = std::env::var("FPT_DEBUG").is_ok();
+
         if let Some(cached) = self.cached_access_token(config)? {
-            if std::env::var("FPT_DEBUG").is_ok() {
+            if debug {
                 eprintln!("[debug] reuse cached access token for {}", config.site);
             }
             return Ok(cached);
@@ -403,7 +435,7 @@ impl RestTransport {
             }
         };
 
-        if std::env::var("FPT_DEBUG").is_ok() {
+        if debug {
             let masked_form: Vec<String> = form
                 .iter()
                 .map(|(k, v)| {
@@ -473,6 +505,7 @@ impl RestTransport {
         query: &[(String, String)],
         body: Option<&Value>,
     ) -> Result<Value> {
+        let debug = std::env::var("FPT_DEBUG").is_ok();
         let max_attempts = Self::max_retry_attempts();
         let mut attempt = 0u32;
         loop {
@@ -501,7 +534,7 @@ impl RestTransport {
             let status = response.status();
             if status == StatusCode::TOO_MANY_REQUESTS && attempt < max_attempts {
                 let delay = Self::backoff_delay(attempt);
-                if std::env::var("FPT_DEBUG").is_ok() {
+                if debug {
                     eprintln!(
                         "[debug] rate-limited (429) on attempt {attempt}/{max_attempts}, retrying after {}ms",
                         delay.as_millis()
@@ -534,6 +567,7 @@ impl RestTransport {
             )
         })?;
 
+        let debug = std::env::var("FPT_DEBUG").is_ok();
         let max_attempts = Self::max_retry_attempts();
         let mut attempt = 0u32;
         loop {
@@ -566,7 +600,7 @@ impl RestTransport {
             let status = response.status();
             if status == StatusCode::TOO_MANY_REQUESTS && attempt < max_attempts {
                 let delay = Self::backoff_delay(attempt);
-                if std::env::var("FPT_DEBUG").is_ok() {
+                if debug {
                     eprintln!(
                         "[debug] rate-limited (429) on attempt {attempt}/{max_attempts}, retrying after {}ms",
                         delay.as_millis()
@@ -1090,6 +1124,67 @@ impl ShotgridTransport for RestTransport {
     ) -> Result<Value> {
         let path = format!("entity/notes/{note_id}/thread_contents");
         self.authorized_json_request(config, Method::POST, &path, &[], Some(body))
+            .await
+    }
+
+    async fn entity_relationships(
+        &self,
+        config: &ConnectionSettings,
+        entity: &str,
+        id: u64,
+        related_field: &str,
+        params: &[(String, String)],
+    ) -> Result<Value> {
+        let path = format!(
+            "entity/{}/{}/relationships/{}",
+            entity_collection_path(entity),
+            id,
+            related_field
+        );
+        self.authorized_json_request(config, Method::GET, &path, params, None)
+            .await
+    }
+
+    async fn user_following(
+        &self,
+        config: &ConnectionSettings,
+        user_id: u64,
+        params: &[(String, String)],
+    ) -> Result<Value> {
+        let path = format!("entity/human_users/{user_id}/following");
+        self.authorized_json_request(config, Method::GET, &path, params, None)
+            .await
+    }
+
+    async fn project_update_last_accessed(
+        &self,
+        config: &ConnectionSettings,
+        project_id: u64,
+    ) -> Result<Value> {
+        let path = format!("entity/projects/{project_id}/_update_last_accessed");
+        self.authorized_json_request(config, Method::PUT, &path, &[], None)
+            .await
+    }
+
+    async fn schema_entity_read(
+        &self,
+        config: &ConnectionSettings,
+        entity: &str,
+    ) -> Result<Value> {
+        let path = format!("schema/{entity}");
+        self.authorized_json_request(config, Method::GET, &path, &[], None)
+            .await
+    }
+
+    async fn schema_field_revive(
+        &self,
+        config: &ConnectionSettings,
+        entity: &str,
+        field_name: &str,
+    ) -> Result<Value> {
+        let path = format!("schema/{entity}/fields/{field_name}");
+        let query = vec![("revive".to_string(), "true".to_string())];
+        self.authorized_json_request(config, Method::POST, &path, &query, None)
             .await
     }
 }
