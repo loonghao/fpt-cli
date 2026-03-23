@@ -385,6 +385,51 @@ impl ShotgridTransport for RecordingTransport {
     ) -> Result<Value> {
         Ok(json!({"note_id": note_id, "content": body["content"].clone(), "type": "Reply"}))
     }
+
+    async fn entity_relationships(
+        &self,
+        _config: &ConnectionSettings,
+        entity: &str,
+        id: u64,
+        related_field: &str,
+        _params: &[(String, String)],
+    ) -> Result<Value> {
+        Ok(json!({"entity": entity, "id": id, "related_field": related_field, "data": []}))
+    }
+
+    async fn user_following(
+        &self,
+        _config: &ConnectionSettings,
+        user_id: u64,
+        _params: &[(String, String)],
+    ) -> Result<Value> {
+        Ok(json!({"user_id": user_id, "data": []}))
+    }
+
+    async fn project_update_last_accessed(
+        &self,
+        _config: &ConnectionSettings,
+        project_id: u64,
+    ) -> Result<Value> {
+        Ok(json!({"project_id": project_id, "ok": true}))
+    }
+
+    async fn schema_entity_read(
+        &self,
+        _config: &ConnectionSettings,
+        entity: &str,
+    ) -> Result<Value> {
+        Ok(json!({"entity": entity, "data": {}}))
+    }
+
+    async fn schema_field_revive(
+        &self,
+        _config: &ConnectionSettings,
+        entity: &str,
+        field_name: &str,
+    ) -> Result<Value> {
+        Ok(json!({"entity": entity, "field_name": field_name, "revived": true}))
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -646,6 +691,51 @@ impl ShotgridTransport for FindOneTransport {
     ) -> Result<Value> {
         Err(AppError::not_implemented("unused"))
     }
+
+    async fn entity_relationships(
+        &self,
+        _config: &ConnectionSettings,
+        _entity: &str,
+        _id: u64,
+        _related_field: &str,
+        _params: &[(String, String)],
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+
+    async fn user_following(
+        &self,
+        _config: &ConnectionSettings,
+        _user_id: u64,
+        _params: &[(String, String)],
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+
+    async fn project_update_last_accessed(
+        &self,
+        _config: &ConnectionSettings,
+        _project_id: u64,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+
+    async fn schema_entity_read(
+        &self,
+        _config: &ConnectionSettings,
+        _entity: &str,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+
+    async fn schema_field_revive(
+        &self,
+        _config: &ConnectionSettings,
+        _entity: &str,
+        _field_name: &str,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
 }
 
 #[derive(Debug, Clone, Default)]
@@ -896,6 +986,51 @@ impl ShotgridTransport for NoteThreadsNotFoundTransport {
         _config: &ConnectionSettings,
         _note_id: u64,
         _body: &Value,
+    ) -> Result<Value> {
+        Ok(json!({}))
+    }
+
+    async fn entity_relationships(
+        &self,
+        _config: &ConnectionSettings,
+        _entity: &str,
+        _id: u64,
+        _related_field: &str,
+        _params: &[(String, String)],
+    ) -> Result<Value> {
+        Ok(json!({}))
+    }
+
+    async fn user_following(
+        &self,
+        _config: &ConnectionSettings,
+        _user_id: u64,
+        _params: &[(String, String)],
+    ) -> Result<Value> {
+        Ok(json!({}))
+    }
+
+    async fn project_update_last_accessed(
+        &self,
+        _config: &ConnectionSettings,
+        _project_id: u64,
+    ) -> Result<Value> {
+        Ok(json!({}))
+    }
+
+    async fn schema_entity_read(
+        &self,
+        _config: &ConnectionSettings,
+        _entity: &str,
+    ) -> Result<Value> {
+        Ok(json!({}))
+    }
+
+    async fn schema_field_revive(
+        &self,
+        _config: &ConnectionSettings,
+        _entity: &str,
+        _field_name: &str,
     ) -> Result<Value> {
         Ok(json!({}))
     }
@@ -1161,6 +1296,51 @@ impl ShotgridTransport for SlowGetTransport {
         _config: &ConnectionSettings,
         _note_id: u64,
         _body: &Value,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+
+    async fn entity_relationships(
+        &self,
+        _config: &ConnectionSettings,
+        _entity: &str,
+        _id: u64,
+        _related_field: &str,
+        _params: &[(String, String)],
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+
+    async fn user_following(
+        &self,
+        _config: &ConnectionSettings,
+        _user_id: u64,
+        _params: &[(String, String)],
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+
+    async fn project_update_last_accessed(
+        &self,
+        _config: &ConnectionSettings,
+        _project_id: u64,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+
+    async fn schema_entity_read(
+        &self,
+        _config: &ConnectionSettings,
+        _entity: &str,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+
+    async fn schema_field_revive(
+        &self,
+        _config: &ConnectionSettings,
+        _entity: &str,
+        _field_name: &str,
     ) -> Result<Value> {
         Err(AppError::not_implemented("unused"))
     }
@@ -2296,4 +2476,114 @@ async fn entity_batch_revive_accepts_plain_ids_array() {
         .expect("batch revive with plain array succeeds");
     assert_eq!(result["total"], 3);
     assert_eq!(result["success_count"], 3);
+}
+
+// ────────────────────────────────────────────────────────────────────
+// New endpoint integration tests: entity_relationships, user_following,
+// project_update_last_accessed, schema_entity_read, schema_field_revive
+// ────────────────────────────────────────────────────────────────────
+
+#[tokio::test]
+async fn entity_relationships_delegates_to_transport() {
+    let app = App::new(RecordingTransport::default());
+    let result = app
+        .entity_relationships(overrides(), "Shot", 42, "assets", None)
+        .await
+        .expect("entity relationships succeeds");
+    assert_eq!(result["entity"], "Shot");
+    assert_eq!(result["id"], 42);
+    assert_eq!(result["related_field"], "assets");
+    assert!(result["data"].as_array().expect("data array").is_empty());
+}
+
+#[tokio::test]
+async fn entity_relationships_passes_query_params() {
+    let app = App::new(RecordingTransport::default());
+    let result = app
+        .entity_relationships(
+            overrides(),
+            "Task",
+            7,
+            "entity",
+            Some(json!({"fields": "code,id", "page": {"size": 10}})),
+        )
+        .await
+        .expect("entity relationships with params succeeds");
+    assert_eq!(result["entity"], "Task");
+    assert_eq!(result["related_field"], "entity");
+}
+
+#[tokio::test]
+async fn user_following_delegates_to_transport() {
+    let app = App::new(RecordingTransport::default());
+    let result = app
+        .user_following(overrides(), 456, None)
+        .await
+        .expect("user following succeeds");
+    assert_eq!(result["user_id"], 456);
+    assert!(result["data"].as_array().expect("data array").is_empty());
+}
+
+#[tokio::test]
+async fn user_following_passes_query_params() {
+    let app = App::new(RecordingTransport::default());
+    let result = app
+        .user_following(
+            overrides(),
+            456,
+            Some(json!({"fields": "code,id", "page": {"size": 25}})),
+        )
+        .await
+        .expect("user following with params succeeds");
+    assert_eq!(result["user_id"], 456);
+}
+
+#[tokio::test]
+async fn project_update_last_accessed_delegates_to_transport() {
+    let app = App::new(RecordingTransport::default());
+    let result = app
+        .project_update_last_accessed(overrides(), 123)
+        .await
+        .expect("project update last accessed succeeds");
+    assert_eq!(result["project_id"], 123);
+    assert_eq!(result["ok"], true);
+}
+
+#[tokio::test]
+async fn schema_entity_read_delegates_to_transport() {
+    let app = App::new(RecordingTransport::default());
+    let result = app
+        .schema_entity_read(overrides(), "Shot")
+        .await
+        .expect("schema entity read succeeds");
+    assert_eq!(result["entity"], "Shot");
+    assert!(result["data"].is_object());
+}
+
+#[tokio::test]
+async fn schema_field_revive_delegates_to_transport() {
+    let app = App::new(RecordingTransport::default());
+    let result = app
+        .schema_field_revive(overrides(), "Shot", "sg_deleted_field")
+        .await
+        .expect("schema field revive succeeds");
+    assert_eq!(result["entity"], "Shot");
+    assert_eq!(result["field_name"], "sg_deleted_field");
+    assert_eq!(result["revived"], true);
+}
+
+#[tokio::test]
+async fn capabilities_includes_new_endpoint_specs() {
+    let app = App::new(RecordingTransport::default());
+    let result = app.capabilities(env!("CARGO_PKG_VERSION"));
+    let commands = result["commands"].as_array().expect("commands array");
+    let names: Vec<&str> = commands
+        .iter()
+        .filter_map(|c| c["name"].as_str())
+        .collect();
+    assert!(names.contains(&"entity.relationship"), "should include entity.relationship");
+    assert!(names.contains(&"entity.update-last-accessed"), "should include entity.update-last-accessed");
+    assert!(names.contains(&"followers.following"), "should include followers.following");
+    assert!(names.contains(&"schema.entity-read"), "should include schema.entity-read");
+    assert!(names.contains(&"schema.field-revive"), "should include schema.field-revive");
 }

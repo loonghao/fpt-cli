@@ -207,6 +207,21 @@ pub enum SchemaCommands {
         entity: String,
         field_name: String,
     },
+    #[command(
+        name = "entity-read",
+        about = "Read the full schema definition of an entity type"
+    )]
+    EntityRead {
+        entity: String,
+    },
+    #[command(
+        name = "field-revive",
+        about = "Revive a previously deleted custom field"
+    )]
+    FieldRevive {
+        entity: String,
+        field_name: String,
+    },
 }
 
 #[derive(Debug, Subcommand)]
@@ -273,6 +288,29 @@ pub enum EntityCommands {
     TextSearch {
         #[arg(long)]
         input: String,
+    },
+    #[command(
+        name = "relationship",
+        about = "Read relationships for a specific entity field"
+    )]
+    Relationship {
+        entity: String,
+        id: u64,
+        #[arg(long, help = "Related field name (e.g. shots, assets)")]
+        field: String,
+        #[arg(
+            long,
+            help = "Optional query parameters as JSON (fields, page, sort, etc.)"
+        )]
+        input: Option<String>,
+    },
+    #[command(
+        name = "update-last-accessed",
+        about = "Update the last-accessed timestamp for a project"
+    )]
+    UpdateLastAccessed {
+        #[arg(help = "Project record id")]
+        project_id: u64,
     },
     #[command(subcommand)]
     Batch(BatchEntityCommands),
@@ -471,6 +509,19 @@ pub enum FollowersCommands {
             help = "User JSON object with type and id, e.g. '{\"type\":\"HumanUser\",\"id\":456}'"
         )]
         input: String,
+    },
+    #[command(
+        name = "following",
+        about = "List all entities a user is following"
+    )]
+    Following {
+        #[arg(help = "HumanUser record id")]
+        user_id: u64,
+        #[arg(
+            long,
+            help = "Optional query parameters as JSON (fields, page, sort, etc.)"
+        )]
+        input: Option<String>,
     },
 }
 

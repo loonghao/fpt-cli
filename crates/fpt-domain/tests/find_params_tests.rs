@@ -182,6 +182,21 @@ impl ShotgridTransport for RecordingTransport {
     async fn note_reply_create(&self, _: &ConnectionSettings, _: u64, _: &Value) -> Result<Value> {
         Ok(json!({}))
     }
+    async fn entity_relationships(&self, _: &ConnectionSettings, _: &str, _: u64, _: &str, _: &[(String, String)]) -> Result<Value> {
+        Ok(json!({}))
+    }
+    async fn user_following(&self, _: &ConnectionSettings, _: u64, _: &[(String, String)]) -> Result<Value> {
+        Ok(json!({}))
+    }
+    async fn project_update_last_accessed(&self, _: &ConnectionSettings, _: u64) -> Result<Value> {
+        Ok(json!({}))
+    }
+    async fn schema_entity_read(&self, _: &ConnectionSettings, _: &str) -> Result<Value> {
+        Ok(json!({}))
+    }
+    async fn schema_field_revive(&self, _: &ConnectionSettings, _: &str, _: &str) -> Result<Value> {
+        Ok(json!({}))
+    }
 }
 
 fn test_overrides() -> ConnectionOverrides {

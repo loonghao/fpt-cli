@@ -291,3 +291,50 @@ pub const ENTITY_BATCH_REVIVE_SPEC: CommandSpec = CommandSpec {
     examples: ENTITY_BATCH_REVIVE_EXAMPLES,
     notes: ENTITY_BATCH_NOTES,
 };
+
+const ENTITY_RELATIONSHIP_EXAMPLES: &[&str] = &[
+    "fpt entity relationship Shot 123 --field assets --site ... --auth-mode script --script-name ... --script-key ...",
+    "fpt entity relationship Task 42 --field entity --input '{\"fields\":\"code,id\"}' --site ...",
+];
+
+const ENTITY_RELATIONSHIP_NOTES: &[&str] = &[
+    "Reads related entities for a specific field via GET /api/{ver}/entity/{type}/{id}/relationships/{field}",
+    "Optional --input accepts query parameters like fields, page, and sort",
+];
+
+pub const ENTITY_RELATIONSHIP_SPEC: CommandSpec = CommandSpec {
+    name: "entity.relationship",
+    summary: "Read relationships for a specific entity field",
+    risk: RiskLevel::Read,
+    implemented: true,
+    supports_dry_run: false,
+    preferred_transport: "rest",
+    fallback_transport: None,
+    input: "entity + id + field name + optional query params",
+    output: "json",
+    examples: ENTITY_RELATIONSHIP_EXAMPLES,
+    notes: ENTITY_RELATIONSHIP_NOTES,
+};
+
+const ENTITY_UPDATE_LAST_ACCESSED_EXAMPLES: &[&str] = &[
+    "fpt entity update-last-accessed 123 --site ... --auth-mode script --script-name ... --script-key ...",
+];
+
+const ENTITY_UPDATE_LAST_ACCESSED_NOTES: &[&str] = &[
+    "Updates the last-accessed timestamp for a project via PUT /api/{ver}/entity/projects/{id}/_update_last_accessed",
+    "Useful for marking a project as recently used in the ShotGrid UI",
+];
+
+pub const ENTITY_UPDATE_LAST_ACCESSED_SPEC: CommandSpec = CommandSpec {
+    name: "entity.update-last-accessed",
+    summary: "Update the last-accessed timestamp for a project",
+    risk: RiskLevel::Write,
+    implemented: true,
+    supports_dry_run: false,
+    preferred_transport: "rest",
+    fallback_transport: None,
+    input: "project id",
+    output: "json",
+    examples: ENTITY_UPDATE_LAST_ACCESSED_EXAMPLES,
+    notes: ENTITY_UPDATE_LAST_ACCESSED_NOTES,
+};
