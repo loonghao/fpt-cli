@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.2.15](https://github.com/loonghao/fpt-cli/compare/v0.2.14...v0.2.15) (2026-03-23)
+
+
+### Features
+
+* add entity.relationship, entity.update-last-accessed, followers.following, schema.entity-read, schema.field-revive endpoints ([0429ceb](https://github.com/loonghao/fpt-cli/commit/0429cebb7a524ec8e87467d6d536b485fe7d4b5f))
+* add schema.field-read, work-schedule.update, entity.text-search, note.reply-create, entity.batch.revive APIs ([#71](https://github.com/loonghao/fpt-cli/issues/71)) ([85a30e9](https://github.com/loonghao/fpt-cli/commit/85a30e94719536e9275d5e31da6314de417b8272))
+
+
+### Miscellaneous Chores
+
+* code cleanup — remove dead code, fix backoff jitter, improve idioms ([#68](https://github.com/loonghao/fpt-cli/issues/68)) ([9d1e0ae](https://github.com/loonghao/fpt-cli/commit/9d1e0aeaf81a2b91d95d46d65e9987075bec2e36))
+* code cleanup — remove unnecessary clones, use idiomatic patterns, fix panic paths ([#72](https://github.com/loonghao/fpt-cli/issues/72)) ([89e8a33](https://github.com/loonghao/fpt-cli/commit/89e8a330e2ff6e5aef00dd76065953a90c7ee25f))
+* deduplicate query helpers and remove unused code ([#70](https://github.com/loonghao/fpt-cli/issues/70)) ([5452752](https://github.com/loonghao/fpt-cli/commit/545275236fe45d9c2afb910b9d9285541a5d009c))
+
 ## [0.2.14](https://github.com/loonghao/fpt-cli/compare/v0.2.13...v0.2.14) (2026-03-23)
 
 
