@@ -9,7 +9,7 @@ resolver = "2"
 
 [workspace.package]
 edition = "2024"
-version = "0.2.13"
+version = "0.2.14"
 license = "MIT"
 rust-version = "1.85"
 
