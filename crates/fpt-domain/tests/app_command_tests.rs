@@ -2577,13 +2577,25 @@ async fn capabilities_includes_new_endpoint_specs() {
     let app = App::new(RecordingTransport::default());
     let result = app.capabilities(env!("CARGO_PKG_VERSION"));
     let commands = result["commands"].as_array().expect("commands array");
-    let names: Vec<&str> = commands
-        .iter()
-        .filter_map(|c| c["name"].as_str())
-        .collect();
-    assert!(names.contains(&"entity.relationship"), "should include entity.relationship");
-    assert!(names.contains(&"entity.update-last-accessed"), "should include entity.update-last-accessed");
-    assert!(names.contains(&"followers.following"), "should include followers.following");
-    assert!(names.contains(&"schema.entity-read"), "should include schema.entity-read");
-    assert!(names.contains(&"schema.field-revive"), "should include schema.field-revive");
+    let names: Vec<&str> = commands.iter().filter_map(|c| c["name"].as_str()).collect();
+    assert!(
+        names.contains(&"entity.relationship"),
+        "should include entity.relationship"
+    );
+    assert!(
+        names.contains(&"entity.update-last-accessed"),
+        "should include entity.update-last-accessed"
+    );
+    assert!(
+        names.contains(&"followers.following"),
+        "should include followers.following"
+    );
+    assert!(
+        names.contains(&"schema.entity-read"),
+        "should include schema.entity-read"
+    );
+    assert!(
+        names.contains(&"schema.field-revive"),
+        "should include schema.field-revive"
+    );
 }

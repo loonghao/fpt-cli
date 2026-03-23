@@ -510,10 +510,7 @@ pub enum FollowersCommands {
         )]
         input: String,
     },
-    #[command(
-        name = "following",
-        about = "List all entities a user is following"
-    )]
+    #[command(name = "following", about = "List all entities a user is following")]
     Following {
         #[arg(help = "HumanUser record id")]
         user_id: u64,
