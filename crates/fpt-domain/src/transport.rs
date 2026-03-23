@@ -227,11 +227,7 @@ pub trait ShotgridTransport {
         config: &ConnectionSettings,
         project_id: u64,
     ) -> Result<Value>;
-    async fn schema_entity_read(
-        &self,
-        config: &ConnectionSettings,
-        entity: &str,
-    ) -> Result<Value>;
+    async fn schema_entity_read(&self, config: &ConnectionSettings, entity: &str) -> Result<Value>;
     async fn schema_field_revive(
         &self,
         config: &ConnectionSettings,
@@ -1166,11 +1162,7 @@ impl ShotgridTransport for RestTransport {
             .await
     }
 
-    async fn schema_entity_read(
-        &self,
-        config: &ConnectionSettings,
-        entity: &str,
-    ) -> Result<Value> {
+    async fn schema_entity_read(&self, config: &ConnectionSettings, entity: &str) -> Result<Value> {
         let path = format!("schema/{entity}");
         self.authorized_json_request(config, Method::GET, &path, &[], None)
             .await
