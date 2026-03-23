@@ -572,14 +572,17 @@ impl RestTransport {
 
     /// Computes the exponential backoff delay for a given attempt number (1-based).
     ///
-    /// Uses full jitter: `delay = random(0, min(cap, base * 2^attempt))`.
-    /// Falls back to a deterministic formula when the random source is unavailable.
+    /// Uses deterministic jitter: the base exponential delay is reduced by a
+    /// fraction derived from the attempt number, giving spread across retries
+    /// without requiring a random source.
     fn backoff_delay(attempt: u32) -> Duration {
         let exp = RETRY_BASE_DELAY_MS.saturating_mul(1u64 << attempt.min(10));
         let capped = exp.min(RETRY_MAX_DELAY_MS);
-        // Simple deterministic jitter: use attempt as a pseudo-random seed.
-        let jitter = (attempt as u64 * 137 + 42) % (capped.max(1));
-        Duration::from_millis(jitter)
+        // Deterministic jitter: keep between 50%-100% of the capped delay so
+        // the backoff is never zero and still provides spread across attempts.
+        let jitter_fraction = (u64::from(attempt) * 137 + 42) % 50; // 0..49
+        let delay = capped - (capped * jitter_fraction / 100);
+        Duration::from_millis(delay.max(RETRY_BASE_DELAY_MS))
     }
 
     async fn rpc_request(

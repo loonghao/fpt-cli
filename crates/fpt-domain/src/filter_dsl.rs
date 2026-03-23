@@ -69,18 +69,16 @@ fn expr_to_value(expr: Expr) -> Value {
     }
 }
 
-struct Parser<'a> {
+struct Parser {
     chars: Vec<char>,
     pos: usize,
-    _input: &'a str,
 }
 
-impl<'a> Parser<'a> {
-    fn new(input: &'a str) -> Self {
+impl Parser {
+    fn new(input: &str) -> Self {
         Self {
             chars: input.chars().collect(),
             pos: 0,
-            _input: input,
         }
     }
 

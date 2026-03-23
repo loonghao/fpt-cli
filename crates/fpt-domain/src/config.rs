@@ -371,7 +371,7 @@ pub fn save_persisted_config(config: &PersistedConnectionConfig) -> Result<PathB
     Ok(path)
 }
 
-pub fn resolve_site(overrides: ConnectionOverrides) -> Result<String> {
+pub(crate) fn resolve_site(overrides: ConnectionOverrides) -> Result<String> {
     let persisted = load_persisted_config()?;
     let site = overrides
         .site

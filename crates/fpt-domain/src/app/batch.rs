@@ -27,6 +27,16 @@ pub enum OnConflict {
     Error,
 }
 
+impl std::fmt::Display for OnConflict {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Skip => f.write_str("skip"),
+            Self::Update => f.write_str("update"),
+            Self::Error => f.write_str("error"),
+        }
+    }
+}
+
 impl<T> App<T>
 where
     T: ShotgridTransport,
@@ -257,7 +267,7 @@ where
                     json!({
                         "action": "create_or_update",
                         "key": key,
-                        "on_conflict": format!("{on_conflict:?}").to_lowercase(),
+                        "on_conflict": on_conflict.to_string(),
                         "plan": plan_entity_create(&api_version, entity, body),
                     })
                 })
@@ -267,7 +277,7 @@ where
                 "operation": "entity.batch.upsert",
                 "entity": entity,
                 "key": key,
-                "on_conflict": format!("{on_conflict:?}").to_lowercase(),
+                "on_conflict": on_conflict.to_string(),
                 "count": plans.len(),
                 "plans": plans,
             }));
@@ -515,7 +525,7 @@ where
             "operation": "entity.batch.upsert",
             "entity": entity,
             "key": key,
-            "on_conflict": format!("{on_conflict:?}").to_lowercase(),
+            "on_conflict": on_conflict.to_string(),
             "total": total_items,
             "success_count": success_count,
             "failure_count": failure_count,
