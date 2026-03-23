@@ -355,6 +355,36 @@ impl ShotgridTransport for RecordingTransport {
     async fn hierarchy(&self, _config: &ConnectionSettings, body: &Value) -> Result<Value> {
         Ok(json!({"data": body}))
     }
+
+    async fn schema_field_read(
+        &self,
+        _config: &ConnectionSettings,
+        entity: &str,
+        field_name: &str,
+    ) -> Result<Value> {
+        Ok(json!({"entity": entity, "field_name": field_name, "data_type": "text"}))
+    }
+
+    async fn work_schedule_update(
+        &self,
+        _config: &ConnectionSettings,
+        body: &Value,
+    ) -> Result<Value> {
+        Ok(json!({"updated": true, "body": body}))
+    }
+
+    async fn text_search(&self, _config: &ConnectionSettings, body: &Value) -> Result<Value> {
+        Ok(json!({"data": [], "text": body["text"].clone()}))
+    }
+
+    async fn note_reply_create(
+        &self,
+        _config: &ConnectionSettings,
+        note_id: u64,
+        body: &Value,
+    ) -> Result<Value> {
+        Ok(json!({"note_id": note_id, "content": body["content"].clone(), "type": "Reply"}))
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -586,6 +616,36 @@ impl ShotgridTransport for FindOneTransport {
     async fn hierarchy(&self, _config: &ConnectionSettings, _body: &Value) -> Result<Value> {
         Ok(json!({}))
     }
+
+    async fn schema_field_read(
+        &self,
+        _config: &ConnectionSettings,
+        _entity: &str,
+        _field_name: &str,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+
+    async fn work_schedule_update(
+        &self,
+        _config: &ConnectionSettings,
+        _body: &Value,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+
+    async fn text_search(&self, _config: &ConnectionSettings, _body: &Value) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+
+    async fn note_reply_create(
+        &self,
+        _config: &ConnectionSettings,
+        _note_id: u64,
+        _body: &Value,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
 }
 
 #[derive(Debug, Clone, Default)]
@@ -807,6 +867,36 @@ impl ShotgridTransport for NoteThreadsNotFoundTransport {
     }
 
     async fn hierarchy(&self, _config: &ConnectionSettings, _body: &Value) -> Result<Value> {
+        Ok(json!({}))
+    }
+
+    async fn schema_field_read(
+        &self,
+        _config: &ConnectionSettings,
+        _entity: &str,
+        _field_name: &str,
+    ) -> Result<Value> {
+        Ok(json!({}))
+    }
+
+    async fn work_schedule_update(
+        &self,
+        _config: &ConnectionSettings,
+        _body: &Value,
+    ) -> Result<Value> {
+        Ok(json!({}))
+    }
+
+    async fn text_search(&self, _config: &ConnectionSettings, _body: &Value) -> Result<Value> {
+        Ok(json!({}))
+    }
+
+    async fn note_reply_create(
+        &self,
+        _config: &ConnectionSettings,
+        _note_id: u64,
+        _body: &Value,
+    ) -> Result<Value> {
         Ok(json!({}))
     }
 }
@@ -1042,6 +1132,36 @@ impl ShotgridTransport for SlowGetTransport {
     }
 
     async fn hierarchy(&self, _config: &ConnectionSettings, _body: &Value) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+
+    async fn schema_field_read(
+        &self,
+        _config: &ConnectionSettings,
+        _entity: &str,
+        _field_name: &str,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+
+    async fn work_schedule_update(
+        &self,
+        _config: &ConnectionSettings,
+        _body: &Value,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+
+    async fn text_search(&self, _config: &ConnectionSettings, _body: &Value) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+
+    async fn note_reply_create(
+        &self,
+        _config: &ConnectionSettings,
+        _note_id: u64,
+        _body: &Value,
+    ) -> Result<Value> {
         Err(AppError::not_implemented("unused"))
     }
 }
@@ -1972,4 +2092,208 @@ fn connection_settings_summary_contains_expected_fields() {
     assert_eq!(summary.auth_mode, AuthMode::Script);
     assert_eq!(summary.principal, Some("test".to_string()));
     assert_eq!(summary.api_version, "v1.1");
+}
+
+// ────────────────────────────────────────────────────────────────────
+// New API integration tests (schema.field-read, work-schedule.update,
+// entity.text-search, note.reply-create, entity.batch.revive)
+// ────────────────────────────────────────────────────────────────────
+
+#[tokio::test]
+async fn schema_field_read_delegates_to_transport() {
+    let app = App::new(RecordingTransport::default());
+    let result = app
+        .schema_field_read(overrides(), "Shot", "code")
+        .await
+        .expect("schema field read succeeds");
+    assert_eq!(result["entity"], "Shot");
+    assert_eq!(result["field_name"], "code");
+    assert_eq!(result["data_type"], "text");
+}
+
+#[tokio::test]
+async fn work_schedule_update_delegates_to_transport() {
+    let app = App::new(RecordingTransport::default());
+    let result = app
+        .work_schedule_update(
+            overrides(),
+            json!({
+                "date": "2026-04-01",
+                "working": false
+            }),
+        )
+        .await
+        .expect("work schedule update succeeds");
+    assert_eq!(result["updated"], true);
+    assert_eq!(result["body"]["date"], "2026-04-01");
+    assert_eq!(result["body"]["working"], false);
+}
+
+#[tokio::test]
+async fn work_schedule_update_rejects_missing_date() {
+    let app = App::new(RecordingTransport::default());
+    let err = app
+        .work_schedule_update(overrides(), json!({"working": true}))
+        .await
+        .expect_err("missing date should be rejected");
+    assert_eq!(err.envelope().code, "INVALID_INPUT");
+}
+
+#[tokio::test]
+async fn work_schedule_update_rejects_missing_working() {
+    let app = App::new(RecordingTransport::default());
+    let err = app
+        .work_schedule_update(overrides(), json!({"date": "2026-04-01"}))
+        .await
+        .expect_err("missing working should be rejected");
+    assert_eq!(err.envelope().code, "INVALID_INPUT");
+}
+
+#[tokio::test]
+async fn work_schedule_update_rejects_non_bool_working() {
+    let app = App::new(RecordingTransport::default());
+    let err = app
+        .work_schedule_update(overrides(), json!({"date": "2026-04-01", "working": "yes"}))
+        .await
+        .expect_err("non-bool working should be rejected");
+    assert_eq!(err.envelope().code, "INVALID_INPUT");
+}
+
+#[tokio::test]
+async fn work_schedule_update_accepts_optional_project_and_user() {
+    let app = App::new(RecordingTransport::default());
+    let result = app
+        .work_schedule_update(
+            overrides(),
+            json!({
+                "date": "2026-04-01",
+                "working": false,
+                "project": {"type": "Project", "id": 123},
+                "user": {"type": "HumanUser", "id": 456}
+            }),
+        )
+        .await
+        .expect("work schedule update with project and user succeeds");
+    assert_eq!(result["updated"], true);
+}
+
+#[tokio::test]
+async fn text_search_delegates_to_transport() {
+    let app = App::new(RecordingTransport::default());
+    let result = app
+        .text_search(
+            overrides(),
+            json!({
+                "text": "hero shot",
+                "entity_types": {"Shot": {}, "Asset": {}}
+            }),
+        )
+        .await
+        .expect("text search succeeds");
+    assert_eq!(result["text"], "hero shot");
+    assert!(result["data"].as_array().expect("data array").is_empty());
+}
+
+#[tokio::test]
+async fn text_search_rejects_non_object_input() {
+    let app = App::new(RecordingTransport::default());
+    let err = app
+        .text_search(overrides(), json!("not an object"))
+        .await
+        .expect_err("non-object input should be rejected");
+    assert_eq!(err.envelope().code, "INVALID_INPUT");
+}
+
+#[tokio::test]
+async fn text_search_rejects_missing_text_field() {
+    let app = App::new(RecordingTransport::default());
+    let err = app
+        .text_search(overrides(), json!({"entity_types": {}}))
+        .await
+        .expect_err("missing text field should be rejected");
+    assert_eq!(err.envelope().code, "INVALID_INPUT");
+}
+
+#[tokio::test]
+async fn text_search_rejects_empty_text_field() {
+    let app = App::new(RecordingTransport::default());
+    let err = app
+        .text_search(overrides(), json!({"text": "  "}))
+        .await
+        .expect_err("empty text should be rejected");
+    assert_eq!(err.envelope().code, "INVALID_INPUT");
+}
+
+#[tokio::test]
+async fn note_reply_create_delegates_to_transport() {
+    let app = App::new(RecordingTransport::default());
+    let result = app
+        .note_reply_create(overrides(), 456, json!({"content": "Looks great!"}))
+        .await
+        .expect("note reply create succeeds");
+    assert_eq!(result["note_id"], 456);
+    assert_eq!(result["content"], "Looks great!");
+    assert_eq!(result["type"], "Reply");
+}
+
+#[tokio::test]
+async fn note_reply_create_rejects_missing_content() {
+    let app = App::new(RecordingTransport::default());
+    let err = app
+        .note_reply_create(overrides(), 456, json!({"type": "Reply"}))
+        .await
+        .expect_err("missing content should be rejected");
+    assert_eq!(err.envelope().code, "INVALID_INPUT");
+}
+
+#[tokio::test]
+async fn note_reply_create_rejects_non_object_body() {
+    let app = App::new(RecordingTransport::default());
+    let err = app
+        .note_reply_create(overrides(), 456, json!("just a string"))
+        .await
+        .expect_err("non-object body should be rejected");
+    assert_eq!(err.envelope().code, "INVALID_INPUT");
+}
+
+#[tokio::test]
+async fn entity_batch_revive_delegates_to_transport() {
+    let app = App::new(RecordingTransport::default());
+    let result = app
+        .entity_batch_revive(overrides(), "Shot", json!({"ids": [860, 861]}), false)
+        .await
+        .expect("batch revive succeeds");
+    assert_eq!(result["total"], 2);
+    assert_eq!(result["success_count"], 2);
+    assert_eq!(result["failure_count"], 0);
+    let results = result["results"].as_array().expect("results array");
+    assert_eq!(results.len(), 2);
+    assert_eq!(results[0]["ok"], true);
+    assert_eq!(results[0]["id"], 860);
+    assert_eq!(results[1]["ok"], true);
+    assert_eq!(results[1]["id"], 861);
+}
+
+#[tokio::test]
+async fn entity_batch_revive_dry_run_returns_plan() {
+    let app = App::new(RecordingTransport::default());
+    let result = app
+        .entity_batch_revive(overrides(), "Shot", json!({"ids": [860, 861]}), true)
+        .await
+        .expect("batch revive dry-run succeeds");
+    assert_eq!(result["dry_run"], true);
+    let plans = result["plans"].as_array().expect("plans array");
+    assert_eq!(plans.len(), 2);
+    assert_eq!(plans[0]["path"], "/api3/json");
+}
+
+#[tokio::test]
+async fn entity_batch_revive_accepts_plain_ids_array() {
+    let app = App::new(RecordingTransport::default());
+    let result = app
+        .entity_batch_revive(overrides(), "Shot", json!([860, 861, 862]), false)
+        .await
+        .expect("batch revive with plain array succeeds");
+    assert_eq!(result["total"], 3);
+    assert_eq!(result["success_count"], 3);
 }

@@ -187,17 +187,28 @@ fpt entity create Version --input @payload.json --dry-run
 
 fpt entity update Task 42 --input @patch.json --dry-run
 fpt entity delete Playlist 99 --dry-run
+fpt entity revive Shot 860 --dry-run
+fpt entity text-search --input '{"text":"hero shot"}' --site ...
+fpt self-update --check --output pretty-json
+fpt self-update
 
+fpt schema field-read Shot code --site ...
 fpt entity batch get Shot --input '{"ids":[101,102],"fields":["code","sg_status_list"]}' --output json
 fpt entity batch find Asset --input @batch_queries.json --output json
 fpt entity batch create Version --input @batch_payloads.json --dry-run --output json
 fpt entity batch update Task --input @batch_updates.json --dry-run --output json
 fpt entity batch delete Playlist --input '{"ids":[99,100]}' --dry-run --output json
+fpt entity batch revive Shot --input '{"ids":[860,861]}' --dry-run --output json
+
+fpt work-schedule read --input @schedule.json --site ...
+fpt work-schedule update --input '{"date":"2026-04-01","working":false}' --site ...
+fpt note threads 456 --site ...
+fpt note reply-create 456 --input '{"content":"Looks great!"}' --site ...
 ```
 
 ### 批量 CRUD
 
-`entity batch` 提供批量 get / find / create / update / delete 工作流。
+`entity batch` 提供批量 get / find / create / update / delete / revive 工作流。
 当前实现是**在 CLI 侧编排已有 REST CRUD 端点**，统一返回 `results` 数组，其中每一项都会携带自己的 `ok` 状态以及 `response` 或 `error`。
 
 输入约定：
@@ -207,10 +218,11 @@ fpt entity batch delete Playlist --input '{"ids":[99,100]}' --dry-run --output j
 - **`entity batch create`**：`[{...body1...},{...body2...}]` 或 `{"items":[...]}`
 - **`entity batch update`**：`[{"id":42,"body":{...}}, {"id":43,"body":{...}}]` 或 `{"items":[...]}`
 - **`entity batch delete`**：`[42,43]` 或 `{"ids":[42,43]}`
+- **`entity batch revive`**：`[860,861]` 或 `{"ids":[860,861]}`
 
 说明：
 
-- **批量 create / update / delete 支持 `--dry-run`**
+- **批量 create / update / delete / revive 支持 `--dry-run`**
 - **批量 delete 真实执行仍要求显式传入 `--yes`**
 - 同一次 CLI 进程中的 batch 子请求会**复用 access token**
 - 同一次 CLI 进程中的 batch 子请求会以**受控并发**方式执行，默认并发度为 `8`
@@ -243,7 +255,7 @@ fpt entity find Asset --filter-dsl "sg_status_list == 'ip' and (code ~ 'bunny' o
 
 当前测试覆盖分为两层：
 
-- **App 编排测试**：`auth.test`、`schema.entities`、`schema.fields`、`entity.get/find/create/update/delete`、`entity.batch.*`
+- **App 编排测试**：`auth.test`、`schema.entities`、`schema.fields`、`schema.field-read`、`entity.get/find/create/update/delete`、`entity.text-search`、`entity.batch.*`（含 `batch.revive`）、`work-schedule.read/update`、`note.threads`、`note.reply-create`
 - **REST transport 测试**：OAuth token 获取、schema/entity 路由映射、`_search` 切换、写操作 method 映射、错误分类、token 复用
 
 开发时建议优先执行：

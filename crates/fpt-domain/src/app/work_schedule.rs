@@ -19,6 +19,16 @@ where
         let payload = normalize_work_schedule_input(input)?;
         self.transport.work_schedule_read(&config, &payload).await
     }
+
+    pub async fn work_schedule_update(
+        &self,
+        overrides: ConnectionOverrides,
+        input: Value,
+    ) -> Result<Value> {
+        let config = ConnectionSettings::resolve(overrides)?;
+        let payload = normalize_work_schedule_update_input(input)?;
+        self.transport.work_schedule_update(&config, &payload).await
+    }
 }
 
 fn normalize_work_schedule_input(input: Value) -> Result<Value> {
@@ -114,4 +124,48 @@ fn validate_entity_link(value: &Value, field_name: &str, expected_type: &str) ->
     })?;
 
     Ok(())
+}
+
+fn normalize_work_schedule_update_input(input: Value) -> Result<Value> {
+    let object = input
+        .as_object()
+        .cloned()
+        .ok_or_else(|| {
+            AppError::invalid_input("work-schedule update input must be a JSON object")
+                .with_operation("normalize_work_schedule_update_input")
+                .with_expected_shape(
+                    "a JSON object containing `date`, `working` (bool), and optional `project`, `user`, and `description`",
+                )
+        })?;
+
+    require_non_empty_string(&object, "date")?;
+
+    if !object.contains_key("working") {
+        return Err(AppError::invalid_input(
+            "work-schedule update requires a `working` boolean field",
+        )
+        .with_operation("normalize_work_schedule_update_input")
+        .with_missing_fields(["working"])
+        .with_expected_shape("a boolean value indicating whether the date is a working day"));
+    }
+
+    object
+        .get("working")
+        .and_then(Value::as_bool)
+        .ok_or_else(|| {
+            AppError::invalid_input("`working` must be a boolean (true or false)")
+                .with_operation("normalize_work_schedule_update_input")
+                .with_invalid_field("working")
+                .with_expected_shape("a boolean value (true or false)")
+        })?;
+
+    if let Some(project) = object.get("project") {
+        validate_entity_link(project, "project", "Project")?;
+    }
+
+    if let Some(user) = object.get("user") {
+        validate_entity_link(user, "user", "HumanUser")?;
+    }
+
+    Ok(Value::Object(object))
 }

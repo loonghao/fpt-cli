@@ -199,6 +199,14 @@ pub enum SchemaCommands {
         entity: String,
         field_name: String,
     },
+    #[command(
+        name = "field-read",
+        about = "Read the schema definition of a single field"
+    )]
+    FieldRead {
+        entity: String,
+        field_name: String,
+    },
 }
 
 #[derive(Debug, Subcommand)]
@@ -258,6 +266,14 @@ pub enum EntityCommands {
         #[arg(long)]
         dry_run: bool,
     },
+    #[command(
+        name = "text-search",
+        about = "Search across entity types using full-text search"
+    )]
+    TextSearch {
+        #[arg(long)]
+        input: String,
+    },
     #[command(subcommand)]
     Batch(BatchEntityCommands),
 }
@@ -265,6 +281,14 @@ pub enum EntityCommands {
 #[derive(Debug, Subcommand)]
 pub enum WorkScheduleCommands {
     Read {
+        #[arg(long)]
+        input: String,
+    },
+    #[command(
+        name = "update",
+        about = "Update the ShotGrid work schedule for a specific date"
+    )]
+    Update {
         #[arg(long)]
         input: String,
     },
@@ -329,6 +353,17 @@ pub enum BatchEntityCommands {
         /// and skipping items that were already processed.
         #[arg(long)]
         resume: bool,
+    },
+    #[command(
+        name = "revive",
+        about = "Revive multiple previously retired entity records"
+    )]
+    Revive {
+        entity: String,
+        #[arg(long)]
+        input: String,
+        #[arg(long)]
+        dry_run: bool,
     },
 }
 
@@ -453,6 +488,16 @@ pub enum NoteCommands {
             help = "Optional query parameters as JSON (fields, page, sort, etc.)"
         )]
         input: Option<String>,
+    },
+    #[command(
+        name = "reply-create",
+        about = "Create a reply in a top-level Note thread"
+    )]
+    ReplyCreate {
+        #[arg(help = "Top-level Note record id")]
+        note_id: u64,
+        #[arg(long)]
+        input: String,
     },
 }
 

@@ -323,6 +323,40 @@ impl ShotgridTransport for UpsertTransport {
     ) -> Result<Value> {
         Err(AppError::not_implemented("unused"))
     }
+
+    async fn schema_field_read(
+        &self,
+        _config: &fpt_domain::ConnectionSettings,
+        _entity: &str,
+        _field_name: &str,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+
+    async fn work_schedule_update(
+        &self,
+        _config: &fpt_domain::ConnectionSettings,
+        _body: &Value,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+
+    async fn text_search(
+        &self,
+        _config: &fpt_domain::ConnectionSettings,
+        _body: &Value,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+
+    async fn note_reply_create(
+        &self,
+        _config: &fpt_domain::ConnectionSettings,
+        _note_id: u64,
+        _body: &Value,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
 }
 
 // ---------------------------------------------------------------------------

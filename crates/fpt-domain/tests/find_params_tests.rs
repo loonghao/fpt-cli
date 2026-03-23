@@ -170,6 +170,18 @@ impl ShotgridTransport for RecordingTransport {
     async fn hierarchy(&self, _: &ConnectionSettings, _: &Value) -> Result<Value> {
         Ok(json!({}))
     }
+    async fn schema_field_read(&self, _: &ConnectionSettings, _: &str, _: &str) -> Result<Value> {
+        Ok(json!({}))
+    }
+    async fn work_schedule_update(&self, _: &ConnectionSettings, _: &Value) -> Result<Value> {
+        Ok(json!({}))
+    }
+    async fn text_search(&self, _: &ConnectionSettings, _: &Value) -> Result<Value> {
+        Ok(json!({}))
+    }
+    async fn note_reply_create(&self, _: &ConnectionSettings, _: u64, _: &Value) -> Result<Value> {
+        Ok(json!({}))
+    }
 }
 
 fn test_overrides() -> ConnectionOverrides {

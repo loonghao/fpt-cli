@@ -96,3 +96,19 @@ pub const SCHEMA_FIELD_DELETE_SPEC: CommandSpec = CommandSpec {
     examples: SCHEMA_FIELD_DELETE_EXAMPLES,
     notes: SCHEMA_FIELD_NOTES,
 };
+
+const SCHEMA_FIELD_READ_EXAMPLES: &[&str] = &["fpt schema field-read Shot code --site ..."];
+
+pub const SCHEMA_FIELD_READ_SPEC: CommandSpec = CommandSpec {
+    name: "schema.field-read",
+    summary: "Read the schema definition of a single field on an entity type",
+    risk: RiskLevel::Read,
+    implemented: true,
+    supports_dry_run: false,
+    preferred_transport: "rest",
+    fallback_transport: None,
+    input: "entity + field_name",
+    output: "json",
+    examples: SCHEMA_FIELD_READ_EXAMPLES,
+    notes: SCHEMA_NOTES,
+};
