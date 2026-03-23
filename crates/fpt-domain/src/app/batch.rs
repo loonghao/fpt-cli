@@ -288,7 +288,7 @@ where
         // Load checkpoint if resuming.
         let completed_indices = if resume {
             if let Some(ref path) = checkpoint_path {
-                load_checkpoint_indices(path, key)?
+                load_checkpoint_indices(path)?
             } else {
                 return Err(AppError::invalid_input(
                     "`--resume` requires `--checkpoint` to specify the checkpoint file path",
@@ -969,7 +969,7 @@ fn u64_list(values: &[Value], field_name: &str) -> Result<Vec<u64>> {
 /// `"index"` field (non-negative integer). Lines that cannot be parsed or
 /// lack the field are silently skipped so that a partially written last line
 /// does not prevent resumption.
-fn load_checkpoint_indices(path: &str, _key: &str) -> Result<HashSet<usize>> {
+fn load_checkpoint_indices(path: &str) -> Result<HashSet<usize>> {
     let path = Path::new(path);
     if !path.exists() {
         return Err(AppError::invalid_input(format!(

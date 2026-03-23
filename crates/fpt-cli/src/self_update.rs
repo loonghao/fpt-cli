@@ -55,7 +55,6 @@ struct GitHubReleaseAsset {
 pub async fn run(args: SelfUpdateArgs) -> Result<Value> {
     let repository = args
         .repository
-        .clone()
         .or_else(|| env::var("FPT_UPDATE_REPOSITORY").ok())
         .unwrap_or_else(|| DEFAULT_REPOSITORY.to_string());
     let (owner, repo) = split_repository(&repository)?;
@@ -70,7 +69,7 @@ pub async fn run(args: SelfUpdateArgs) -> Result<Value> {
             "could not resolve the current executable path: {error}"
         ))
     })?;
-    let requested_version = args.version.clone().map(normalize_version);
+    let requested_version = args.version.map(normalize_version);
     let client = build_http_client()?;
     let release = fetch_release(&client, &owner, &repo, requested_version.as_deref()).await?;
     let release_version = parse_release_version(&release.tag_name)?;
@@ -420,13 +419,12 @@ fn write_bytes(path: &Path, bytes: &[u8]) -> Result<()> {
 fn verify_checksum(checksums: &str, asset_name: &str, archive_bytes: &[u8]) -> Result<()> {
     let expected = checksums
         .lines()
-        .filter_map(|line| {
+        .find_map(|line| {
             let mut parts = line.split_whitespace();
             let checksum = parts.next()?;
             let name = parts.next()?.trim_start_matches('*');
             (name == asset_name).then(|| checksum.to_ascii_lowercase())
         })
-        .next()
         .ok_or_else(|| {
             AppError::internal(format!(
                 "checksum file `{}` does not contain an entry for asset `{}`",
