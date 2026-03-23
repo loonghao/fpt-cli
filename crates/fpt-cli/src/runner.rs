@@ -14,7 +14,7 @@ use serde_json::Value;
 
 pub async fn run(cli: Cli) -> Result<Value> {
     let app = App::default();
-    let connection = cli.connection.clone().into();
+    let connection = cli.connection.into();
 
     match cli.command {
         Commands::Capabilities => Ok(app.capabilities(env!("CARGO_PKG_VERSION"))),
@@ -49,6 +49,13 @@ pub async fn run(cli: Cli) -> Result<Value> {
             }
             SchemaCommands::FieldRead { entity, field_name } => {
                 app.schema_field_read(connection, &entity, &field_name)
+                    .await
+            }
+            SchemaCommands::EntityRead { entity } => {
+                app.schema_entity_read(connection, &entity).await
+            }
+            SchemaCommands::FieldRevive { entity, field_name } => {
+                app.schema_field_revive(connection, &entity, &field_name)
                     .await
             }
         },
@@ -114,6 +121,20 @@ pub async fn run(cli: Cli) -> Result<Value> {
             EntityCommands::TextSearch { input } => {
                 let body = required_json_input(input)?;
                 app.text_search(connection, body).await
+            }
+            EntityCommands::Relationship {
+                entity,
+                id,
+                field,
+                input,
+            } => {
+                let input = read_json_input(input.as_deref())?;
+                app.entity_relationships(connection, &entity, id, &field, input)
+                    .await
+            }
+            EntityCommands::UpdateLastAccessed { project_id } => {
+                app.project_update_last_accessed(connection, project_id)
+                    .await
             }
             EntityCommands::Batch(command) => match command {
                 BatchEntityCommands::Get { entity, input } => {
@@ -261,6 +282,10 @@ pub async fn run(cli: Cli) -> Result<Value> {
             FollowersCommands::Unfollow { entity, id, input } => {
                 let body = required_json_input(input)?;
                 app.entity_unfollow(connection, &entity, id, body).await
+            }
+            FollowersCommands::Following { user_id, input } => {
+                let input = read_json_input(input.as_deref())?;
+                app.user_following(connection, user_id, input).await
             }
         },
         Commands::Note(command) => match command {
