@@ -5,8 +5,10 @@ pub fn print_stdout(value: &Value, output_format: OutputFormat) {
     match output_format {
         OutputFormat::Toon => println!(
             "{}",
-            toon_format::encode_default(value)
-                .unwrap_or_else(|_| format!("{{\"serialization_error\":\"failed to encode as TOON\",\"fallback\":{}}}", serde_json::to_string(value).unwrap_or_default()))
+            toon_format::encode_default(value).unwrap_or_else(|_| format!(
+                "{{\"serialization_error\":\"failed to encode as TOON\",\"fallback\":{}}}",
+                serde_json::to_string(value).unwrap_or_default()
+            ))
         ),
         OutputFormat::Json => println!(
             "{}",
@@ -25,8 +27,10 @@ pub fn print_stderr(value: &ErrorEnvelope, output_format: OutputFormat) {
     match output_format {
         OutputFormat::Toon => eprintln!(
             "{}",
-            toon_format::encode_default(value)
-                .unwrap_or_else(|_| format!("{{\"serialization_error\":\"failed to encode as TOON\",\"fallback\":{}}}", serde_json::to_string(value).unwrap_or_default()))
+            toon_format::encode_default(value).unwrap_or_else(|_| format!(
+                "{{\"serialization_error\":\"failed to encode as TOON\",\"fallback\":{}}}",
+                serde_json::to_string(value).unwrap_or_default()
+            ))
         ),
         OutputFormat::Json => eprintln!(
             "{}",
