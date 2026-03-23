@@ -56,3 +56,27 @@ pub const ENTITY_UNFOLLOW_SPEC: CommandSpec = CommandSpec {
     examples: UNFOLLOW_EXAMPLES,
     notes: FOLLOW_NOTES,
 };
+
+const FOLLOWING_EXAMPLES: &[&str] = &[
+    "fpt followers following 456 --site ... --auth-mode script --script-name ... --script-key ...",
+    "fpt followers following 456 --input '{\"fields\":\"code,id\",\"page\":{\"size\":50}}' --site ...",
+];
+
+const FOLLOWING_NOTES: &[&str] = &[
+    "Lists all entities a user is currently following via GET /api/{ver}/entity/human_users/{user_id}/following",
+    "Optional --input accepts query parameters like fields, page, and sort",
+];
+
+pub const USER_FOLLOWING_SPEC: CommandSpec = CommandSpec {
+    name: "followers.following",
+    summary: "List all entities a user is following",
+    risk: RiskLevel::Read,
+    implemented: true,
+    supports_dry_run: false,
+    preferred_transport: "rest",
+    fallback_transport: None,
+    input: "user_id + optional query params",
+    output: "json",
+    examples: FOLLOWING_EXAMPLES,
+    notes: FOLLOWING_NOTES,
+};

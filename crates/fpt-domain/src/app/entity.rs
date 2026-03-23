@@ -138,6 +138,32 @@ where
         self.transport.entity_revive(&config, entity, id).await
     }
 
+    pub async fn entity_relationships(
+        &self,
+        overrides: ConnectionOverrides,
+        entity: &str,
+        id: u64,
+        related_field: &str,
+        input: Option<Value>,
+    ) -> Result<Value> {
+        let config = ConnectionSettings::resolve(overrides)?;
+        let params = super::activity::build_query_params_public(input)?;
+        self.transport
+            .entity_relationships(&config, entity, id, related_field, &params)
+            .await
+    }
+
+    pub async fn project_update_last_accessed(
+        &self,
+        overrides: ConnectionOverrides,
+        project_id: u64,
+    ) -> Result<Value> {
+        let config = ConnectionSettings::resolve(overrides)?;
+        self.transport
+            .project_update_last_accessed(&config, project_id)
+            .await
+    }
+
     pub async fn text_search(&self, overrides: ConnectionOverrides, input: Value) -> Result<Value> {
         let config = ConnectionSettings::resolve(overrides)?;
         let payload = normalize_text_search_input(input)?;

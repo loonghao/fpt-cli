@@ -41,6 +41,12 @@ where
     }
 }
 
+/// Public wrapper for `build_query_params` — used by entity_relationships
+/// and user_following to convert optional JSON input into query pairs.
+pub fn build_query_params_public(input: Option<Value>) -> Result<Vec<(String, String)>> {
+    build_query_params(input)
+}
+
 /// Convert an optional JSON object into a flat list of query string key-value pairs.
 ///
 /// Supported shapes:

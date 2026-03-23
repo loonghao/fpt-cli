@@ -357,6 +357,51 @@ impl ShotgridTransport for UpsertTransport {
     ) -> Result<Value> {
         Err(AppError::not_implemented("unused"))
     }
+
+    async fn entity_relationships(
+        &self,
+        _config: &fpt_domain::ConnectionSettings,
+        _entity: &str,
+        _id: u64,
+        _related_field: &str,
+        _params: &[(String, String)],
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+
+    async fn user_following(
+        &self,
+        _config: &fpt_domain::ConnectionSettings,
+        _user_id: u64,
+        _params: &[(String, String)],
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+
+    async fn project_update_last_accessed(
+        &self,
+        _config: &fpt_domain::ConnectionSettings,
+        _project_id: u64,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+
+    async fn schema_entity_read(
+        &self,
+        _config: &fpt_domain::ConnectionSettings,
+        _entity: &str,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+
+    async fn schema_field_revive(
+        &self,
+        _config: &fpt_domain::ConnectionSettings,
+        _entity: &str,
+        _field_name: &str,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
 }
 
 // ---------------------------------------------------------------------------

@@ -72,4 +72,25 @@ where
             .schema_field_read(&config, entity, field_name)
             .await
     }
+
+    pub async fn schema_entity_read(
+        &self,
+        overrides: ConnectionOverrides,
+        entity: &str,
+    ) -> Result<Value> {
+        let config = ConnectionSettings::resolve(overrides)?;
+        self.transport.schema_entity_read(&config, entity).await
+    }
+
+    pub async fn schema_field_revive(
+        &self,
+        overrides: ConnectionOverrides,
+        entity: &str,
+        field_name: &str,
+    ) -> Result<Value> {
+        let config = ConnectionSettings::resolve(overrides)?;
+        self.transport
+            .schema_field_revive(&config, entity, field_name)
+            .await
+    }
 }

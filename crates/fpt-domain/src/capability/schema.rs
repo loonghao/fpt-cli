@@ -112,3 +112,44 @@ pub const SCHEMA_FIELD_READ_SPEC: CommandSpec = CommandSpec {
     examples: SCHEMA_FIELD_READ_EXAMPLES,
     notes: SCHEMA_NOTES,
 };
+
+const SCHEMA_ENTITY_READ_EXAMPLES: &[&str] = &[
+    "fpt schema entity-read Shot --site ... --auth-mode script --script-name ... --script-key ...",
+];
+
+pub const SCHEMA_ENTITY_READ_SPEC: CommandSpec = CommandSpec {
+    name: "schema.entity-read",
+    summary: "Read the full schema definition of an entity type",
+    risk: RiskLevel::Read,
+    implemented: true,
+    supports_dry_run: false,
+    preferred_transport: "rest",
+    fallback_transport: None,
+    input: "entity name",
+    output: "json",
+    examples: SCHEMA_ENTITY_READ_EXAMPLES,
+    notes: SCHEMA_NOTES,
+};
+
+const SCHEMA_FIELD_REVIVE_EXAMPLES: &[&str] = &[
+    "fpt schema field-revive Shot sg_deleted_field --site ... --auth-mode script --script-name ... --script-key ...",
+];
+
+const SCHEMA_FIELD_REVIVE_NOTES: &[&str] = &[
+    "Revives a previously deleted custom field via POST /api/{ver}/schema/{entity}/fields/{field_name}?revive=true",
+    "The field must have been previously deleted and not yet purged",
+];
+
+pub const SCHEMA_FIELD_REVIVE_SPEC: CommandSpec = CommandSpec {
+    name: "schema.field-revive",
+    summary: "Revive a previously deleted custom field on an entity type",
+    risk: RiskLevel::Write,
+    implemented: true,
+    supports_dry_run: false,
+    preferred_transport: "rest",
+    fallback_transport: None,
+    input: "entity + field_name",
+    output: "json",
+    examples: SCHEMA_FIELD_REVIVE_EXAMPLES,
+    notes: SCHEMA_FIELD_REVIVE_NOTES,
+};
