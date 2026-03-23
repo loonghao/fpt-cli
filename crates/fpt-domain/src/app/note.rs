@@ -5,6 +5,7 @@ use crate::config::{ConnectionOverrides, ConnectionSettings};
 use crate::transport::ShotgridTransport;
 
 use super::App;
+use super::query_helpers::{scalar_to_string, string_list_to_csv};
 
 impl<T> App<T>
 where
@@ -22,6 +23,19 @@ where
             .note_threads(&config, note_id, &params)
             .await
             .map_err(|error| translate_note_threads_error(error, note_id))
+    }
+
+    pub async fn note_reply_create(
+        &self,
+        overrides: ConnectionOverrides,
+        note_id: u64,
+        body: Value,
+    ) -> Result<Value> {
+        let config = ConnectionSettings::resolve(overrides)?;
+        validate_note_reply_body(&body)?;
+        self.transport
+            .note_reply_create(&config, note_id, &body)
+            .await
     }
 }
 
@@ -96,42 +110,23 @@ fn build_note_query_params(input: Option<Value>) -> Result<Vec<(String, String)>
     Ok(params)
 }
 
-fn scalar_to_string(value: &Value, field_name: &str) -> Result<String> {
-    match value {
-        Value::String(s) => Ok(s.clone()),
-        Value::Number(n) => Ok(n.to_string()),
-        Value::Bool(b) => Ok(b.to_string()),
-        _ => Err(AppError::invalid_input(format!(
-            "`{field_name}` must be a scalar value (string, number, or bool)"
-        ))
-        .with_operation("build_note_query_params")
-        .with_invalid_field(field_name)
-        .with_expected_shape("a scalar value of type string, number, or boolean")),
-    }
-}
-
-fn string_list_to_csv(value: &Value, field_name: &str) -> Result<String> {
-    if let Some(s) = value.as_str() {
-        return Ok(s.to_string());
-    }
-    let array = value.as_array().ok_or_else(|| {
-        AppError::invalid_input(format!(
-            "`{field_name}` must be a string or an array of strings"
-        ))
-        .with_operation("build_note_query_params")
-        .with_invalid_field(field_name)
-        .with_expected_shape("either a string or an array of strings")
+fn validate_note_reply_body(body: &Value) -> Result<()> {
+    let object = body.as_object().ok_or_else(|| {
+        AppError::invalid_input("note reply body must be a JSON object")
+            .with_operation("note_reply_create")
+            .with_expected_shape(
+                "a JSON object containing `content` (string) and optional `type` for the reply",
+            )
     })?;
-    let items: Result<Vec<String>> = array
-        .iter()
-        .map(|v| {
-            v.as_str().map(ToString::to_string).ok_or_else(|| {
-                AppError::invalid_input(format!("`{field_name}` items must be strings"))
-                    .with_operation("build_note_query_params")
-                    .with_invalid_field(field_name)
-                    .with_expected_shape("an array containing only strings")
-            })
-        })
-        .collect();
-    Ok(items?.join(","))
+
+    if !object.contains_key("content") {
+        return Err(AppError::invalid_input(
+            "note reply body must contain a `content` field with the reply text",
+        )
+        .with_operation("note_reply_create")
+        .with_missing_fields(["content"])
+        .with_expected_shape("a JSON object containing at least a `content` string field"));
+    }
+
+    Ok(())
 }

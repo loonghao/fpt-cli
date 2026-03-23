@@ -60,4 +60,16 @@ where
             .schema_field_delete(&config, entity, field_name)
             .await
     }
+
+    pub async fn schema_field_read(
+        &self,
+        overrides: ConnectionOverrides,
+        entity: &str,
+        field_name: &str,
+    ) -> Result<Value> {
+        let config = ConnectionSettings::resolve(overrides)?;
+        self.transport
+            .schema_field_read(&config, entity, field_name)
+            .await
+    }
 }

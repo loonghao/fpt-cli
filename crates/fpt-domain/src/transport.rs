@@ -190,6 +190,24 @@ pub trait ShotgridTransport {
         field_name: &str,
     ) -> Result<Value>;
     async fn hierarchy(&self, config: &ConnectionSettings, body: &Value) -> Result<Value>;
+    async fn schema_field_read(
+        &self,
+        config: &ConnectionSettings,
+        entity: &str,
+        field_name: &str,
+    ) -> Result<Value>;
+    async fn work_schedule_update(
+        &self,
+        config: &ConnectionSettings,
+        body: &Value,
+    ) -> Result<Value>;
+    async fn text_search(&self, config: &ConnectionSettings, body: &Value) -> Result<Value>;
+    async fn note_reply_create(
+        &self,
+        config: &ConnectionSettings,
+        note_id: u64,
+        body: &Value,
+    ) -> Result<Value>;
 }
 
 #[derive(Debug, Clone)]
@@ -1032,6 +1050,46 @@ impl ShotgridTransport for RestTransport {
 
     async fn hierarchy(&self, config: &ConnectionSettings, body: &Value) -> Result<Value> {
         self.authorized_json_request(config, Method::POST, "hierarchy/_search", &[], Some(body))
+            .await
+    }
+
+    async fn schema_field_read(
+        &self,
+        config: &ConnectionSettings,
+        entity: &str,
+        field_name: &str,
+    ) -> Result<Value> {
+        let path = format!("schema/{entity}/fields/{field_name}");
+        self.authorized_json_request(config, Method::GET, &path, &[], None)
+            .await
+    }
+
+    async fn work_schedule_update(
+        &self,
+        config: &ConnectionSettings,
+        body: &Value,
+    ) -> Result<Value> {
+        self.rpc_request(
+            &config.site,
+            "work_schedule_update",
+            vec![Self::rpc_auth_params(config), body.clone()],
+        )
+        .await
+    }
+
+    async fn text_search(&self, config: &ConnectionSettings, body: &Value) -> Result<Value> {
+        self.authorized_json_request(config, Method::POST, "entity/_text_search", &[], Some(body))
+            .await
+    }
+
+    async fn note_reply_create(
+        &self,
+        config: &ConnectionSettings,
+        note_id: u64,
+        body: &Value,
+    ) -> Result<Value> {
+        let path = format!("entity/notes/{note_id}/thread_contents");
+        self.authorized_json_request(config, Method::POST, &path, &[], Some(body))
             .await
     }
 }

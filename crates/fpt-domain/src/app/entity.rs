@@ -137,4 +137,45 @@ where
         let config = ConnectionSettings::resolve(overrides)?;
         self.transport.entity_revive(&config, entity, id).await
     }
+
+    pub async fn text_search(&self, overrides: ConnectionOverrides, input: Value) -> Result<Value> {
+        let config = ConnectionSettings::resolve(overrides)?;
+        let payload = normalize_text_search_input(input)?;
+        self.transport.text_search(&config, &payload).await
+    }
+}
+
+fn normalize_text_search_input(input: Value) -> Result<Value> {
+    let object = input.as_object().ok_or_else(|| {
+        AppError::invalid_input("entity text-search input must be a JSON object")
+            .with_operation("normalize_text_search_input")
+            .with_expected_shape(
+                "a JSON object containing `text` (search query string) and optional `entity_types`",
+            )
+    })?;
+
+    if !object.contains_key("text") {
+        return Err(AppError::invalid_input(
+            "text-search requires a `text` field with the search query string",
+        )
+        .with_operation("normalize_text_search_input")
+        .with_missing_fields(["text"])
+        .with_expected_shape("a JSON object containing at least a `text` string field"));
+    }
+
+    let text = object.get("text").and_then(Value::as_str).ok_or_else(|| {
+        AppError::invalid_input("`text` must be a non-empty string")
+            .with_operation("normalize_text_search_input")
+            .with_invalid_field("text")
+            .with_expected_shape("a non-empty string")
+    })?;
+
+    if text.trim().is_empty() {
+        return Err(AppError::invalid_input("`text` cannot be empty")
+            .with_operation("normalize_text_search_input")
+            .with_invalid_field("text")
+            .with_hint("Provide a non-empty search query string."));
+    }
+
+    Ok(input)
 }

@@ -4,6 +4,8 @@ use serde_json::{Value, json};
 use crate::filter_dsl::parse_filter_dsl;
 use crate::transport::FindParams;
 
+use super::query_helpers::{scalar_to_string, string_list};
+
 pub(super) fn build_find_params(
     input: Option<Value>,
     filter_dsl: Option<String>,
@@ -104,13 +106,13 @@ pub(super) fn build_find_params(
         if let Some(number) = page.get("number") {
             params.query.push((
                 "page[number]".to_string(),
-                scalar_to_query(number, "page.number")?,
+                scalar_to_string(number, "page.number")?,
             ));
         }
         if let Some(size) = page.get("size") {
             params.query.push((
                 "page[size]".to_string(),
-                scalar_to_query(size, "page.size")?,
+                scalar_to_string(size, "page.size")?,
             ));
         }
     }
@@ -237,53 +239,6 @@ pub(super) fn extract_find_one_response(response: Value) -> Result<Value> {
     }
 }
 
-fn string_list(value: &Value, field_name: &str) -> Result<Vec<String>> {
-    if let Some(value) = value.as_str() {
-        let items = value
-            .split(',')
-            .map(str::trim)
-            .filter(|value| !value.is_empty())
-            .map(ToString::to_string)
-            .collect();
-        return Ok(items);
-    }
-
-    let array = value.as_array().ok_or_else(|| {
-        AppError::invalid_input(format!(
-            "`{field_name}` must be either a comma-separated string or an array of strings"
-        ))
-        .with_operation("build_find_params")
-        .with_invalid_field(field_name)
-        .with_expected_shape("either a comma-separated string or an array of strings")
-    })?;
-
-    array
-        .iter()
-        .map(|value| {
-            value.as_str().map(ToString::to_string).ok_or_else(|| {
-                AppError::invalid_input(format!("`{field_name}` array items must all be strings"))
-                    .with_operation("build_find_params")
-                    .with_invalid_field(field_name)
-                    .with_expected_shape("an array containing only strings")
-            })
-        })
-        .collect()
-}
-
-fn scalar_to_query(value: &Value, field_name: &str) -> Result<String> {
-    match value {
-        Value::String(value) => Ok(value.clone()),
-        Value::Number(value) => Ok(value.to_string()),
-        Value::Bool(value) => Ok(value.to_string()),
-        _ => Err(AppError::invalid_input(format!(
-            "`{field_name}` must be a scalar query value of type string, number, or boolean"
-        ))
-        .with_operation("build_find_params")
-        .with_invalid_field(field_name)
-        .with_expected_shape("a scalar query value of type string, number, or boolean")),
-    }
-}
-
 fn value_to_query(value: &Value, field_name: &str) -> Result<String> {
     match value {
         Value::Null => Err(
@@ -295,11 +250,11 @@ fn value_to_query(value: &Value, field_name: &str) -> Result<String> {
         Value::Array(values) => {
             let mut items = Vec::with_capacity(values.len());
             for value in values {
-                items.push(scalar_to_query(value, field_name)?);
+                items.push(scalar_to_string(value, field_name)?);
             }
             Ok(items.join(","))
         }
-        _ => scalar_to_query(value, field_name),
+        _ => scalar_to_string(value, field_name),
     }
 }
 

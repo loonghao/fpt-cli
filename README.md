@@ -186,20 +186,29 @@ fpt entity create Version --input @payload.json --dry-run
 
 fpt entity update Task 42 --input @patch.json --dry-run
 fpt entity delete Playlist 99 --dry-run
+fpt entity revive Shot 860 --dry-run
+fpt entity text-search --input '{"text":"hero shot"}' --site ...
 fpt self-update --check --output pretty-json
 fpt self-update
 
+fpt schema field-read Shot code --site ...
 fpt entity batch get Shot --input '{"ids":[101,102],"fields":["code","sg_status_list"]}' --output json
 
 fpt entity batch find Asset --input @batch_queries.json --output json
 fpt entity batch create Version --input @batch_payloads.json --dry-run --output json
 fpt entity batch update Task --input @batch_updates.json --dry-run --output json
 fpt entity batch delete Playlist --input '{"ids":[99,100]}' --dry-run --output json
+fpt entity batch revive Shot --input '{"ids":[860,861]}' --dry-run --output json
+
+fpt work-schedule read --input @schedule.json --site ...
+fpt work-schedule update --input '{"date":"2026-04-01","working":false}' --site ...
+fpt note threads 456 --site ...
+fpt note reply-create 456 --input '{"content":"Looks great!"}' --site ...
 ```
 
 ### Batch CRUD
 
-`entity batch` provides batch get / find / create / update / delete workflows.
+`entity batch` provides batch get / find / create / update / delete / revive workflows.
 The current implementation is **client-side orchestration over existing REST CRUD endpoints** and returns a unified `results` array where each item carries its own `ok` state plus `response` or `error`.
 
 Input conventions:
@@ -209,10 +218,11 @@ Input conventions:
 - **`entity batch create`**: `[{...body1...},{...body2...}]` or `{"items":[...]}`
 - **`entity batch update`**: `[{"id":42,"body":{...}}, {"id":43,"body":{...}}]` or `{"items":[...]}`
 - **`entity batch delete`**: `[42,43]` or `{"ids":[42,43]}`
+- **`entity batch revive`**: `[860,861]` or `{"ids":[860,861]}`
 
 Notes:
 
-- **Batch create / update / delete support `--dry-run`**
+- **Batch create / update / delete / revive support `--dry-run`**
 - **Batch delete still requires explicit `--yes` for real execution**
 - Batch sub-requests in the same CLI process **reuse the access token**
 - Batch sub-requests run with **controlled concurrency**, defaulting to `8`
@@ -245,7 +255,7 @@ fpt entity find Asset --filter-dsl "sg_status_list == 'ip' and (code ~ 'bunny' o
 
 Current coverage is split into two layers:
 
-- **App orchestration tests**: `auth.test`, `schema.entities`, `schema.fields`, `entity.get/find/create/update/delete`, `entity.batch.*`
+- **App orchestration tests**: `auth.test`, `schema.entities`, `schema.fields`, `schema.field-read`, `entity.get/find/create/update/delete`, `entity.text-search`, `entity.batch.*` (including `batch.revive`), `work-schedule.read/update`, `note.threads`, `note.reply-create`
 - **REST transport tests**: OAuth token acquisition, schema/entity route mapping, `_search` switching, write-method mapping, error classification, token reuse
 
 Recommended command during development:

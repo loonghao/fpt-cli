@@ -247,3 +247,47 @@ pub const ENTITY_BATCH_DELETE_SPEC: CommandSpec = CommandSpec {
     examples: ENTITY_BATCH_DELETE_EXAMPLES,
     notes: ENTITY_BATCH_NOTES,
 };
+
+const ENTITY_TEXT_SEARCH_EXAMPLES: &[&str] = &[
+    "fpt entity text-search --input '{\"text\":\"hero shot\"}' --site ... --auth-mode script --script-name ... --script-key ...",
+    "fpt entity text-search --input '{\"text\":\"explosion\",\"entity_types\":{\"Shot\":{},\"Asset\":{}}}' --site ...",
+];
+
+const ENTITY_TEXT_SEARCH_NOTES: &[&str] = &[
+    "Performs a cross-entity full-text search via POST /api/{ver}/entity/_text_search",
+    "Input JSON must include a `text` string; optional `entity_types` restricts the search scope",
+    "Returns matching records across multiple entity types",
+];
+
+pub const ENTITY_TEXT_SEARCH_SPEC: CommandSpec = CommandSpec {
+    name: "entity.text-search",
+    summary: "Search across entity types using full-text search",
+    risk: RiskLevel::Read,
+    implemented: true,
+    supports_dry_run: false,
+    preferred_transport: "rest",
+    fallback_transport: None,
+    input: "input JSON with text (search query) and optional entity_types",
+    output: "json",
+    examples: ENTITY_TEXT_SEARCH_EXAMPLES,
+    notes: ENTITY_TEXT_SEARCH_NOTES,
+};
+
+const ENTITY_BATCH_REVIVE_EXAMPLES: &[&str] = &[
+    "fpt entity batch revive Shot --input '{\"ids\":[860,861]}' --dry-run --output json",
+    "fpt entity batch revive Shot --input '{\"ids\":[860,861]}' --site ... --auth-mode script --script-name ... --script-key ...",
+];
+
+pub const ENTITY_BATCH_REVIVE_SPEC: CommandSpec = CommandSpec {
+    name: "entity.batch.revive",
+    summary: "Revive multiple previously retired entity records",
+    risk: RiskLevel::Write,
+    implemented: true,
+    supports_dry_run: true,
+    preferred_transport: "rpc",
+    fallback_transport: None,
+    input: "ids array / object with ids",
+    output: "json",
+    examples: ENTITY_BATCH_REVIVE_EXAMPLES,
+    notes: ENTITY_BATCH_NOTES,
+};

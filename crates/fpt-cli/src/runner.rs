@@ -47,6 +47,10 @@ pub async fn run(cli: Cli) -> Result<Value> {
                 app.schema_field_delete(connection, &entity, &field_name)
                     .await
             }
+            SchemaCommands::FieldRead { entity, field_name } => {
+                app.schema_field_read(connection, &entity, &field_name)
+                    .await
+            }
         },
         Commands::Entity(command) => match command {
             EntityCommands::Get { entity, id, fields } => {
@@ -107,6 +111,10 @@ pub async fn run(cli: Cli) -> Result<Value> {
                 id,
                 dry_run,
             } => app.entity_revive(connection, &entity, id, dry_run).await,
+            EntityCommands::TextSearch { input } => {
+                let body = required_json_input(input)?;
+                app.text_search(connection, body).await
+            }
             EntityCommands::Batch(command) => match command {
                 BatchEntityCommands::Get { entity, input } => {
                     let body = required_json_input(input)?;
@@ -171,12 +179,25 @@ pub async fn run(cli: Cli) -> Result<Value> {
                     )
                     .await
                 }
+                BatchEntityCommands::Revive {
+                    entity,
+                    input,
+                    dry_run,
+                } => {
+                    let body = required_json_input(input)?;
+                    app.entity_batch_revive(connection, &entity, body, dry_run)
+                        .await
+                }
             },
         },
         Commands::WorkSchedule(command) => match command {
             WorkScheduleCommands::Read { input } => {
                 let body = required_json_input(input)?;
                 app.work_schedule_read(connection, body).await
+            }
+            WorkScheduleCommands::Update { input } => {
+                let body = required_json_input(input)?;
+                app.work_schedule_update(connection, body).await
             }
         },
         Commands::Upload(command) => match command {
@@ -246,6 +267,10 @@ pub async fn run(cli: Cli) -> Result<Value> {
             NoteCommands::Threads { note_id, input } => {
                 let input = read_json_input(input.as_deref())?;
                 app.note_threads(connection, note_id, input).await
+            }
+            NoteCommands::ReplyCreate { note_id, input } => {
+                let body = required_json_input(input)?;
+                app.note_reply_create(connection, note_id, body).await
             }
         },
         Commands::Hierarchy(command) => match command {
