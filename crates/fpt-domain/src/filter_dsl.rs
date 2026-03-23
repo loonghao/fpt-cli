@@ -231,8 +231,8 @@ impl Parser {
                     "false" => Ok(Value::Bool(false)),
                     "null" => Ok(Value::Null),
                     _ => {
-                        // Entity-link shorthand: `EntityType:id` → {"type": "EntityType", "id": id}
-                        // Example: `Project:123` → {"type": "Project", "id": 123}
+                        // Entity-link shorthand: `EntityType:id` \u2192 {"type": "EntityType", "id": id}
+                        // Example: `Project:123` \u2192 {"type": "Project", "id": 123}
                         self.skip_whitespace();
                         if self.consume_char(':') {
                             let id = self.parse_number()?;

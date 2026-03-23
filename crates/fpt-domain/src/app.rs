@@ -6,6 +6,7 @@ mod find;
 mod follow;
 mod hierarchy;
 mod note;
+mod query_helpers;
 mod schema;
 mod server;
 mod summarize;
