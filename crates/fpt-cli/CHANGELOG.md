@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.13](https://github.com/loonghao/fpt-cli/compare/v0.2.12...v0.2.13) (2026-03-23)
+
+
+### Bug Fixes
+
+* use rustls-tls-native-roots to support enterprise MITM proxies ([#64](https://github.com/loonghao/fpt-cli/issues/64)) ([d3a0eda](https://github.com/loonghao/fpt-cli/commit/d3a0edaf37e1925848a5868f9d457d01506b8f3a))
+
 ## [0.2.12](https://github.com/loonghao/fpt-cli/compare/v0.2.11...v0.2.12) (2026-03-23)
 
 
