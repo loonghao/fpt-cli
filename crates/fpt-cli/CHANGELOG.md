@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.14](https://github.com/loonghao/fpt-cli/compare/v0.2.13...v0.2.14) (2026-03-23)
+
+
+### Miscellaneous Chores
+
+* **deps:** update rust crate zip to v8.4.0 ([a5512b3](https://github.com/loonghao/fpt-cli/commit/a5512b3296b5517c7485c8d5f24bc4e1bc228ee0))
+
 ## [0.2.13](https://github.com/loonghao/fpt-cli/compare/v0.2.12...v0.2.13) (2026-03-23)
 
 
