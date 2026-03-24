@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.2.18](https://github.com/loonghao/fpt-cli/compare/v0.2.17...v0.2.18) (2026-03-24)
+
+
+### Code Refactoring
+
+* deduplicate filter normalization and relocate query param builder ([#88](https://github.com/loonghao/fpt-cli/issues/88)) ([6996dd5](https://github.com/loonghao/fpt-cli/commit/6996dd5ae71e57f44e31c43033119239f00ea96e))
+* eliminate code duplication and improve type safety ([#84](https://github.com/loonghao/fpt-cli/issues/84)) ([a6ef06e](https://github.com/loonghao/fpt-cli/commit/a6ef06e9fd5c5c04ce0097bd7823b045b0a44f3b))
+* extract batch result helpers, deduplicate retry logic, and tighten visibility ([#89](https://github.com/loonghao/fpt-cli/issues/89)) ([7a967fc](https://github.com/loonghao/fpt-cli/commit/7a967fcd0cf948d2a24b669c55434fd266bf1ec9))
+
+
+### Miscellaneous Chores
+
+* code cleanup round 4 — deduplicate errors and helpers\n\n- Extract bad_format closure in split_repository to eliminate duplicated error construction (self_update.rs)\n- Extract binary_not_found_error helper shared by extract_tar_gz_binary and extract_zip_binary (self_update.rs)\n- Add RestTransport::is_debug() to consolidate 3 redundant env var lookups (transport.rs)\n- Replace build_note_query_params with existing build_common_query_params from activity.rs (~30 lines removed) (note.rs)\n- Replace format allocation with in-place push for trailing newline (config.rs) ([#86](https://github.com/loonghao/fpt-cli/issues/86)) ([95b733f](https://github.com/loonghao/fpt-cli/commit/95b733f6c2742ff583478c215384f3b1ecc13800))
+
 ## [0.2.17](https://github.com/loonghao/fpt-cli/compare/v0.2.16...v0.2.17) (2026-03-24)
 
 
