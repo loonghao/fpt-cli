@@ -1185,13 +1185,17 @@ fn parse_batch_summarize_input(input: Value) -> Result<Vec<Value>> {
                     )
                     .with_operation("parse_batch_summarize_input")
                     .with_missing_fields(["requests"])
-                    .with_expected_shape("a JSON object containing `requests` (array of summarize request objects)")
+                    .with_expected_shape(
+                        "a JSON object containing `requests` (array of summarize request objects)",
+                    )
                 })?
                 .as_array()
-                .ok_or_else(|| AppError::invalid_input("`requests` must be a JSON array of objects")
-                    .with_operation("parse_batch_summarize_input")
-                    .with_invalid_field("requests")
-                    .with_expected_shape("a JSON array of summarize request objects"))?
+                .ok_or_else(|| {
+                    AppError::invalid_input("`requests` must be a JSON array of objects")
+                        .with_operation("parse_batch_summarize_input")
+                        .with_invalid_field("requests")
+                        .with_expected_shape("a JSON array of summarize request objects")
+                })?
                 .clone();
             non_empty_items(requests, "requests")?
         }

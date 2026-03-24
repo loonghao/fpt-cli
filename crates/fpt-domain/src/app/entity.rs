@@ -258,7 +258,9 @@ fn build_count_payload(input: Option<Value>, filter_dsl: Option<String>) -> Resu
             let object = input.as_object().ok_or_else(|| {
                 AppError::invalid_input("entity count input must be a JSON object")
                     .with_operation("build_count_payload")
-                    .with_expected_shape("a JSON object containing optional `filters` and `filter_operator`")
+                    .with_expected_shape(
+                        "a JSON object containing optional `filters` and `filter_operator`",
+                    )
             })?;
             let filters = object.get("filters").cloned().unwrap_or(json!([]));
             let filter_operator = object.get("filter_operator").cloned();
@@ -278,10 +280,7 @@ fn build_count_payload(input: Option<Value>, filter_dsl: Option<String>) -> Resu
                     other => other,
                 })
                 .unwrap_or("all");
-            let conditions = parsed
-                .get("conditions")
-                .cloned()
-                .unwrap_or(json!([]));
+            let conditions = parsed.get("conditions").cloned().unwrap_or(json!([]));
             json!({
                 "filter_operator": operator,
                 "filters": conditions,

@@ -232,10 +232,7 @@ pub enum SchemaCommands {
     EntityDelete {
         entity: String,
     },
-    #[command(
-        name = "entity-create",
-        about = "Create a new custom entity type"
-    )]
+    #[command(name = "entity-create", about = "Create a new custom entity type")]
     EntityCreate {
         #[arg(long)]
         input: String,
