@@ -94,8 +94,11 @@ where
 const DEFAULT_BATCH_CONCURRENCY: usize = 8;
 const MAX_BATCH_CONCURRENCY: usize = 32;
 
+/// Environment variable for overriding the default batch concurrency limit.
+const ENV_FPT_BATCH_CONCURRENCY: &str = "FPT_BATCH_CONCURRENCY";
+
 fn batch_concurrency_limit() -> usize {
-    env::var("FPT_BATCH_CONCURRENCY")
+    env::var(ENV_FPT_BATCH_CONCURRENCY)
         .ok()
         .and_then(|value| value.parse::<usize>().ok())
         .filter(|value| *value > 0)

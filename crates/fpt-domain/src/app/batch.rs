@@ -711,7 +711,7 @@ where
 /// Build a batch response that includes execution statistics.
 ///
 /// `elapsed_ms` is the total wall-clock time for the batch operation.
-pub(super) fn batch_response_with_stats(
+fn batch_response_with_stats(
     operation: &str,
     entity: &str,
     results: Vec<Value>,
@@ -1071,7 +1071,9 @@ fn load_checkpoint_indices(path: &str) -> Result<HashSet<usize>> {
         }
         if let Ok(value) = serde_json::from_str::<Value>(trimmed) {
             if let Some(idx) = value.get("index").and_then(Value::as_u64) {
-                indices.insert(idx as usize);
+                if let Ok(i) = usize::try_from(idx) {
+                    indices.insert(i);
+                }
             }
         }
         // Silently skip malformed lines so a partial last write doesn't block resume.

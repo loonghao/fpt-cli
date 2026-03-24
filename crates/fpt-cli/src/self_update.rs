@@ -9,13 +9,14 @@ use sha2::{Digest, Sha256};
 use std::env;
 use std::fs::File;
 use std::io::{self, Write};
-
 use std::path::{Path, PathBuf};
 use tar::Archive;
 use tempfile::tempdir;
 use zip::ZipArchive;
 
 const DEFAULT_REPOSITORY: &str = "loonghao/fpt-cli";
+/// Environment variable for overriding the GitHub repository used by `self-update`.
+const ENV_FPT_UPDATE_REPOSITORY: &str = "FPT_UPDATE_REPOSITORY";
 const CHECKSUM_ASSET_NAME: &str = "fpt-checksums.txt";
 const SUPPORTED_TARGETS: &[&str] = &[
     "x86_64-pc-windows-msvc",
@@ -55,7 +56,7 @@ struct GitHubReleaseAsset {
 pub async fn run(args: SelfUpdateArgs) -> Result<Value> {
     let repository = args
         .repository
-        .or_else(|| env::var("FPT_UPDATE_REPOSITORY").ok())
+        .or_else(|| env::var(ENV_FPT_UPDATE_REPOSITORY).ok())
         .unwrap_or_else(|| DEFAULT_REPOSITORY.to_string());
     let (owner, repo) = split_repository(&repository)?;
     let target = detect_target()?;
