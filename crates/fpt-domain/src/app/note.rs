@@ -5,7 +5,7 @@ use crate::config::{ConnectionOverrides, ConnectionSettings};
 use crate::transport::ShotgridTransport;
 
 use super::App;
-use super::query_helpers::{scalar_to_string, string_list_to_csv};
+use super::activity::build_common_query_params;
 
 impl<T> App<T>
 where
@@ -18,7 +18,7 @@ where
         input: Option<Value>,
     ) -> Result<Value> {
         let config = ConnectionSettings::resolve(overrides)?;
-        let params = build_note_query_params(input)?;
+        let params = build_common_query_params(input)?;
         self.transport
             .note_threads(&config, note_id, &params)
             .await
@@ -76,38 +76,6 @@ fn translate_note_threads_error(error: AppError, note_id: u64) -> AppError {
     }
 
     error
-}
-
-/// Convert an optional JSON object into query string key-value pairs for note thread requests.
-fn build_note_query_params(input: Option<Value>) -> Result<Vec<(String, String)>> {
-    let Some(input) = input else {
-        return Ok(Vec::new());
-    };
-
-    let object = input.as_object().ok_or_else(|| {
-        AppError::invalid_input("note threads input must be a JSON object")
-            .with_operation("build_note_query_params")
-            .with_expected_shape("a JSON object containing fields like `fields` or `entity_fields`")
-    })?;
-
-    let mut params: Vec<(String, String)> = Vec::new();
-
-    for (key, value) in object {
-        match key.as_str() {
-            "fields" | "entity_fields" => {
-                let joined = string_list_to_csv(value, key)?;
-                if !joined.is_empty() {
-                    params.push((key.clone(), joined));
-                }
-            }
-            _ => {
-                let s = scalar_to_string(value, key)?;
-                params.push((key.clone(), s));
-            }
-        }
-    }
-
-    Ok(params)
 }
 
 fn validate_note_reply_body(body: &Value) -> Result<()> {

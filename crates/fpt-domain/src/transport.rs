@@ -287,6 +287,11 @@ impl Default for RestTransport {
 }
 
 impl RestTransport {
+    /// Returns `true` when `FPT_DEBUG` is set in the environment.
+    fn is_debug() -> bool {
+        std::env::var(ENV_FPT_DEBUG).is_ok()
+    }
+
     fn build_url(
         &self,
         config: &ConnectionSettings,
@@ -431,7 +436,7 @@ impl RestTransport {
         &self,
         config: &ConnectionSettings,
     ) -> Result<AccessTokenPayload> {
-        let debug = std::env::var(ENV_FPT_DEBUG).is_ok();
+        let debug = Self::is_debug();
 
         if let Some(cached) = self.cached_access_token(config)? {
             if debug {
@@ -540,7 +545,7 @@ impl RestTransport {
         query: &[(String, String)],
         body: Option<&Value>,
     ) -> Result<Value> {
-        let debug = std::env::var(ENV_FPT_DEBUG).is_ok();
+        let debug = Self::is_debug();
         let max_attempts = Self::max_retry_attempts();
         let mut attempt = 0u32;
         loop {
@@ -602,7 +607,7 @@ impl RestTransport {
             )
         })?;
 
-        let debug = std::env::var(ENV_FPT_DEBUG).is_ok();
+        let debug = Self::is_debug();
         let max_attempts = Self::max_retry_attempts();
         let mut attempt = 0u32;
         loop {
