@@ -2899,7 +2899,9 @@ async fn entity_count_with_filter_dsl() {
     let snapshot = transport.snapshot();
     let (_, payload) = &snapshot.entity_summarize_calls[0];
     assert_eq!(payload["filters"]["filter_operator"], "all");
-    let filters = payload["filters"]["filters"].as_array().expect("filters array");
+    let filters = payload["filters"]["filters"]
+        .as_array()
+        .expect("filters array");
     assert_eq!(filters.len(), 1);
     assert_eq!(filters[0][0], "sg_status_list");
 }

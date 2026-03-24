@@ -259,8 +259,11 @@ pub trait ShotgridTransport {
         entity: &str,
         field_name: &str,
     ) -> Result<Value>;
-    async fn schema_entity_create(&self, config: &ConnectionSettings, body: &Value)
-        -> Result<Value>;
+    async fn schema_entity_create(
+        &self,
+        config: &ConnectionSettings,
+        body: &Value,
+    ) -> Result<Value>;
     async fn schema_entity_revive(
         &self,
         config: &ConnectionSettings,

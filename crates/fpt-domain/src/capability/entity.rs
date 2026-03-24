@@ -403,9 +403,8 @@ pub const ENTITY_COUNT_SPEC: CommandSpec = CommandSpec {
     notes: ENTITY_COUNT_NOTES,
 };
 
-const ENTITY_BATCH_SUMMARIZE_EXAMPLES: &[&str] = &[
-    "fpt entity batch summarize --input @batch_summaries.json --output json",
-];
+const ENTITY_BATCH_SUMMARIZE_EXAMPLES: &[&str] =
+    &["fpt entity batch summarize --input @batch_summaries.json --output json"];
 
 const ENTITY_BATCH_SUMMARIZE_NOTES: &[&str] = &[
     "Runs multiple summarize queries concurrently in one CLI invocation",
