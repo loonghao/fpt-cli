@@ -20,6 +20,17 @@ const RETRY_MAX_DELAY_MS: u64 = 30_000;
 /// Shared dry-run note used by all request plan builders.
 const DRY_RUN_NOTE: &str = "dry-run: shows the planned request without making a network call";
 
+/// Environment variable that, when set, enables verbose debug output for
+/// transport-level operations (e.g. retry logging).
+const ENV_FPT_DEBUG: &str = "FPT_DEBUG";
+
+/// Environment variable for overriding the maximum number of retry attempts.
+const ENV_FPT_MAX_RETRIES: &str = "FPT_MAX_RETRIES";
+
+/// Safety margin (in seconds) subtracted from the access-token TTL so that
+/// the token is refreshed before it actually expires on the server.
+const TOKEN_EXPIRY_MARGIN_SECS: u64 = 30;
+
 #[derive(Debug, Clone, Default)]
 pub struct FindParams {
     pub query: Vec<(String, String)>,
@@ -387,7 +398,11 @@ impl RestTransport {
         payload: &AccessTokenPayload,
     ) -> Result<()> {
         let expires_at = payload.expires_in.map(|seconds| {
-            let effective_seconds = if seconds > 30 { seconds - 30 } else { seconds };
+            let effective_seconds = if seconds > TOKEN_EXPIRY_MARGIN_SECS {
+                seconds - TOKEN_EXPIRY_MARGIN_SECS
+            } else {
+                seconds
+            };
             Instant::now() + Duration::from_secs(effective_seconds)
         });
 
@@ -406,7 +421,7 @@ impl RestTransport {
         &self,
         config: &ConnectionSettings,
     ) -> Result<AccessTokenPayload> {
-        let debug = std::env::var("FPT_DEBUG").is_ok();
+        let debug = std::env::var(ENV_FPT_DEBUG).is_ok();
 
         if let Some(cached) = self.cached_access_token(config)? {
             if debug {
@@ -515,7 +530,7 @@ impl RestTransport {
         query: &[(String, String)],
         body: Option<&Value>,
     ) -> Result<Value> {
-        let debug = std::env::var("FPT_DEBUG").is_ok();
+        let debug = std::env::var(ENV_FPT_DEBUG).is_ok();
         let max_attempts = Self::max_retry_attempts();
         let mut attempt = 0u32;
         loop {
@@ -577,7 +592,7 @@ impl RestTransport {
             )
         })?;
 
-        let debug = std::env::var("FPT_DEBUG").is_ok();
+        let debug = std::env::var(ENV_FPT_DEBUG).is_ok();
         let max_attempts = Self::max_retry_attempts();
         let mut attempt = 0u32;
         loop {
@@ -626,7 +641,7 @@ impl RestTransport {
 
     /// Returns the maximum number of retry attempts, configurable via `FPT_MAX_RETRIES`.
     fn max_retry_attempts() -> u32 {
-        std::env::var("FPT_MAX_RETRIES")
+        std::env::var(ENV_FPT_MAX_RETRIES)
             .ok()
             .and_then(|v| v.parse::<u32>().ok())
             .unwrap_or(MAX_RETRY_ATTEMPTS)
