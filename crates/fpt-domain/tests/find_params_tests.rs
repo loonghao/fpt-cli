@@ -220,6 +220,12 @@ impl ShotgridTransport for RecordingTransport {
     async fn schema_field_revive(&self, _: &ConnectionSettings, _: &str, _: &str) -> Result<Value> {
         Ok(json!({}))
     }
+    async fn schema_entity_create(&self, _: &ConnectionSettings, _: &Value) -> Result<Value> {
+        Ok(json!({}))
+    }
+    async fn schema_entity_revive(&self, _: &ConnectionSettings, _: &str) -> Result<Value> {
+        Ok(json!({}))
+    }
 }
 
 fn test_overrides() -> ConnectionOverrides {

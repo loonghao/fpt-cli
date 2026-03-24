@@ -248,6 +248,13 @@ pub trait ShotgridTransport {
         entity: &str,
         field_name: &str,
     ) -> Result<Value>;
+    async fn schema_entity_create(&self, config: &ConnectionSettings, body: &Value)
+        -> Result<Value>;
+    async fn schema_entity_revive(
+        &self,
+        config: &ConnectionSettings,
+        entity: &str,
+    ) -> Result<Value>;
 }
 
 #[derive(Debug, Clone)]
@@ -1210,6 +1217,26 @@ impl ShotgridTransport for RestTransport {
         field_name: &str,
     ) -> Result<Value> {
         let path = format!("schema/{entity}/fields/{field_name}");
+        let query = vec![("revive".to_string(), "true".to_string())];
+        self.authorized_json_request(config, Method::POST, &path, &query, None)
+            .await
+    }
+
+    async fn schema_entity_create(
+        &self,
+        config: &ConnectionSettings,
+        body: &Value,
+    ) -> Result<Value> {
+        self.authorized_json_request(config, Method::POST, "schema", &[], Some(body))
+            .await
+    }
+
+    async fn schema_entity_revive(
+        &self,
+        config: &ConnectionSettings,
+        entity: &str,
+    ) -> Result<Value> {
+        let path = format!("schema/{entity}");
         let query = vec![("revive".to_string(), "true".to_string())];
         self.authorized_json_request(config, Method::POST, &path, &query, None)
             .await

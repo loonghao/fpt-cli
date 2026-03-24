@@ -232,6 +232,21 @@ pub enum SchemaCommands {
     EntityDelete {
         entity: String,
     },
+    #[command(
+        name = "entity-create",
+        about = "Create a new custom entity type"
+    )]
+    EntityCreate {
+        #[arg(long)]
+        input: String,
+    },
+    #[command(
+        name = "entity-revive",
+        about = "Revive a previously retired entity type"
+    )]
+    EntityRevive {
+        entity: String,
+    },
 }
 
 #[derive(Debug, Subcommand)]
@@ -321,6 +336,17 @@ pub enum EntityCommands {
     UpdateLastAccessed {
         #[arg(help = "Project record id")]
         project_id: u64,
+    },
+    #[command(
+        name = "count",
+        about = "Count entity records matching optional filters"
+    )]
+    Count {
+        entity: String,
+        #[arg(long)]
+        input: Option<String>,
+        #[arg(long = "filter-dsl")]
+        filter_dsl: Option<String>,
     },
     #[command(subcommand)]
     Batch(BatchEntityCommands),
@@ -419,6 +445,14 @@ pub enum BatchEntityCommands {
     )]
     FindOne {
         entity: String,
+        #[arg(long)]
+        input: String,
+    },
+    #[command(
+        name = "summarize",
+        about = "Run multiple summarize queries in one CLI invocation"
+    )]
+    Summarize {
         #[arg(long)]
         input: String,
     },

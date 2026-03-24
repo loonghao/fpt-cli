@@ -114,4 +114,22 @@ where
             .schema_field_revive(&config, entity, field_name)
             .await
     }
+
+    pub async fn schema_entity_create(
+        &self,
+        overrides: ConnectionOverrides,
+        body: Value,
+    ) -> Result<Value> {
+        let config = ConnectionSettings::resolve(overrides)?;
+        self.transport.schema_entity_create(&config, &body).await
+    }
+
+    pub async fn schema_entity_revive(
+        &self,
+        overrides: ConnectionOverrides,
+        entity: &str,
+    ) -> Result<Value> {
+        let config = ConnectionSettings::resolve(overrides)?;
+        self.transport.schema_entity_revive(&config, entity).await
+    }
 }

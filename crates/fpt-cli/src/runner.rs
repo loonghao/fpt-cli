@@ -65,6 +65,13 @@ pub async fn run(cli: Cli) -> Result<Value> {
             SchemaCommands::EntityDelete { entity } => {
                 app.schema_entity_delete(connection, &entity).await
             }
+            SchemaCommands::EntityCreate { input } => {
+                let body = required_json_input(input)?;
+                app.schema_entity_create(connection, body).await
+            }
+            SchemaCommands::EntityRevive { entity } => {
+                app.schema_entity_revive(connection, &entity).await
+            }
         },
         Commands::Entity(command) => match command {
             EntityCommands::Get { entity, id, fields } => {
@@ -143,6 +150,15 @@ pub async fn run(cli: Cli) -> Result<Value> {
                 app.project_update_last_accessed(connection, project_id)
                     .await
             }
+            EntityCommands::Count {
+                entity,
+                input,
+                filter_dsl,
+            } => {
+                let input = read_json_input(input.as_deref())?;
+                app.entity_count(connection, &entity, input, filter_dsl)
+                    .await
+            }
             EntityCommands::Batch(command) => match command {
                 BatchEntityCommands::Get { entity, input } => {
                     let body = required_json_input(input)?;
@@ -219,6 +235,10 @@ pub async fn run(cli: Cli) -> Result<Value> {
                 BatchEntityCommands::FindOne { entity, input } => {
                     let body = required_json_input(input)?;
                     app.entity_batch_find_one(connection, &entity, body).await
+                }
+                BatchEntityCommands::Summarize { input } => {
+                    let body = required_json_input(input)?;
+                    app.entity_batch_summarize(connection, body).await
                 }
             },
         },

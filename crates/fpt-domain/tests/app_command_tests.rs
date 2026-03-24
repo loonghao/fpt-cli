@@ -447,6 +447,22 @@ impl ShotgridTransport for RecordingTransport {
     ) -> Result<Value> {
         Ok(json!({"entity": entity, "field_name": field_name, "revived": true}))
     }
+
+    async fn schema_entity_create(
+        &self,
+        _config: &ConnectionSettings,
+        body: &Value,
+    ) -> Result<Value> {
+        Ok(json!({"body": body, "created": true}))
+    }
+
+    async fn schema_entity_revive(
+        &self,
+        _config: &ConnectionSettings,
+        entity: &str,
+    ) -> Result<Value> {
+        Ok(json!({"entity": entity, "revived": true}))
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -770,6 +786,22 @@ impl ShotgridTransport for FindOneTransport {
     ) -> Result<Value> {
         Err(AppError::not_implemented("unused"))
     }
+
+    async fn schema_entity_create(
+        &self,
+        _config: &ConnectionSettings,
+        _body: &Value,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+
+    async fn schema_entity_revive(
+        &self,
+        _config: &ConnectionSettings,
+        _entity: &str,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
 }
 
 #[derive(Debug, Clone, Default)]
@@ -1082,6 +1114,22 @@ impl ShotgridTransport for NoteThreadsNotFoundTransport {
         _config: &ConnectionSettings,
         _entity: &str,
         _field_name: &str,
+    ) -> Result<Value> {
+        Ok(json!({}))
+    }
+
+    async fn schema_entity_create(
+        &self,
+        _config: &ConnectionSettings,
+        _body: &Value,
+    ) -> Result<Value> {
+        Ok(json!({}))
+    }
+
+    async fn schema_entity_revive(
+        &self,
+        _config: &ConnectionSettings,
+        _entity: &str,
     ) -> Result<Value> {
         Ok(json!({}))
     }
@@ -1409,6 +1457,22 @@ impl ShotgridTransport for SlowGetTransport {
         _config: &ConnectionSettings,
         _entity: &str,
         _field_name: &str,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+
+    async fn schema_entity_create(
+        &self,
+        _config: &ConnectionSettings,
+        _body: &Value,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+
+    async fn schema_entity_revive(
+        &self,
+        _config: &ConnectionSettings,
+        _entity: &str,
     ) -> Result<Value> {
         Err(AppError::not_implemented("unused"))
     }
@@ -2765,5 +2829,175 @@ async fn capabilities_includes_new_schema_and_batch_specs() {
     assert!(
         names.contains(&"entity.batch.find-one"),
         "should include entity.batch.find-one"
+    );
+}
+
+// ────────────────────────────────────────────────────────────────────
+// schema.entity-create, schema.entity-revive, entity.count,
+// entity.batch.upsert capability, entity.batch.summarize
+// ────────────────────────────────────────────────────────────────────
+
+#[tokio::test]
+async fn schema_entity_create_delegates_to_transport() {
+    let app = App::new(RecordingTransport::default());
+    let body = json!({"name": {"value": "CustomEntity01"}});
+    let result = app
+        .schema_entity_create(overrides(), body.clone())
+        .await
+        .expect("schema entity create succeeds");
+    assert_eq!(result["body"], body);
+    assert_eq!(result["created"], true);
+}
+
+#[tokio::test]
+async fn schema_entity_revive_delegates_to_transport() {
+    let app = App::new(RecordingTransport::default());
+    let result = app
+        .schema_entity_revive(overrides(), "CustomEntity01")
+        .await
+        .expect("schema entity revive succeeds");
+    assert_eq!(result["entity"], "CustomEntity01");
+    assert_eq!(result["revived"], true);
+}
+
+#[tokio::test]
+async fn entity_count_without_filters_returns_record_count() {
+    let transport = RecordingTransport::default();
+    let app = App::new(transport.clone());
+    let result = app
+        .entity_count(overrides(), "Shot", None, None)
+        .await
+        .expect("entity count without filters succeeds");
+    // The mock summarize returns the entity and summaries.
+    assert_eq!(result["entity"], "Shot");
+    assert_eq!(result["summaries"][0]["type"], "record_count");
+
+    let snapshot = transport.snapshot();
+    assert_eq!(snapshot.entity_summarize_calls.len(), 1);
+    let (entity, payload) = &snapshot.entity_summarize_calls[0];
+    assert_eq!(entity, "Shot");
+    assert_eq!(payload["summaries"][0]["field"], "id");
+    assert_eq!(payload["summaries"][0]["type"], "record_count");
+    assert_eq!(payload["filters"]["filter_operator"], "all");
+}
+
+#[tokio::test]
+async fn entity_count_with_filter_dsl() {
+    let transport = RecordingTransport::default();
+    let app = App::new(transport.clone());
+    let result = app
+        .entity_count(
+            overrides(),
+            "Task",
+            None,
+            Some("sg_status_list == 'ip'".to_string()),
+        )
+        .await
+        .expect("entity count with filter_dsl succeeds");
+    assert_eq!(result["entity"], "Task");
+
+    let snapshot = transport.snapshot();
+    let (_, payload) = &snapshot.entity_summarize_calls[0];
+    assert_eq!(payload["filters"]["filter_operator"], "all");
+    let filters = payload["filters"]["filters"].as_array().expect("filters array");
+    assert_eq!(filters.len(), 1);
+    assert_eq!(filters[0][0], "sg_status_list");
+}
+
+#[tokio::test]
+async fn entity_count_with_json_input() {
+    let transport = RecordingTransport::default();
+    let app = App::new(transport.clone());
+    let result = app
+        .entity_count(
+            overrides(),
+            "Version",
+            Some(json!({
+                "filters": [["sg_status_list", "is", "ip"]],
+                "filter_operator": "any"
+            })),
+            None,
+        )
+        .await
+        .expect("entity count with JSON input succeeds");
+    assert_eq!(result["entity"], "Version");
+
+    let snapshot = transport.snapshot();
+    let (_, payload) = &snapshot.entity_summarize_calls[0];
+    assert_eq!(payload["filters"]["filter_operator"], "any");
+}
+
+#[tokio::test]
+async fn entity_count_rejects_input_and_filter_dsl_together() {
+    let app = App::new(RecordingTransport::default());
+    let err = app
+        .entity_count(
+            overrides(),
+            "Shot",
+            Some(json!({"filters": []})),
+            Some("code == 'a'".to_string()),
+        )
+        .await
+        .expect_err("input and filter_dsl together should be rejected");
+    assert_eq!(err.envelope().code, "INVALID_INPUT");
+}
+
+#[tokio::test]
+async fn entity_batch_summarize_aggregates_results() {
+    let app = App::new(RecordingTransport::default());
+    let input = json!([
+        {
+            "entity": "Shot",
+            "payload": {
+                "filters": {"filter_operator": "all", "filters": []},
+                "summaries": [{"field": "id", "type": "record_count"}]
+            }
+        },
+        {
+            "entity": "Task",
+            "payload": {
+                "filters": {"filter_operator": "all", "filters": []},
+                "summaries": [{"field": "id", "type": "record_count"}]
+            }
+        }
+    ]);
+    let result = app
+        .entity_batch_summarize(overrides(), input)
+        .await
+        .expect("batch summarize succeeds");
+    assert_eq!(result["operation"], "entity.batch.summarize");
+    assert_eq!(result["total"], 2);
+    assert_eq!(result["success_count"], 2);
+    assert_eq!(result["failure_count"], 0);
+    let results = result["results"].as_array().expect("results array");
+    assert_eq!(results[0]["ok"], true);
+    assert_eq!(results[1]["ok"], true);
+}
+
+#[tokio::test]
+async fn capabilities_includes_all_new_specs() {
+    let app = App::new(RecordingTransport::default());
+    let result = app.capabilities(env!("CARGO_PKG_VERSION"));
+    let commands = result["commands"].as_array().expect("commands array");
+    let names: Vec<&str> = commands.iter().filter_map(|c| c["name"].as_str()).collect();
+    assert!(
+        names.contains(&"schema.entity-create"),
+        "should include schema.entity-create"
+    );
+    assert!(
+        names.contains(&"schema.entity-revive"),
+        "should include schema.entity-revive"
+    );
+    assert!(
+        names.contains(&"entity.batch.upsert"),
+        "should include entity.batch.upsert"
+    );
+    assert!(
+        names.contains(&"entity.count"),
+        "should include entity.count"
+    );
+    assert!(
+        names.contains(&"entity.batch.summarize"),
+        "should include entity.batch.summarize"
     );
 }
