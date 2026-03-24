@@ -14,16 +14,25 @@ mod work_schedule;
 use fpt_core::CommandSpec;
 
 static COMMANDS: &[CommandSpec] = &[
+    // Core
     core::CAPABILITIES_SPEC,
     core::INSPECT_COMMAND_SPEC,
+    // Auth
     auth::AUTH_TEST_SPEC,
+    // Server
     server::SERVER_INFO_SPEC,
+    // Schema
     schema::SCHEMA_ENTITIES_SPEC,
+    schema::SCHEMA_ENTITY_READ_SPEC,
+    schema::SCHEMA_ENTITY_UPDATE_SPEC,
+    schema::SCHEMA_ENTITY_DELETE_SPEC,
     schema::SCHEMA_FIELDS_SPEC,
     schema::SCHEMA_FIELD_CREATE_SPEC,
+    schema::SCHEMA_FIELD_READ_SPEC,
     schema::SCHEMA_FIELD_UPDATE_SPEC,
     schema::SCHEMA_FIELD_DELETE_SPEC,
-    schema::SCHEMA_FIELD_READ_SPEC,
+    schema::SCHEMA_FIELD_REVIVE_SPEC,
+    // Entity — single operations
     entity::ENTITY_GET_SPEC,
     entity::ENTITY_FIND_SPEC,
     entity::ENTITY_FIND_ONE_SPEC,
@@ -33,34 +42,38 @@ static COMMANDS: &[CommandSpec] = &[
     entity::ENTITY_DELETE_SPEC,
     entity::ENTITY_REVIVE_SPEC,
     entity::ENTITY_TEXT_SEARCH_SPEC,
+    entity::ENTITY_RELATIONSHIP_SPEC,
+    entity::ENTITY_UPDATE_LAST_ACCESSED_SPEC,
+    // Entity — batch operations
     entity::ENTITY_BATCH_GET_SPEC,
     entity::ENTITY_BATCH_FIND_SPEC,
+    entity::ENTITY_BATCH_FIND_ONE_SPEC,
     entity::ENTITY_BATCH_CREATE_SPEC,
     entity::ENTITY_BATCH_UPDATE_SPEC,
     entity::ENTITY_BATCH_DELETE_SPEC,
     entity::ENTITY_BATCH_REVIVE_SPEC,
-    entity::ENTITY_BATCH_FIND_ONE_SPEC,
+    // Follow
     follow::ENTITY_FOLLOWERS_SPEC,
     follow::ENTITY_FOLLOW_SPEC,
     follow::ENTITY_UNFOLLOW_SPEC,
     follow::USER_FOLLOWING_SPEC,
+    // Note
     note::NOTE_THREADS_SPEC,
     note::NOTE_REPLY_CREATE_SPEC,
+    // Hierarchy
     hierarchy::HIERARCHY_SEARCH_SPEC,
+    // Work schedule
     work_schedule::WORK_SCHEDULE_READ_SPEC,
     work_schedule::WORK_SCHEDULE_UPDATE_SPEC,
+    // Upload / download
     upload::UPLOAD_URL_SPEC,
     upload::DOWNLOAD_URL_SPEC,
     upload::THUMBNAIL_URL_SPEC,
+    // Activity
     activity::ACTIVITY_STREAM_SPEC,
     activity::EVENT_LOG_ENTRIES_SPEC,
     activity::PREFERENCES_GET_SPEC,
-    entity::ENTITY_RELATIONSHIP_SPEC,
-    entity::ENTITY_UPDATE_LAST_ACCESSED_SPEC,
-    schema::SCHEMA_ENTITY_READ_SPEC,
-    schema::SCHEMA_ENTITY_UPDATE_SPEC,
-    schema::SCHEMA_ENTITY_DELETE_SPEC,
-    schema::SCHEMA_FIELD_REVIVE_SPEC,
+    // Self-update & config
     self_update::SELF_UPDATE_SPEC,
     self_update::CONFIG_GET_SPEC,
     self_update::CONFIG_PATH_SPEC,
