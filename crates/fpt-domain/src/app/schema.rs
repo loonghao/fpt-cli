@@ -82,6 +82,27 @@ where
         self.transport.schema_entity_read(&config, entity).await
     }
 
+    pub async fn schema_entity_update(
+        &self,
+        overrides: ConnectionOverrides,
+        entity: &str,
+        body: Value,
+    ) -> Result<Value> {
+        let config = ConnectionSettings::resolve(overrides)?;
+        self.transport
+            .schema_entity_update(&config, entity, &body)
+            .await
+    }
+
+    pub async fn schema_entity_delete(
+        &self,
+        overrides: ConnectionOverrides,
+        entity: &str,
+    ) -> Result<Value> {
+        let config = ConnectionSettings::resolve(overrides)?;
+        self.transport.schema_entity_delete(&config, entity).await
+    }
+
     pub async fn schema_field_revive(
         &self,
         overrides: ConnectionOverrides,

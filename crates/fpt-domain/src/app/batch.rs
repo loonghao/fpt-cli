@@ -654,6 +654,71 @@ where
             elapsed_ms,
         ))
     }
+
+    pub async fn entity_batch_find_one(
+        &self,
+        overrides: ConnectionOverrides,
+        entity: &str,
+        input: Value,
+    ) -> Result<Value> {
+        let requests = parse_batch_find_input(input)?;
+        let config = ConnectionSettings::resolve(overrides)?;
+        let transport = &self.transport;
+        let config = &config;
+        let started_at = Instant::now();
+        let mut results = stream::iter(requests.into_iter().enumerate())
+            .map(|(index, request)| async move {
+                match build_find_params(Some(request.clone()), None) {
+                    Ok(mut params) => {
+                        upsert_query_param(&mut params.query, "page[size]", "1");
+                        match transport.entity_find(config, entity, params).await {
+                            Ok(response) => {
+                                let record =
+                                    super::find::extract_find_one_response(response);
+                                match record {
+                                    Ok(value) => json!({
+                                        "index": index,
+                                        "ok": true,
+                                        "request": request,
+                                        "response": value,
+                                    }),
+                                    Err(error) => json!({
+                                        "index": index,
+                                        "ok": false,
+                                        "request": request,
+                                        "error": error.envelope(),
+                                    }),
+                                }
+                            }
+                            Err(error) => json!({
+                                "index": index,
+                                "ok": false,
+                                "request": request,
+                                "error": error.envelope(),
+                            }),
+                        }
+                    }
+                    Err(error) => json!({
+                        "index": index,
+                        "ok": false,
+                        "request": request,
+                        "error": error.envelope(),
+                    }),
+                }
+            })
+            .buffer_unordered(batch_concurrency_limit())
+            .collect::<Vec<_>>()
+            .await;
+        sort_batch_results(&mut results);
+        let elapsed_ms = started_at.elapsed().as_millis() as u64;
+
+        Ok(batch_response_with_stats(
+            "entity.batch.find-one",
+            entity,
+            results,
+            elapsed_ms,
+        ))
+    }
 }
 
 /// Build a batch response that includes execution statistics.

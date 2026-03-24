@@ -228,6 +228,17 @@ pub trait ShotgridTransport {
         project_id: u64,
     ) -> Result<Value>;
     async fn schema_entity_read(&self, config: &ConnectionSettings, entity: &str) -> Result<Value>;
+    async fn schema_entity_update(
+        &self,
+        config: &ConnectionSettings,
+        entity: &str,
+        body: &Value,
+    ) -> Result<Value>;
+    async fn schema_entity_delete(
+        &self,
+        config: &ConnectionSettings,
+        entity: &str,
+    ) -> Result<Value>;
     async fn schema_field_revive(
         &self,
         config: &ConnectionSettings,
@@ -1165,6 +1176,27 @@ impl ShotgridTransport for RestTransport {
     async fn schema_entity_read(&self, config: &ConnectionSettings, entity: &str) -> Result<Value> {
         let path = format!("schema/{entity}");
         self.authorized_json_request(config, Method::GET, &path, &[], None)
+            .await
+    }
+
+    async fn schema_entity_update(
+        &self,
+        config: &ConnectionSettings,
+        entity: &str,
+        body: &Value,
+    ) -> Result<Value> {
+        let path = format!("schema/{entity}");
+        self.authorized_json_request(config, Method::PUT, &path, &[], Some(body))
+            .await
+    }
+
+    async fn schema_entity_delete(
+        &self,
+        config: &ConnectionSettings,
+        entity: &str,
+    ) -> Result<Value> {
+        let path = format!("schema/{entity}");
+        self.authorized_json_request(config, Method::DELETE, &path, &[], None)
             .await
     }
 

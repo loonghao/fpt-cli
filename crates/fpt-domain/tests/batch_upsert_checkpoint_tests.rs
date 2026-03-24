@@ -394,6 +394,23 @@ impl ShotgridTransport for UpsertTransport {
         Err(AppError::not_implemented("unused"))
     }
 
+    async fn schema_entity_update(
+        &self,
+        _config: &fpt_domain::ConnectionSettings,
+        _entity: &str,
+        _body: &Value,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+
+    async fn schema_entity_delete(
+        &self,
+        _config: &fpt_domain::ConnectionSettings,
+        _entity: &str,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+
     async fn schema_field_revive(
         &self,
         _config: &fpt_domain::ConnectionSettings,

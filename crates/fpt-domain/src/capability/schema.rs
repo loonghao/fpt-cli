@@ -153,3 +153,50 @@ pub const SCHEMA_FIELD_REVIVE_SPEC: CommandSpec = CommandSpec {
     examples: SCHEMA_FIELD_REVIVE_EXAMPLES,
     notes: SCHEMA_FIELD_REVIVE_NOTES,
 };
+
+const SCHEMA_ENTITY_UPDATE_EXAMPLES: &[&str] = &[
+    "fpt schema entity-update CustomEntity --input '{\"name\":{\"value\":\"Renamed Entity\"}}' --site ...",
+];
+
+const SCHEMA_ENTITY_UPDATE_NOTES: &[&str] = &[
+    "Updates entity type properties via PUT /api/{ver}/schema/{entity_type}",
+    "Requires admin-level credentials",
+];
+
+pub const SCHEMA_ENTITY_UPDATE_SPEC: CommandSpec = CommandSpec {
+    name: "schema.entity-update",
+    summary: "Update properties of an entity type",
+    risk: RiskLevel::Write,
+    implemented: true,
+    supports_dry_run: false,
+    preferred_transport: "rest",
+    fallback_transport: None,
+    input: "entity name + properties JSON",
+    output: "json",
+    examples: SCHEMA_ENTITY_UPDATE_EXAMPLES,
+    notes: SCHEMA_ENTITY_UPDATE_NOTES,
+};
+
+const SCHEMA_ENTITY_DELETE_EXAMPLES: &[&str] = &[
+    "fpt schema entity-delete CustomEntity --site ... --auth-mode script --script-name ... --script-key ...",
+];
+
+const SCHEMA_ENTITY_DELETE_NOTES: &[&str] = &[
+    "Deletes (retires) an entity type via DELETE /api/{ver}/schema/{entity_type}",
+    "This is a destructive operation that requires admin-level credentials",
+    "Once deleted, the entity type can no longer be used until revived",
+];
+
+pub const SCHEMA_ENTITY_DELETE_SPEC: CommandSpec = CommandSpec {
+    name: "schema.entity-delete",
+    summary: "Delete (retire) an entity type",
+    risk: RiskLevel::Destructive,
+    implemented: true,
+    supports_dry_run: false,
+    preferred_transport: "rest",
+    fallback_transport: None,
+    input: "entity name",
+    output: "json",
+    examples: SCHEMA_ENTITY_DELETE_EXAMPLES,
+    notes: SCHEMA_ENTITY_DELETE_NOTES,
+};

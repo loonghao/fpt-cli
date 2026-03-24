@@ -21,7 +21,8 @@
 - 面向自动化的 **结构化 JSON 输出**
 - 命令级 **capability / inspect** 发现接口
 - 用于认证、schema 与 entity CRUD 的 **REST transport MVP**
-- 面向高频“只取第一条”场景的 **`entity.find-one`**
+- **Schema entity CRUD**：读取、更新、删除 entity type
+- 面向高频"只取第一条"场景的 **`entity.find-one`**
 - 用于服务端聚合统计与分组汇总的 **`entity.summarize`**
 - 支持 `additional_filter_presets` 的 **`entity.find` 结构化 `_search`**
 
@@ -193,8 +194,11 @@ fpt self-update --check --output pretty-json
 fpt self-update
 
 fpt schema field-read Shot code --site ...
+fpt schema entity-update CustomEntity01 --input @entity_props.json --site ...
+fpt schema entity-delete CustomEntity01 --site ...
 fpt entity batch get Shot --input '{"ids":[101,102],"fields":["code","sg_status_list"]}' --output json
 fpt entity batch find Asset --input @batch_queries.json --output json
+fpt entity batch find-one Shot --input @batch_queries.json --output json
 fpt entity batch create Version --input @batch_payloads.json --dry-run --output json
 fpt entity batch update Task --input @batch_updates.json --dry-run --output json
 fpt entity batch delete Playlist --input '{"ids":[99,100]}' --dry-run --output json
@@ -208,13 +212,14 @@ fpt note reply-create 456 --input '{"content":"Looks great!"}' --site ...
 
 ### 批量 CRUD
 
-`entity batch` 提供批量 get / find / create / update / delete / revive 工作流。
+`entity batch` 提供批量 get / find / find-one / create / update / delete / revive 工作流。
 当前实现是**在 CLI 侧编排已有 REST CRUD 端点**，统一返回 `results` 数组，其中每一项都会携带自己的 `ok` 状态以及 `response` 或 `error`。
 
 输入约定：
 
 - **`entity batch get`**：`[1,2,3]` 或 `{"ids":[1,2,3],"fields":["code"]}`
 - **`entity batch find`**：`[{...query1...},{...query2...}]` 或 `{"requests":[...]}`
+- **`entity batch find-one`**：与 `batch find` 相同，但每个查询只返回第一条匹配记录
 - **`entity batch create`**：`[{...body1...},{...body2...}]` 或 `{"items":[...]}`
 - **`entity batch update`**：`[{"id":42,"body":{...}}, {"id":43,"body":{...}}]` 或 `{"items":[...]}`
 - **`entity batch delete`**：`[42,43]` 或 `{"ids":[42,43]}`
@@ -255,7 +260,7 @@ fpt entity find Asset --filter-dsl "sg_status_list == 'ip' and (code ~ 'bunny' o
 
 当前测试覆盖分为两层：
 
-- **App 编排测试**：`auth.test`、`schema.entities`、`schema.fields`、`schema.field-read`、`entity.get/find/create/update/delete`、`entity.text-search`、`entity.batch.*`（含 `batch.revive`）、`work-schedule.read/update`、`note.threads`、`note.reply-create`
+- **App 编排测试**：`auth.test`、`schema.entities`、`schema.fields`、`schema.field-read`、`schema.entity-read/update/delete`、`entity.get/find/create/update/delete`、`entity.text-search`、`entity.batch.*`（含 `batch.find-one` 和 `batch.revive`）、`work-schedule.read/update`、`note.threads`、`note.reply-create`
 - **REST transport 测试**：OAuth token 获取、schema/entity 路由映射、`_search` 切换、写操作 method 映射、错误分类、token 复用
 
 开发时建议优先执行：

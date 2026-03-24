@@ -20,7 +20,8 @@ This repository is the first implementation stage and already includes:
 - **Structured JSON output** for automation, now used as the default output mode
 - **Command capability / inspect** discovery APIs
 - **REST transport MVP** for auth, schema, and entity CRUD
-- **`entity.find-one`** for the common “return the first match” workflow
+- **Schema entity CRUD**: read, update, and delete entity types
+- **`entity.find-one`** for the common "return the first match" workflow
 - **`entity.summarize`** for server-side aggregate summaries and grouped rollups
 - **`entity.find` structured `_search` support**, including `additional_filter_presets`
 
@@ -192,9 +193,12 @@ fpt self-update --check --output pretty-json
 fpt self-update
 
 fpt schema field-read Shot code --site ...
+fpt schema entity-update CustomEntity01 --input @entity_props.json --site ...
+fpt schema entity-delete CustomEntity01 --site ...
 fpt entity batch get Shot --input '{"ids":[101,102],"fields":["code","sg_status_list"]}' --output json
 
 fpt entity batch find Asset --input @batch_queries.json --output json
+fpt entity batch find-one Shot --input @batch_queries.json --output json
 fpt entity batch create Version --input @batch_payloads.json --dry-run --output json
 fpt entity batch update Task --input @batch_updates.json --dry-run --output json
 fpt entity batch delete Playlist --input '{"ids":[99,100]}' --dry-run --output json
@@ -208,13 +212,14 @@ fpt note reply-create 456 --input '{"content":"Looks great!"}' --site ...
 
 ### Batch CRUD
 
-`entity batch` provides batch get / find / create / update / delete / revive workflows.
+`entity batch` provides batch get / find / find-one / create / update / delete / revive workflows.
 The current implementation is **client-side orchestration over existing REST CRUD endpoints** and returns a unified `results` array where each item carries its own `ok` state plus `response` or `error`.
 
 Input conventions:
 
 - **`entity batch get`**: `[1,2,3]` or `{"ids":[1,2,3],"fields":["code"]}`
 - **`entity batch find`**: `[{...query1...},{...query2...}]` or `{"requests":[...]}`
+- **`entity batch find-one`**: same as `batch find` but returns only the first matching record per query
 - **`entity batch create`**: `[{...body1...},{...body2...}]` or `{"items":[...]}`
 - **`entity batch update`**: `[{"id":42,"body":{...}}, {"id":43,"body":{...}}]` or `{"items":[...]}`
 - **`entity batch delete`**: `[42,43]` or `{"ids":[42,43]}`
@@ -255,7 +260,7 @@ fpt entity find Asset --filter-dsl "sg_status_list == 'ip' and (code ~ 'bunny' o
 
 Current coverage is split into two layers:
 
-- **App orchestration tests**: `auth.test`, `schema.entities`, `schema.fields`, `schema.field-read`, `entity.get/find/create/update/delete`, `entity.text-search`, `entity.batch.*` (including `batch.revive`), `work-schedule.read/update`, `note.threads`, `note.reply-create`
+- **App orchestration tests**: `auth.test`, `schema.entities`, `schema.fields`, `schema.field-read`, `schema.entity-read/update/delete`, `entity.get/find/create/update/delete`, `entity.text-search`, `entity.batch.*` (including `batch.find-one` and `batch.revive`), `work-schedule.read/update`, `note.threads`, `note.reply-create`
 - **REST transport tests**: OAuth token acquisition, schema/entity route mapping, `_search` switching, write-method mapping, error classification, token reuse
 
 Recommended command during development:

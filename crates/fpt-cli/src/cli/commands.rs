@@ -222,6 +222,22 @@ pub enum SchemaCommands {
         entity: String,
         field_name: String,
     },
+    #[command(
+        name = "entity-update",
+        about = "Update properties of an entity type"
+    )]
+    EntityUpdate {
+        entity: String,
+        #[arg(long)]
+        input: String,
+    },
+    #[command(
+        name = "entity-delete",
+        about = "Delete (retire) an entity type"
+    )]
+    EntityDelete {
+        entity: String,
+    },
 }
 
 #[derive(Debug, Subcommand)]
@@ -402,6 +418,15 @@ pub enum BatchEntityCommands {
         input: String,
         #[arg(long)]
         dry_run: bool,
+    },
+    #[command(
+        name = "find-one",
+        about = "Run multiple find-one queries in one CLI invocation"
+    )]
+    FindOne {
+        entity: String,
+        #[arg(long)]
+        input: String,
     },
 }
 

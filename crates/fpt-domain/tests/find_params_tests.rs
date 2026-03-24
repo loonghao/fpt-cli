@@ -206,6 +206,17 @@ impl ShotgridTransport for RecordingTransport {
     async fn schema_entity_read(&self, _: &ConnectionSettings, _: &str) -> Result<Value> {
         Ok(json!({}))
     }
+    async fn schema_entity_update(
+        &self,
+        _: &ConnectionSettings,
+        _: &str,
+        _: &Value,
+    ) -> Result<Value> {
+        Ok(json!({}))
+    }
+    async fn schema_entity_delete(&self, _: &ConnectionSettings, _: &str) -> Result<Value> {
+        Ok(json!({}))
+    }
     async fn schema_field_revive(&self, _: &ConnectionSettings, _: &str, _: &str) -> Result<Value> {
         Ok(json!({}))
     }

@@ -58,6 +58,13 @@ pub async fn run(cli: Cli) -> Result<Value> {
                 app.schema_field_revive(connection, &entity, &field_name)
                     .await
             }
+            SchemaCommands::EntityUpdate { entity, input } => {
+                let body = required_json_input(input)?;
+                app.schema_entity_update(connection, &entity, body).await
+            }
+            SchemaCommands::EntityDelete { entity } => {
+                app.schema_entity_delete(connection, &entity).await
+            }
         },
         Commands::Entity(command) => match command {
             EntityCommands::Get { entity, id, fields } => {
@@ -208,6 +215,10 @@ pub async fn run(cli: Cli) -> Result<Value> {
                     let body = required_json_input(input)?;
                     app.entity_batch_revive(connection, &entity, body, dry_run)
                         .await
+                }
+                BatchEntityCommands::FindOne { entity, input } => {
+                    let body = required_json_input(input)?;
+                    app.entity_batch_find_one(connection, &entity, body).await
                 }
             },
         },
