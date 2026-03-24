@@ -338,3 +338,22 @@ pub const ENTITY_UPDATE_LAST_ACCESSED_SPEC: CommandSpec = CommandSpec {
     examples: ENTITY_UPDATE_LAST_ACCESSED_EXAMPLES,
     notes: ENTITY_UPDATE_LAST_ACCESSED_NOTES,
 };
+
+const ENTITY_BATCH_FIND_ONE_EXAMPLES: &[&str] = &[
+    "fpt entity batch find-one Shot --input @batch_queries.json --output json",
+    "fpt entity batch find-one Asset --input '[{\"fields\":[\"code\"],\"filters\":[[\"sg_status_list\",\"is\",\"ip\"]]}]' --output json",
+];
+
+pub const ENTITY_BATCH_FIND_ONE_SPEC: CommandSpec = CommandSpec {
+    name: "entity.batch.find-one",
+    summary: "Run multiple find-one queries in one CLI invocation",
+    risk: RiskLevel::Read,
+    implemented: true,
+    supports_dry_run: false,
+    preferred_transport: "rest",
+    fallback_transport: Some("rpc"),
+    input: "request object array / object with requests",
+    output: "json",
+    examples: ENTITY_BATCH_FIND_ONE_EXAMPLES,
+    notes: ENTITY_BATCH_NOTES,
+};

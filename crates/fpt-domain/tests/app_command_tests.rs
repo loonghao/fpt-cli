@@ -422,6 +422,23 @@ impl ShotgridTransport for RecordingTransport {
         Ok(json!({"entity": entity, "data": {}}))
     }
 
+    async fn schema_entity_update(
+        &self,
+        _config: &ConnectionSettings,
+        entity: &str,
+        body: &Value,
+    ) -> Result<Value> {
+        Ok(json!({"entity": entity, "body": body, "updated": true}))
+    }
+
+    async fn schema_entity_delete(
+        &self,
+        _config: &ConnectionSettings,
+        entity: &str,
+    ) -> Result<Value> {
+        Ok(json!({"entity": entity, "deleted": true}))
+    }
+
     async fn schema_field_revive(
         &self,
         _config: &ConnectionSettings,
@@ -728,6 +745,23 @@ impl ShotgridTransport for FindOneTransport {
         Err(AppError::not_implemented("unused"))
     }
 
+    async fn schema_entity_update(
+        &self,
+        _config: &ConnectionSettings,
+        _entity: &str,
+        _body: &Value,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+
+    async fn schema_entity_delete(
+        &self,
+        _config: &ConnectionSettings,
+        _entity: &str,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+
     async fn schema_field_revive(
         &self,
         _config: &ConnectionSettings,
@@ -1019,6 +1053,23 @@ impl ShotgridTransport for NoteThreadsNotFoundTransport {
     }
 
     async fn schema_entity_read(
+        &self,
+        _config: &ConnectionSettings,
+        _entity: &str,
+    ) -> Result<Value> {
+        Ok(json!({}))
+    }
+
+    async fn schema_entity_update(
+        &self,
+        _config: &ConnectionSettings,
+        _entity: &str,
+        _body: &Value,
+    ) -> Result<Value> {
+        Ok(json!({}))
+    }
+
+    async fn schema_entity_delete(
         &self,
         _config: &ConnectionSettings,
         _entity: &str,
@@ -1336,6 +1387,23 @@ impl ShotgridTransport for SlowGetTransport {
         Err(AppError::not_implemented("unused"))
     }
 
+    async fn schema_entity_update(
+        &self,
+        _config: &ConnectionSettings,
+        _entity: &str,
+        _body: &Value,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+
+    async fn schema_entity_delete(
+        &self,
+        _config: &ConnectionSettings,
+        _entity: &str,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+
     async fn schema_field_revive(
         &self,
         _config: &ConnectionSettings,
@@ -1345,6 +1413,7 @@ impl ShotgridTransport for SlowGetTransport {
         Err(AppError::not_implemented("unused"))
     }
 }
+
 
 fn overrides() -> ConnectionOverrides {
     ConnectionOverrides {
@@ -2597,5 +2666,105 @@ async fn capabilities_includes_new_endpoint_specs() {
     assert!(
         names.contains(&"schema.field-revive"),
         "should include schema.field-revive"
+    );
+}
+
+#[tokio::test]
+async fn schema_entity_update_delegates_to_transport() {
+    let app = App::new(RecordingTransport::default());
+    let body = json!({"name": {"value": "Renamed Entity"}});
+    let result = app
+        .schema_entity_update(overrides(), "CustomEntity", body.clone())
+        .await
+        .expect("schema entity update succeeds");
+    assert_eq!(result["entity"], "CustomEntity");
+    assert_eq!(result["body"], body);
+    assert_eq!(result["updated"], true);
+}
+
+#[tokio::test]
+async fn schema_entity_delete_delegates_to_transport() {
+    let app = App::new(RecordingTransport::default());
+    let result = app
+        .schema_entity_delete(overrides(), "CustomEntity")
+        .await
+        .expect("schema entity delete succeeds");
+    assert_eq!(result["entity"], "CustomEntity");
+    assert_eq!(result["deleted"], true);
+}
+
+#[tokio::test]
+async fn batch_find_one_returns_first_matching_record() {
+    let transport = RecordingTransport::default();
+    let app = App::new(transport);
+    let input = json!([
+        {"fields": ["code"], "filters": [["sg_status_list", "is", "ip"]]},
+        {"fields": ["code"], "filters": [["sg_status_list", "is", "fin"]]}
+    ]);
+    let result = app
+        .entity_batch_find_one(overrides(), "Shot", input)
+        .await
+        .expect("batch find-one succeeds");
+
+    assert_eq!(result["operation"], "entity.batch.find-one");
+    assert_eq!(result["entity"], "Shot");
+    let results = result["results"].as_array().expect("results array");
+    assert_eq!(results.len(), 2);
+    // Both should have been processed (ok might be false due to missing "data" in mock response)
+    for item in results {
+        assert!(item.get("index").is_some(), "each result has an index");
+        assert!(item.get("request").is_some(), "each result has a request");
+    }
+}
+
+#[tokio::test]
+async fn batch_find_one_with_data_extracts_first() {
+    // Use FindOneTransport which returns a response with "data" array
+    let transport = FindOneTransport::new(json!({"data": [{"id": 42, "code": "hero_shot"}]}));
+    let app = App::new(transport);
+    let input = json!([{"fields": ["code"]}]);
+    let result = app
+        .entity_batch_find_one(overrides(), "Shot", input)
+        .await
+        .expect("batch find-one succeeds");
+    let results = result["results"].as_array().expect("results array");
+    assert_eq!(results.len(), 1);
+    assert_eq!(results[0]["ok"], true);
+    assert_eq!(results[0]["response"]["id"], 42);
+    assert_eq!(results[0]["response"]["code"], "hero_shot");
+}
+
+#[tokio::test]
+async fn batch_find_one_with_empty_data_returns_null() {
+    let transport = FindOneTransport::new(json!({"data": []}));
+    let app = App::new(transport);
+    let input = json!([{"fields": ["code"]}]);
+    let result = app
+        .entity_batch_find_one(overrides(), "Shot", input)
+        .await
+        .expect("batch find-one succeeds");
+    let results = result["results"].as_array().expect("results array");
+    assert_eq!(results.len(), 1);
+    assert_eq!(results[0]["ok"], true);
+    assert!(results[0]["response"].is_null());
+}
+
+#[tokio::test]
+async fn capabilities_includes_new_schema_and_batch_specs() {
+    let app = App::new(RecordingTransport::default());
+    let result = app.capabilities(env!("CARGO_PKG_VERSION"));
+    let commands = result["commands"].as_array().expect("commands array");
+    let names: Vec<&str> = commands.iter().filter_map(|c| c["name"].as_str()).collect();
+    assert!(
+        names.contains(&"schema.entity-update"),
+        "should include schema.entity-update"
+    );
+    assert!(
+        names.contains(&"schema.entity-delete"),
+        "should include schema.entity-delete"
+    );
+    assert!(
+        names.contains(&"entity.batch.find-one"),
+        "should include entity.batch.find-one"
     );
 }
