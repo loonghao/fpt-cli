@@ -1414,7 +1414,6 @@ impl ShotgridTransport for SlowGetTransport {
     }
 }
 
-
 fn overrides() -> ConnectionOverrides {
     ConnectionOverrides {
         site: Some("https://example.shotgrid.autodesk.com".to_string()),

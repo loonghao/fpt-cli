@@ -222,19 +222,13 @@ pub enum SchemaCommands {
         entity: String,
         field_name: String,
     },
-    #[command(
-        name = "entity-update",
-        about = "Update properties of an entity type"
-    )]
+    #[command(name = "entity-update", about = "Update properties of an entity type")]
     EntityUpdate {
         entity: String,
         #[arg(long)]
         input: String,
     },
-    #[command(
-        name = "entity-delete",
-        about = "Delete (retire) an entity type"
-    )]
+    #[command(name = "entity-delete", about = "Delete (retire) an entity type")]
     EntityDelete {
         entity: String,
     },
