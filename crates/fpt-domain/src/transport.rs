@@ -1235,8 +1235,7 @@ impl ShotgridTransport for RestTransport {
         field_name: &str,
     ) -> Result<Value> {
         let path = format!("schema/{entity}/fields/{field_name}");
-        let query = vec![("revive".to_string(), "true".to_string())];
-        self.authorized_json_request(config, Method::POST, &path, &query, None)
+        self.authorized_json_request(config, Method::POST, &path, &revive_query(), None)
             .await
     }
 
@@ -1255,10 +1254,14 @@ impl ShotgridTransport for RestTransport {
         entity: &str,
     ) -> Result<Value> {
         let path = format!("schema/{entity}");
-        let query = vec![("revive".to_string(), "true".to_string())];
-        self.authorized_json_request(config, Method::POST, &path, &query, None)
+        self.authorized_json_request(config, Method::POST, &path, &revive_query(), None)
             .await
     }
+}
+
+/// Build the query parameters used by the schema revive endpoints.
+fn revive_query() -> Vec<(String, String)> {
+    vec![("revive".to_string(), "true".to_string())]
 }
 
 pub fn entity_collection_path(entity: &str) -> String {

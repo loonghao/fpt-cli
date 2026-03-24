@@ -18,6 +18,20 @@ use super::find::{build_find_params, upsert_query_param};
 use super::query_helpers::string_list;
 use super::{App, BatchUpdateItem, batch_concurrency_limit, sort_batch_results};
 
+/// Convert an [`Instant`] elapsed duration to whole milliseconds.
+///
+/// This is a lossless helper: `Duration::as_millis()` returns `u128` but all
+/// realistic batch durations fit comfortably in `u64`.  Using a dedicated
+/// function avoids scattering bare `as u64` casts throughout the batch methods.
+#[inline]
+fn elapsed_ms(started_at: Instant) -> u64 {
+    started_at
+        .elapsed()
+        .as_millis()
+        .try_into()
+        .unwrap_or(u64::MAX)
+}
+
 /// How to handle a conflict when an entity with the key field value already exists.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum OnConflict {
@@ -78,13 +92,12 @@ where
             .collect::<Vec<_>>()
             .await;
         sort_batch_results(&mut results);
-        let elapsed_ms = started_at.elapsed().as_millis() as u64;
 
         Ok(batch_response_with_stats(
             "entity.batch.get",
             entity,
             results,
-            elapsed_ms,
+            elapsed_ms(started_at),
         ))
     }
 
@@ -128,13 +141,12 @@ where
             .collect::<Vec<_>>()
             .await;
         sort_batch_results(&mut results);
-        let elapsed_ms = started_at.elapsed().as_millis() as u64;
 
         Ok(batch_response_with_stats(
             "entity.batch.find",
             entity,
             results,
-            elapsed_ms,
+            elapsed_ms(started_at),
         ))
     }
 
@@ -180,13 +192,12 @@ where
             .collect::<Vec<_>>()
             .await;
         sort_batch_results(&mut results);
-        let elapsed_ms = started_at.elapsed().as_millis() as u64;
 
         Ok(batch_response_with_stats(
             "entity.batch.create",
             entity,
             results,
-            elapsed_ms,
+            elapsed_ms(started_at),
         ))
     }
 
@@ -237,13 +248,12 @@ where
             .collect::<Vec<_>>()
             .await;
         sort_batch_results(&mut results);
-        let elapsed_ms = started_at.elapsed().as_millis() as u64;
 
         Ok(batch_response_with_stats(
             "entity.batch.update",
             entity,
             results,
-            elapsed_ms,
+            elapsed_ms(started_at),
         ))
     }
 
@@ -498,7 +508,7 @@ where
             .collect::<Vec<_>>()
             .await;
         sort_batch_results(&mut results);
-        let elapsed_ms = started_at.elapsed().as_millis() as u64;
+        let elapsed = elapsed_ms(started_at);
 
         let failure_count = results
             .iter()
@@ -525,7 +535,7 @@ where
             "resumed_skip_count": resumed_skip_count,
             "checkpoint": checkpoint_path,
             "stats": {
-                "elapsed_ms": elapsed_ms,
+                "elapsed_ms": elapsed,
             },
             "results": results,
         }))
@@ -582,13 +592,12 @@ where
             .collect::<Vec<_>>()
             .await;
         sort_batch_results(&mut results);
-        let elapsed_ms = started_at.elapsed().as_millis() as u64;
 
         Ok(batch_response_with_stats(
             "entity.batch.delete",
             entity,
             results,
-            elapsed_ms,
+            elapsed_ms(started_at),
         ))
     }
 
@@ -633,13 +642,12 @@ where
             .collect::<Vec<_>>()
             .await;
         sort_batch_results(&mut results);
-        let elapsed_ms = started_at.elapsed().as_millis() as u64;
 
         Ok(batch_response_with_stats(
             "entity.batch.revive",
             entity,
             results,
-            elapsed_ms,
+            elapsed_ms(started_at),
         ))
     }
 
@@ -697,13 +705,12 @@ where
             .collect::<Vec<_>>()
             .await;
         sort_batch_results(&mut results);
-        let elapsed_ms = started_at.elapsed().as_millis() as u64;
 
         Ok(batch_response_with_stats(
             "entity.batch.find-one",
             entity,
             results,
-            elapsed_ms,
+            elapsed_ms(started_at),
         ))
     }
     pub async fn entity_batch_summarize(
@@ -745,13 +752,12 @@ where
             .collect::<Vec<_>>()
             .await;
         sort_batch_results(&mut results);
-        let elapsed_ms = started_at.elapsed().as_millis() as u64;
 
         Ok(batch_response_with_stats(
             "entity.batch.summarize",
             "_multi",
             results,
-            elapsed_ms,
+            elapsed_ms(started_at),
         ))
     }
 }
