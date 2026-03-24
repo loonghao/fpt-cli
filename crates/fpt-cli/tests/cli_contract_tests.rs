@@ -221,3 +221,168 @@ fn config_clear_invalid_field_returns_error() {
             .and(predicate::str::contains("unknown field name")),
     );
 }
+
+// --- config get / config path tests ---
+
+#[test]
+fn config_get_outputs_config_command_tag() {
+    let mut command = Command::cargo_bin("fpt").expect("binary exists");
+    command.args(["config", "get", "--output", "json"]);
+
+    command
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("\"command\":\"config.get\""));
+}
+
+#[test]
+fn config_path_outputs_config_path_command_tag() {
+    let mut command = Command::cargo_bin("fpt").expect("binary exists");
+    command.args(["config", "path", "--output", "json"]);
+
+    command.assert().success().stdout(
+        predicate::str::contains("\"command\":\"config.path\"")
+            .and(predicate::str::contains("\"path\":")),
+    );
+}
+
+// --- config set tests ---
+
+#[test]
+fn config_set_no_args_returns_error() {
+    let mut command = Command::cargo_bin("fpt").expect("binary exists");
+    command.args(["config", "set", "--output", "json"]);
+
+    command.assert().failure().stderr(
+        predicate::str::contains("INVALID_INPUT").and(predicate::str::contains("config set")),
+    );
+}
+
+#[test]
+fn config_set_with_site_succeeds() {
+    let mut command = Command::cargo_bin("fpt").expect("binary exists");
+    command.args([
+        "config",
+        "set",
+        "--site",
+        "https://test.shotgrid.autodesk.com",
+        "--output",
+        "json",
+    ]);
+
+    command.assert().success().stdout(
+        predicate::str::contains("\"command\":\"config.set\"")
+            .and(predicate::str::contains("test.shotgrid.autodesk.com")),
+    );
+}
+
+// --- entity create dry-run ---
+
+#[test]
+fn entity_create_dry_run_outputs_rest_request_plan() {
+    let mut command = Command::cargo_bin("fpt").expect("binary exists");
+    command.args([
+        "entity",
+        "create",
+        "Shot",
+        "--input",
+        "{\"data\":{\"type\":\"Shot\",\"attributes\":{\"code\":\"test\"}}}",
+        "--dry-run",
+        "--output",
+        "json",
+    ]);
+
+    command.assert().success().stdout(
+        predicate::str::contains("\"dry_run\":true")
+            .and(predicate::str::contains("/api/v1.1/entity/shots")),
+    );
+}
+
+// --- entity delete dry-run ---
+
+#[test]
+fn entity_delete_dry_run_outputs_rest_request_plan() {
+    let mut command = Command::cargo_bin("fpt").expect("binary exists");
+    command.args([
+        "entity",
+        "delete",
+        "Task",
+        "42",
+        "--dry-run",
+        "--output",
+        "json",
+    ]);
+
+    command.assert().success().stdout(
+        predicate::str::contains("\"dry_run\":true")
+            .and(predicate::str::contains("/api/v1.1/entity/tasks/42"))
+            .and(predicate::str::contains("DELETE")),
+    );
+}
+
+// --- entity revive dry-run ---
+
+#[test]
+fn entity_revive_dry_run_outputs_rpc_request_plan() {
+    let mut command = Command::cargo_bin("fpt").expect("binary exists");
+    command.args([
+        "entity",
+        "revive",
+        "Shot",
+        "860",
+        "--dry-run",
+        "--output",
+        "json",
+    ]);
+
+    command.assert().success().stdout(
+        predicate::str::contains("\"dry_run\":true").and(predicate::str::contains("revive")),
+    );
+}
+
+// --- inspect registered command validation ---
+
+#[test]
+fn inspect_hierarchy_search_is_registered() {
+    let mut command = Command::cargo_bin("fpt").expect("binary exists");
+    command.args(["inspect", "command", "hierarchy.search", "--output", "json"]);
+
+    command
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("hierarchy"));
+}
+
+#[test]
+fn inspect_entity_text_search_is_registered() {
+    let mut command = Command::cargo_bin("fpt").expect("binary exists");
+    command.args([
+        "inspect",
+        "command",
+        "entity.text-search",
+        "--output",
+        "json",
+    ]);
+
+    command
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("text"));
+}
+
+#[test]
+fn inspect_unknown_command_returns_error() {
+    let mut command = Command::cargo_bin("fpt").expect("binary exists");
+    command.args([
+        "inspect",
+        "command",
+        "nonexistent.command",
+        "--output",
+        "json",
+    ]);
+
+    command
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("UNSUPPORTED_CAPABILITY"));
+}

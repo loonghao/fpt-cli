@@ -390,6 +390,762 @@ async fn entity_write_commands_use_expected_methods_and_parse_empty_delete() {
     assert_eq!(delete_response["status"], 204);
 }
 
+// --- Followers endpoints ---
+
+#[tokio::test]
+async fn entity_followers_uses_expected_get_endpoint() {
+    let server = MockServer::start();
+    let auth = mock_auth(&server);
+    let followers = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1.1/entity/shots/50/followers")
+            .header("authorization", "Bearer token-123");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({"data": [{"type": "HumanUser", "id": 10}]}));
+    });
+    let transport = RestTransport::default();
+    let config = script_config(&server);
+
+    let response = transport
+        .entity_followers(&config, "Shot", 50)
+        .await
+        .expect("entity followers succeeds");
+
+    assert_eq!(auth.hits(), 1);
+    assert_eq!(followers.hits(), 1);
+    assert_eq!(response["data"][0]["id"], 10);
+}
+
+#[tokio::test]
+async fn entity_follow_posts_user_to_followers_endpoint() {
+    let server = MockServer::start();
+    let auth = mock_auth(&server);
+    let follow = server.mock(|when, then| {
+        when.method(POST)
+            .path("/api/v1.1/entity/tasks/33/followers")
+            .header("authorization", "Bearer token-123")
+            .json_body(json!({"type": "HumanUser", "id": 7}));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({"data": {"type": "HumanUser", "id": 7}}));
+    });
+    let transport = RestTransport::default();
+    let config = script_config(&server);
+
+    let response = transport
+        .entity_follow(&config, "Task", 33, &json!({"type": "HumanUser", "id": 7}))
+        .await
+        .expect("entity follow succeeds");
+
+    assert_eq!(auth.hits(), 1);
+    assert_eq!(follow.hits(), 1);
+    assert_eq!(response["data"]["id"], 7);
+}
+
+#[tokio::test]
+async fn entity_unfollow_deletes_user_from_followers_endpoint() {
+    let server = MockServer::start();
+    let auth = mock_auth(&server);
+    let unfollow = server.mock(|when, then| {
+        when.method(DELETE)
+            .path("/api/v1.1/entity/shots/50/followers/7")
+            .header("authorization", "Bearer token-123");
+        then.status(204);
+    });
+    let transport = RestTransport::default();
+    let config = script_config(&server);
+
+    let response = transport
+        .entity_unfollow(&config, "Shot", 50, &json!({"type": "HumanUser", "id": 7}))
+        .await
+        .expect("entity unfollow succeeds");
+
+    assert_eq!(auth.hits(), 1);
+    assert_eq!(unfollow.hits(), 1);
+    assert_eq!(response["ok"], true);
+    assert_eq!(response["status"], 204);
+}
+
+// --- Upload / Download / Thumbnail URL endpoints ---
+
+#[tokio::test]
+async fn upload_url_uses_expected_get_endpoint_with_query_params() {
+    let server = MockServer::start();
+    let auth = mock_auth(&server);
+    let upload = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1.1/entity/versions/10/sg_uploaded_movie/_upload")
+            .query_param("filename", "clip.mov")
+            .query_param("multipart_upload", "false")
+            .header("authorization", "Bearer token-123");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({"links": {"upload": "https://s3.example.com/upload"}}));
+    });
+    let transport = RestTransport::default();
+    let config = script_config(&server);
+
+    let response = transport
+        .upload_url(
+            &config,
+            fpt_domain::transport::UploadUrlRequest {
+                entity: "Version",
+                id: 10,
+                field_name: "sg_uploaded_movie",
+                file_name: "clip.mov",
+                content_type: None,
+                multipart_upload: false,
+            },
+        )
+        .await
+        .expect("upload url succeeds");
+
+    assert_eq!(auth.hits(), 1);
+    assert_eq!(upload.hits(), 1);
+    assert_eq!(response["links"]["upload"], "https://s3.example.com/upload");
+}
+
+#[tokio::test]
+async fn download_url_uses_expected_get_endpoint() {
+    let server = MockServer::start();
+    let auth = mock_auth(&server);
+    let download = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1.1/entity/versions/10/sg_uploaded_movie/_download")
+            .header("authorization", "Bearer token-123");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({"links": {"download": "https://s3.example.com/download"}}));
+    });
+    let transport = RestTransport::default();
+    let config = script_config(&server);
+
+    let response = transport
+        .download_url(&config, "Version", 10, "sg_uploaded_movie")
+        .await
+        .expect("download url succeeds");
+
+    assert_eq!(auth.hits(), 1);
+    assert_eq!(download.hits(), 1);
+    assert_eq!(
+        response["links"]["download"],
+        "https://s3.example.com/download"
+    );
+}
+
+#[tokio::test]
+async fn thumbnail_url_uses_expected_get_endpoint() {
+    let server = MockServer::start();
+    let auth = mock_auth(&server);
+    let thumbnail = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1.1/entity/assets/5/image")
+            .header("authorization", "Bearer token-123");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({"links": {"thumb": "https://s3.example.com/thumb.jpg"}}));
+    });
+    let transport = RestTransport::default();
+    let config = script_config(&server);
+
+    let response = transport
+        .thumbnail_url(&config, "Asset", 5)
+        .await
+        .expect("thumbnail url succeeds");
+
+    assert_eq!(auth.hits(), 1);
+    assert_eq!(thumbnail.hits(), 1);
+    assert_eq!(
+        response["links"]["thumb"],
+        "https://s3.example.com/thumb.jpg"
+    );
+}
+
+// --- Schema field CRUD endpoints ---
+
+#[tokio::test]
+async fn schema_field_create_posts_to_expected_path() {
+    let server = MockServer::start();
+    let auth = mock_auth(&server);
+    let field_create = server.mock(|when, then| {
+        when.method(POST)
+            .path("/api/v1.1/schema/Shot/fields")
+            .header("authorization", "Bearer token-123")
+            .json_body(json!({"data_type": "text", "properties": [{"property_name": "name", "value": "Custom Field"}]}));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({"data": {"name": "sg_custom_field"}}));
+    });
+    let transport = RestTransport::default();
+    let config = script_config(&server);
+
+    let response = transport
+        .schema_field_create(
+            &config,
+            "Shot",
+            &json!({"data_type": "text", "properties": [{"property_name": "name", "value": "Custom Field"}]}),
+        )
+        .await
+        .expect("schema field create succeeds");
+
+    assert_eq!(auth.hits(), 1);
+    assert_eq!(field_create.hits(), 1);
+    assert_eq!(response["data"]["name"], "sg_custom_field");
+}
+
+#[tokio::test]
+async fn schema_field_update_puts_to_expected_path() {
+    let server = MockServer::start();
+    let auth = mock_auth(&server);
+    let field_update = server.mock(|when, then| {
+        when.method(PUT)
+            .path("/api/v1.1/schema/Shot/fields/sg_custom_field")
+            .header("authorization", "Bearer token-123")
+            .json_body(
+                json!({"properties": [{"property_name": "name", "value": "Renamed Field"}]}),
+            );
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({"data": {"name": "Renamed Field"}}));
+    });
+    let transport = RestTransport::default();
+    let config = script_config(&server);
+
+    let response = transport
+        .schema_field_update(
+            &config,
+            "Shot",
+            "sg_custom_field",
+            &json!({"properties": [{"property_name": "name", "value": "Renamed Field"}]}),
+        )
+        .await
+        .expect("schema field update succeeds");
+
+    assert_eq!(auth.hits(), 1);
+    assert_eq!(field_update.hits(), 1);
+    assert_eq!(response["data"]["name"], "Renamed Field");
+}
+
+#[tokio::test]
+async fn schema_field_delete_uses_delete_method() {
+    let server = MockServer::start();
+    let auth = mock_auth(&server);
+    let field_delete = server.mock(|when, then| {
+        when.method(DELETE)
+            .path("/api/v1.1/schema/Shot/fields/sg_custom_field")
+            .header("authorization", "Bearer token-123");
+        then.status(204);
+    });
+    let transport = RestTransport::default();
+    let config = script_config(&server);
+
+    let response = transport
+        .schema_field_delete(&config, "Shot", "sg_custom_field")
+        .await
+        .expect("schema field delete succeeds");
+
+    assert_eq!(auth.hits(), 1);
+    assert_eq!(field_delete.hits(), 1);
+    assert_eq!(response["ok"], true);
+    assert_eq!(response["status"], 204);
+}
+
+#[tokio::test]
+async fn schema_field_read_uses_get_method() {
+    let server = MockServer::start();
+    let auth = mock_auth(&server);
+    let field_read = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1.1/schema/Shot/fields/code")
+            .header("authorization", "Bearer token-123");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({"data": {"data_type": "text", "name": "code"}}));
+    });
+    let transport = RestTransport::default();
+    let config = script_config(&server);
+
+    let response = transport
+        .schema_field_read(&config, "Shot", "code")
+        .await
+        .expect("schema field read succeeds");
+
+    assert_eq!(auth.hits(), 1);
+    assert_eq!(field_read.hits(), 1);
+    assert_eq!(response["data"]["data_type"], "text");
+}
+
+#[tokio::test]
+async fn schema_field_revive_posts_with_revive_query_param() {
+    let server = MockServer::start();
+    let auth = mock_auth(&server);
+    let field_revive = server.mock(|when, then| {
+        when.method(POST)
+            .path("/api/v1.1/schema/Shot/fields/sg_custom_field")
+            .query_param("revive", "true")
+            .header("authorization", "Bearer token-123");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({"data": {"name": "sg_custom_field", "revived": true}}));
+    });
+    let transport = RestTransport::default();
+    let config = script_config(&server);
+
+    let response = transport
+        .schema_field_revive(&config, "Shot", "sg_custom_field")
+        .await
+        .expect("schema field revive succeeds");
+
+    assert_eq!(auth.hits(), 1);
+    assert_eq!(field_revive.hits(), 1);
+    assert_eq!(response["data"]["revived"], true);
+}
+
+// --- Schema entity CRUD endpoints ---
+
+#[tokio::test]
+async fn schema_entity_read_uses_expected_get_path() {
+    let server = MockServer::start();
+    let auth = mock_auth(&server);
+    let entity_read = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1.1/schema/CustomEntity01")
+            .header("authorization", "Bearer token-123");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({"data": {"name": "CustomEntity01"}}));
+    });
+    let transport = RestTransport::default();
+    let config = script_config(&server);
+
+    let response = transport
+        .schema_entity_read(&config, "CustomEntity01")
+        .await
+        .expect("schema entity read succeeds");
+
+    assert_eq!(auth.hits(), 1);
+    assert_eq!(entity_read.hits(), 1);
+    assert_eq!(response["data"]["name"], "CustomEntity01");
+}
+
+#[tokio::test]
+async fn schema_entity_update_uses_put_method() {
+    let server = MockServer::start();
+    let auth = mock_auth(&server);
+    let entity_update = server.mock(|when, then| {
+        when.method(PUT)
+            .path("/api/v1.1/schema/CustomEntity01")
+            .header("authorization", "Bearer token-123")
+            .json_body(json!({"name": "Renamed Entity"}));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({"data": {"name": "Renamed Entity"}}));
+    });
+    let transport = RestTransport::default();
+    let config = script_config(&server);
+
+    let response = transport
+        .schema_entity_update(
+            &config,
+            "CustomEntity01",
+            &json!({"name": "Renamed Entity"}),
+        )
+        .await
+        .expect("schema entity update succeeds");
+
+    assert_eq!(auth.hits(), 1);
+    assert_eq!(entity_update.hits(), 1);
+    assert_eq!(response["data"]["name"], "Renamed Entity");
+}
+
+#[tokio::test]
+async fn schema_entity_delete_uses_delete_method() {
+    let server = MockServer::start();
+    let auth = mock_auth(&server);
+    let entity_delete = server.mock(|when, then| {
+        when.method(DELETE)
+            .path("/api/v1.1/schema/CustomEntity01")
+            .header("authorization", "Bearer token-123");
+        then.status(204);
+    });
+    let transport = RestTransport::default();
+    let config = script_config(&server);
+
+    let response = transport
+        .schema_entity_delete(&config, "CustomEntity01")
+        .await
+        .expect("schema entity delete succeeds");
+
+    assert_eq!(auth.hits(), 1);
+    assert_eq!(entity_delete.hits(), 1);
+    assert_eq!(response["ok"], true);
+    assert_eq!(response["status"], 204);
+}
+
+#[tokio::test]
+async fn schema_entity_create_posts_to_schema_root() {
+    let server = MockServer::start();
+    let auth = mock_auth(&server);
+    let entity_create = server.mock(|when, then| {
+        when.method(POST)
+            .path("/api/v1.1/schema")
+            .header("authorization", "Bearer token-123")
+            .json_body(json!({"name": "CustomEntity02", "schema_field_type": "entity"}));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({"data": {"name": "CustomEntity02"}}));
+    });
+    let transport = RestTransport::default();
+    let config = script_config(&server);
+
+    let response = transport
+        .schema_entity_create(
+            &config,
+            &json!({"name": "CustomEntity02", "schema_field_type": "entity"}),
+        )
+        .await
+        .expect("schema entity create succeeds");
+
+    assert_eq!(auth.hits(), 1);
+    assert_eq!(entity_create.hits(), 1);
+    assert_eq!(response["data"]["name"], "CustomEntity02");
+}
+
+#[tokio::test]
+async fn schema_entity_revive_posts_with_revive_query_param() {
+    let server = MockServer::start();
+    let auth = mock_auth(&server);
+    let entity_revive = server.mock(|when, then| {
+        when.method(POST)
+            .path("/api/v1.1/schema/CustomEntity01")
+            .query_param("revive", "true")
+            .header("authorization", "Bearer token-123");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({"data": {"name": "CustomEntity01", "revived": true}}));
+    });
+    let transport = RestTransport::default();
+    let config = script_config(&server);
+
+    let response = transport
+        .schema_entity_revive(&config, "CustomEntity01")
+        .await
+        .expect("schema entity revive succeeds");
+
+    assert_eq!(auth.hits(), 1);
+    assert_eq!(entity_revive.hits(), 1);
+    assert_eq!(response["data"]["revived"], true);
+}
+
+// --- Hierarchy, text search, activity stream, event log, preferences ---
+
+#[tokio::test]
+async fn hierarchy_search_posts_to_expected_path() {
+    let server = MockServer::start();
+    let auth = mock_auth(&server);
+    let hierarchy = server.mock(|when, then| {
+        when.method(POST)
+            .path("/api/v1.1/hierarchy/_search")
+            .header("authorization", "Bearer token-123")
+            .json_body(
+                json!({"root": {"type": "Project", "id": 100}, "seed_entity_field": "entity"}),
+            );
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({"data": [{"name": "root", "children": []}]}));
+    });
+    let transport = RestTransport::default();
+    let config = script_config(&server);
+
+    let response = transport
+        .hierarchy(
+            &config,
+            &json!({"root": {"type": "Project", "id": 100}, "seed_entity_field": "entity"}),
+        )
+        .await
+        .expect("hierarchy search succeeds");
+
+    assert_eq!(auth.hits(), 1);
+    assert_eq!(hierarchy.hits(), 1);
+    assert_eq!(response["data"][0]["name"], "root");
+}
+
+#[tokio::test]
+async fn text_search_posts_to_expected_path() {
+    let server = MockServer::start();
+    let auth = mock_auth(&server);
+    let text_search = server.mock(|when, then| {
+        when.method(POST)
+            .path("/api/v1.1/entity/_text_search")
+            .header("authorization", "Bearer token-123")
+            .json_body(json!({"text": "bunny", "entity_types": {"Shot": []}}));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({"data": [{"type": "Shot", "id": 1}]}));
+    });
+    let transport = RestTransport::default();
+    let config = script_config(&server);
+
+    let response = transport
+        .text_search(
+            &config,
+            &json!({"text": "bunny", "entity_types": {"Shot": []}}),
+        )
+        .await
+        .expect("text search succeeds");
+
+    assert_eq!(auth.hits(), 1);
+    assert_eq!(text_search.hits(), 1);
+    assert_eq!(response["data"][0]["type"], "Shot");
+}
+
+#[tokio::test]
+async fn activity_stream_uses_expected_get_path() {
+    let server = MockServer::start();
+    let auth = mock_auth(&server);
+    let activity = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1.1/entity/shots/42/activity_stream")
+            .header("authorization", "Bearer token-123");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({"data": []}));
+    });
+    let transport = RestTransport::default();
+    let config = script_config(&server);
+
+    let response = transport
+        .activity_stream(&config, "Shot", 42, &[])
+        .await
+        .expect("activity stream succeeds");
+
+    assert_eq!(auth.hits(), 1);
+    assert_eq!(activity.hits(), 1);
+    assert_eq!(response["data"], json!([]));
+}
+
+#[tokio::test]
+async fn event_log_entries_uses_expected_get_path() {
+    let server = MockServer::start();
+    let auth = mock_auth(&server);
+    let event_log = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1.1/entity/event_log_entries")
+            .header("authorization", "Bearer token-123");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({"data": []}));
+    });
+    let transport = RestTransport::default();
+    let config = script_config(&server);
+
+    let response = transport
+        .event_log_entries(&config, &[])
+        .await
+        .expect("event log entries succeeds");
+
+    assert_eq!(auth.hits(), 1);
+    assert_eq!(event_log.hits(), 1);
+    assert_eq!(response["data"], json!([]));
+}
+
+#[tokio::test]
+async fn preferences_get_uses_expected_get_path() {
+    let server = MockServer::start();
+    let auth = mock_auth(&server);
+    let prefs = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1.1/preferences")
+            .header("authorization", "Bearer token-123");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({"data": {"format_currency_field": "USD"}}));
+    });
+    let transport = RestTransport::default();
+    let config = script_config(&server);
+
+    let response = transport
+        .preferences_get(&config)
+        .await
+        .expect("preferences get succeeds");
+
+    assert_eq!(auth.hits(), 1);
+    assert_eq!(prefs.hits(), 1);
+    assert_eq!(response["data"]["format_currency_field"], "USD");
+}
+
+// --- Entity relationships, user following, project update last accessed ---
+
+#[tokio::test]
+async fn entity_relationships_uses_expected_get_path() {
+    let server = MockServer::start();
+    let auth = mock_auth(&server);
+    let relationships = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1.1/entity/shots/42/relationships/assets")
+            .header("authorization", "Bearer token-123");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({"data": [{"type": "Asset", "id": 1}]}));
+    });
+    let transport = RestTransport::default();
+    let config = script_config(&server);
+
+    let response = transport
+        .entity_relationships(&config, "Shot", 42, "assets", &[])
+        .await
+        .expect("entity relationships succeeds");
+
+    assert_eq!(auth.hits(), 1);
+    assert_eq!(relationships.hits(), 1);
+    assert_eq!(response["data"][0]["type"], "Asset");
+}
+
+#[tokio::test]
+async fn user_following_uses_expected_get_path() {
+    let server = MockServer::start();
+    let auth = mock_auth(&server);
+    let following = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1.1/entity/human_users/7/following")
+            .header("authorization", "Bearer token-123");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({"data": []}));
+    });
+    let transport = RestTransport::default();
+    let config = script_config(&server);
+
+    let response = transport
+        .user_following(&config, 7, &[])
+        .await
+        .expect("user following succeeds");
+
+    assert_eq!(auth.hits(), 1);
+    assert_eq!(following.hits(), 1);
+    assert_eq!(response["data"], json!([]));
+}
+
+#[tokio::test]
+async fn project_update_last_accessed_uses_expected_put_path() {
+    let server = MockServer::start();
+    let auth = mock_auth(&server);
+    let update_accessed = server.mock(|when, then| {
+        when.method(PUT)
+            .path("/api/v1.1/entity/projects/100/_update_last_accessed")
+            .header("authorization", "Bearer token-123");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({"data": {"ok": true}}));
+    });
+    let transport = RestTransport::default();
+    let config = script_config(&server);
+
+    let response = transport
+        .project_update_last_accessed(&config, 100)
+        .await
+        .expect("project update last accessed succeeds");
+
+    assert_eq!(auth.hits(), 1);
+    assert_eq!(update_accessed.hits(), 1);
+    assert_eq!(response["data"]["ok"], true);
+}
+
+// --- Note reply create ---
+
+#[tokio::test]
+async fn note_reply_create_posts_to_expected_path() {
+    let server = MockServer::start();
+    let auth = mock_auth(&server);
+    let reply = server.mock(|when, then| {
+        when.method(POST)
+            .path("/api/v1.1/entity/notes/100/thread_contents")
+            .header("authorization", "Bearer token-123")
+            .json_body(json!({"content": "Great work!"}));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({"data": {"type": "Reply", "id": 200}}));
+    });
+    let transport = RestTransport::default();
+    let config = script_config(&server);
+
+    let response = transport
+        .note_reply_create(&config, 100, &json!({"content": "Great work!"}))
+        .await
+        .expect("note reply create succeeds");
+
+    assert_eq!(auth.hits(), 1);
+    assert_eq!(reply.hits(), 1);
+    assert_eq!(response["data"]["type"], "Reply");
+}
+
+// --- Work schedule update (RPC) ---
+
+#[tokio::test]
+async fn work_schedule_update_uses_rpc_method() {
+    let server = MockServer::start();
+    let ws_update = server.mock(|when, then| {
+        when.method(POST).path("/api3/json").json_body(json!({
+            "method_name": "work_schedule_update",
+            "params": [
+                {
+                    "script_name": "openclaw",
+                    "script_key": "secret-key"
+                },
+                {
+                    "date": "2026-03-16",
+                    "working": false,
+                    "reason": "Studio Holiday"
+                }
+            ]
+        }));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({"results": {"ok": true}}));
+    });
+    let transport = RestTransport::default();
+    let config = script_config(&server);
+
+    let response = transport
+        .work_schedule_update(
+            &config,
+            &json!({"date": "2026-03-16", "working": false, "reason": "Studio Holiday"}),
+        )
+        .await
+        .expect("work schedule update succeeds");
+
+    assert_eq!(ws_update.hits(), 1);
+    assert_eq!(response["ok"], true);
+}
+
+// --- Server info (RPC) ---
+
+#[tokio::test]
+async fn server_info_uses_rpc_info_method() {
+    let server = MockServer::start();
+    let info = server.mock(|when, then| {
+        when.method(POST).path("/api3/json").json_body(json!({
+            "method_name": "info",
+            "params": []
+        }));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({"results": {"version": [8, 40, 0, 0]}}));
+    });
+    let transport = RestTransport::default();
+
+    let response = transport
+        .server_info(&server.base_url())
+        .await
+        .expect("server info succeeds");
+
+    assert_eq!(info.hits(), 1);
+    assert_eq!(response["version"], json!([8, 40, 0, 0]));
+}
+
+// --- Error mapping ---
+
 #[tokio::test]
 async fn rest_errors_map_auth_and_api_failures() {
     let auth_server = MockServer::start();
