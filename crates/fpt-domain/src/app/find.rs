@@ -4,7 +4,7 @@ use serde_json::{Value, json};
 use crate::filter_dsl::parse_filter_dsl;
 use crate::transport::FindParams;
 
-use super::query_helpers::{scalar_to_string, string_list};
+use super::query_helpers::{push_page_params, scalar_to_string, string_list};
 
 pub(super) fn build_find_params(
     input: Option<Value>,
@@ -95,26 +95,7 @@ pub(super) fn build_find_params(
     }
 
     if let Some(page) = object.get("page") {
-        let page = page.as_object().ok_or_else(|| {
-            AppError::invalid_input(
-                "`page` must be a JSON object like `{\"number\": 1, \"size\": 25}`",
-            )
-            .with_operation("build_find_params")
-            .with_invalid_field("page")
-            .with_expected_shape("a JSON object like `{\"number\": 1, \"size\": 25}`")
-        })?;
-        if let Some(number) = page.get("number") {
-            params.query.push((
-                "page[number]".to_string(),
-                scalar_to_string(number, "page.number")?,
-            ));
-        }
-        if let Some(size) = page.get("size") {
-            params.query.push((
-                "page[size]".to_string(),
-                scalar_to_string(size, "page.size")?,
-            ));
-        }
+        push_page_params(&mut params.query, page, "build_find_params")?;
     }
 
     if let Some(filters) = object.get("filters") {
