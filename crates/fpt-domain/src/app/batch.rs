@@ -505,22 +505,10 @@ where
             .filter(|item| item.get("ok").and_then(Value::as_bool) != Some(true))
             .count();
         let success_count = results.len().saturating_sub(failure_count);
-        let created_count = results
-            .iter()
-            .filter(|item| item.get("action").and_then(Value::as_str) == Some("created"))
-            .count();
-        let updated_count = results
-            .iter()
-            .filter(|item| item.get("action").and_then(Value::as_str) == Some("updated"))
-            .count();
-        let skipped_count = results
-            .iter()
-            .filter(|item| item.get("action").and_then(Value::as_str) == Some("skipped"))
-            .count();
-        let resumed_skip_count = results
-            .iter()
-            .filter(|item| item.get("action").and_then(Value::as_str) == Some("resumed_skip"))
-            .count();
+        let created_count = count_by_action(&results, "created");
+        let updated_count = count_by_action(&results, "updated");
+        let skipped_count = count_by_action(&results, "skipped");
+        let resumed_skip_count = count_by_action(&results, "resumed_skip");
 
         Ok(json!({
             "ok": failure_count == 0,
@@ -551,7 +539,7 @@ where
         dry_run: bool,
         yes: bool,
     ) -> Result<Value> {
-        let ids = parse_batch_delete_input(input)?;
+        let ids = parse_batch_id_list_input(input)?;
         if dry_run {
             let api_version = api_version_or_default(overrides.api_version.as_deref());
             let plans = ids
@@ -611,7 +599,7 @@ where
         input: Value,
         dry_run: bool,
     ) -> Result<Value> {
-        let ids = parse_batch_delete_input(input)?;
+        let ids = parse_batch_id_list_input(input)?;
         if dry_run {
             let plans = ids
                 .iter()
@@ -939,7 +927,10 @@ fn parse_batch_update_input(input: Value) -> Result<Vec<BatchUpdateItem>> {
         .collect()
 }
 
-fn parse_batch_delete_input(input: Value) -> Result<Vec<u64>> {
+/// Parse a batch input that contains a flat list of entity ids.
+///
+/// Used by both batch-delete and batch-revive commands.
+fn parse_batch_id_list_input(input: Value) -> Result<Vec<u64>> {
     match input {
         Value::Array(values) => u64_list(&values, "ids"),
         Value::Object(object) => {
@@ -947,23 +938,23 @@ fn parse_batch_delete_input(input: Value) -> Result<Vec<u64>> {
                 .get("ids")
                 .ok_or_else(|| {
                     AppError::invalid_input(
-                        "entity batch delete input is missing required field `ids`",
+                        "batch id list input is missing required field `ids`",
                     )
-                    .with_operation("parse_batch_delete_input")
+                    .with_operation("parse_batch_id_list_input")
                     .with_missing_fields(["ids"])
                     .with_expected_shape("a JSON object containing `ids` (array of positive integers)")
                 })?
                 .as_array()
                 .ok_or_else(|| AppError::invalid_input("`ids` must be a JSON array of positive integers")
-                    .with_operation("parse_batch_delete_input")
+                    .with_operation("parse_batch_id_list_input")
                     .with_invalid_field("ids")
                     .with_expected_shape("a JSON array of positive integers"))?;
             u64_list(ids, "ids")
         }
         _ => Err(AppError::invalid_input(
-            "entity batch delete input must be either a JSON array of ids or an object containing `ids`",
+            "batch id list input must be either a JSON array of ids or an object containing `ids`",
         )
-        .with_operation("parse_batch_delete_input")
+        .with_operation("parse_batch_id_list_input")
         .with_expected_shape("a JSON array of positive integers, or a JSON object containing `ids`")),
     }
 }
@@ -1021,6 +1012,14 @@ fn u64_list(values: &[Value], field_name: &str) -> Result<Vec<u64>> {
             })
         })
         .collect()
+}
+
+/// Count batch result items that match a specific `"action"` string value.
+fn count_by_action(results: &[Value], action: &str) -> usize {
+    results
+        .iter()
+        .filter(|item| item.get("action").and_then(Value::as_str) == Some(action))
+        .count()
 }
 
 // ---------------------------------------------------------------------------

@@ -147,7 +147,7 @@ where
         input: Option<Value>,
     ) -> Result<Value> {
         let config = ConnectionSettings::resolve(overrides)?;
-        let params = super::activity::build_query_params_public(input)?;
+        let params = super::activity::build_common_query_params(input)?;
         self.transport
             .entity_relationships(&config, entity, id, related_field, &params)
             .await

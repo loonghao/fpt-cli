@@ -43,7 +43,7 @@ where
 
 /// Public wrapper for `build_query_params` — used by entity_relationships
 /// and user_following to convert optional JSON input into query pairs.
-pub fn build_query_params_public(input: Option<Value>) -> Result<Vec<(String, String)>> {
+pub fn build_common_query_params(input: Option<Value>) -> Result<Vec<(String, String)>> {
     build_query_params(input)
 }
 

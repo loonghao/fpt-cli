@@ -3,6 +3,7 @@ use std::time::{Duration, Instant};
 
 use async_trait::async_trait;
 use fpt_core::{AppError, Result, RiskLevel};
+use reqwest::header::{ACCEPT, CONTENT_TYPE};
 use reqwest::{Client, Method, Response, StatusCode};
 use serde::Serialize;
 use serde_json::{Value, json};
@@ -16,6 +17,8 @@ const MAX_RETRY_ATTEMPTS: u32 = 5;
 const RETRY_BASE_DELAY_MS: u64 = 500;
 /// Maximum backoff delay cap (milliseconds).
 const RETRY_MAX_DELAY_MS: u64 = 30_000;
+/// Shared dry-run note used by all request plan builders.
+const DRY_RUN_NOTE: &str = "dry-run: shows the planned request without making a network call";
 
 #[derive(Debug, Clone, Default)]
 pub struct FindParams {
@@ -459,7 +462,7 @@ impl RestTransport {
         let response = self
             .client
             .post(url)
-            .header("Accept", "application/json")
+            .header(ACCEPT, "application/json")
             .form(&form)
             .send()
             .await
@@ -522,7 +525,7 @@ impl RestTransport {
             let mut request = self
                 .client
                 .request(method.clone(), url)
-                .header("accept", "application/json")
+                .header(ACCEPT, "application/json")
                 .bearer_auth(token.access_token);
 
             if let Some(body) = body {
@@ -585,8 +588,8 @@ impl RestTransport {
             let response = self
                 .client
                 .request(Method::POST, url)
-                .header("accept", "application/json")
-                .header("content-type", "application/vnd+shotgun.api3_hash+json")
+                .header(ACCEPT, "application/json")
+                .header(CONTENT_TYPE, "application/vnd+shotgun.api3_hash+json")
                 .bearer_auth(token.access_token)
                 .body(serialized_body.clone())
                 .send()
@@ -659,7 +662,7 @@ impl RestTransport {
         let response = self
             .client
             .request(Method::POST, url)
-            .header("accept", "application/json")
+            .header(ACCEPT, "application/json")
             .json(&body)
             .send()
             .await
@@ -1275,7 +1278,7 @@ pub fn plan_entity_create(api_version: &str, entity: &str, body: Value) -> Reque
         risk: RiskLevel::Write,
         query: Vec::new(),
         body: Some(body),
-        notes: vec!["dry-run: shows the planned request without making a network call".to_string()],
+        notes: vec![DRY_RUN_NOTE.to_string()],
     }
 }
 
@@ -1291,7 +1294,7 @@ pub fn plan_entity_update(api_version: &str, entity: &str, id: u64, body: Value)
         risk: RiskLevel::Write,
         query: Vec::new(),
         body: Some(body),
-        notes: vec!["dry-run: shows the planned request without making a network call".to_string()],
+        notes: vec![DRY_RUN_NOTE.to_string()],
     }
 }
 
@@ -1308,7 +1311,7 @@ pub fn plan_entity_delete(api_version: &str, entity: &str, id: u64) -> RequestPl
         query: Vec::new(),
         body: None,
         notes: vec![
-            "dry-run: shows the planned request without making a network call".to_string(),
+            DRY_RUN_NOTE.to_string(),
             "actual deletion requires explicit `--yes` flag".to_string(),
         ],
     }
@@ -1331,7 +1334,7 @@ pub fn plan_entity_revive(entity: &str, id: u64) -> RequestPlan {
             ]
         })),
         notes: vec![
-            "dry-run: shows the planned request without making a network call".to_string(),
+            DRY_RUN_NOTE.to_string(),
             "RPC auth params are injected from the connection config at execution time".to_string(),
         ],
     }
