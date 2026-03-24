@@ -119,23 +119,17 @@ impl AppError {
             Value::String(format!("failed to serialize detail value: {error}"))
         });
 
-        match self.details.take() {
-            Some(Value::Object(mut object)) => {
-                object.insert(key, value);
-                self.details = Some(Value::Object(object));
+        let mut object = match self.details.take() {
+            Some(Value::Object(existing)) => existing,
+            Some(other) => {
+                let mut map = Map::new();
+                map.insert("context".to_string(), other);
+                map
             }
-            Some(existing) => {
-                let mut object = Map::new();
-                object.insert("context".to_string(), existing);
-                object.insert(key, value);
-                self.details = Some(Value::Object(object));
-            }
-            None => {
-                let mut object = Map::new();
-                object.insert(key, value);
-                self.details = Some(Value::Object(object));
-            }
-        }
+            None => Map::new(),
+        };
+        object.insert(key, value);
+        self.details = Some(Value::Object(object));
 
         self
     }

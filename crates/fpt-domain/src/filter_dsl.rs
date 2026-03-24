@@ -87,35 +87,29 @@ impl Parser {
     }
 
     fn parse_or(&mut self) -> Result<Expr> {
-        let mut terms = vec![self.parse_and()?];
-
-        loop {
-            let checkpoint = self.pos;
-            if self.consume_keyword("or") {
-                terms.push(self.parse_and()?);
-            } else {
-                self.pos = checkpoint;
-                break;
-            }
-        }
-
-        if terms.len() == 1 {
-            Ok(terms.remove(0))
-        } else {
-            Ok(Expr::Logical {
-                op: LogicalOp::Or,
-                conditions: terms,
-            })
-        }
+        self.parse_binary_chain("or", LogicalOp::Or, Self::parse_and)
     }
 
     fn parse_and(&mut self) -> Result<Expr> {
-        let mut terms = vec![self.parse_primary()?];
+        self.parse_binary_chain("and", LogicalOp::And, Self::parse_primary)
+    }
+
+    /// Parse a left-associative chain of `keyword`-separated sub-expressions.
+    ///
+    /// If only one sub-expression is found the node is returned as-is;
+    /// otherwise they are wrapped in a `Logical` node with the given `op`.
+    fn parse_binary_chain(
+        &mut self,
+        keyword: &str,
+        op: LogicalOp,
+        mut sub_parser: impl FnMut(&mut Self) -> Result<Expr>,
+    ) -> Result<Expr> {
+        let mut terms = vec![sub_parser(self)?];
 
         loop {
             let checkpoint = self.pos;
-            if self.consume_keyword("and") {
-                terms.push(self.parse_primary()?);
+            if self.consume_keyword(keyword) {
+                terms.push(sub_parser(self)?);
             } else {
                 self.pos = checkpoint;
                 break;
@@ -126,7 +120,7 @@ impl Parser {
             Ok(terms.remove(0))
         } else {
             Ok(Expr::Logical {
-                op: LogicalOp::And,
+                op,
                 conditions: terms,
             })
         }
