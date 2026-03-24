@@ -3003,3 +3003,135 @@ async fn capabilities_includes_all_new_specs() {
         "should include entity.batch.summarize"
     );
 }
+
+// ────────────────────────────────────────────────────────────────────
+// inspect.command tests
+// ────────────────────────────────────────────────────────────────────
+
+#[test]
+fn inspect_command_returns_spec_for_known_command() {
+    let app = App::new(RecordingTransport::default());
+    let result = app
+        .inspect_command("entity.get")
+        .expect("known command should succeed");
+    assert_eq!(result["name"], "entity.get");
+    assert!(result["summary"].is_string());
+    assert!(result["risk"].is_string());
+    assert!(result["implemented"].is_boolean());
+    assert!(result["examples"].is_array());
+}
+
+#[test]
+fn inspect_command_rejects_unknown_command() {
+    let app = App::new(RecordingTransport::default());
+    let err = app
+        .inspect_command("nonexistent.command")
+        .expect_err("unknown command should fail");
+    assert_eq!(err.envelope().code, "UNSUPPORTED_CAPABILITY");
+    assert!(
+        err.envelope().message.contains("nonexistent.command"),
+        "error message should include the unknown command name"
+    );
+}
+
+#[test]
+fn inspect_command_normalizes_name() {
+    let app = App::new(RecordingTransport::default());
+    // Command names with spaces are normalized to dots; uppercase to lowercase.
+    let result = app
+        .inspect_command("Entity Get")
+        .expect("normalized name should resolve");
+    assert_eq!(result["name"], "entity.get");
+}
+
+// ────────────────────────────────────────────────────────────────────
+// entity.batch.summarize error-path tests
+// ────────────────────────────────────────────────────────────────────
+
+#[tokio::test]
+async fn entity_batch_summarize_rejects_non_array_non_object_input() {
+    let app = App::new(RecordingTransport::default());
+    let err = app
+        .entity_batch_summarize(overrides(), json!("not valid"))
+        .await
+        .expect_err("string input should be rejected");
+    assert_eq!(err.envelope().code, "INVALID_INPUT");
+}
+
+#[tokio::test]
+async fn entity_batch_summarize_rejects_empty_array() {
+    let app = App::new(RecordingTransport::default());
+    let err = app
+        .entity_batch_summarize(overrides(), json!([]))
+        .await
+        .expect_err("empty array should be rejected");
+    assert_eq!(err.envelope().code, "INVALID_INPUT");
+}
+
+#[tokio::test]
+async fn entity_batch_summarize_rejects_item_missing_entity() {
+    let app = App::new(RecordingTransport::default());
+    let err = app
+        .entity_batch_summarize(
+            overrides(),
+            json!([{"payload": {"filters": []}}]),
+        )
+        .await
+        .expect_err("missing entity should be rejected");
+    assert_eq!(err.envelope().code, "INVALID_INPUT");
+    assert!(
+        err.envelope().message.contains("entity"),
+        "error should mention missing `entity` field"
+    );
+}
+
+#[tokio::test]
+async fn entity_batch_summarize_rejects_item_missing_payload() {
+    let app = App::new(RecordingTransport::default());
+    let err = app
+        .entity_batch_summarize(
+            overrides(),
+            json!([{"entity": "Shot"}]),
+        )
+        .await
+        .expect_err("missing payload should be rejected");
+    assert_eq!(err.envelope().code, "INVALID_INPUT");
+    assert!(
+        err.envelope().message.contains("payload"),
+        "error should mention missing `payload` field"
+    );
+}
+
+#[tokio::test]
+async fn entity_batch_summarize_rejects_non_object_item() {
+    let app = App::new(RecordingTransport::default());
+    let err = app
+        .entity_batch_summarize(overrides(), json!([42]))
+        .await
+        .expect_err("non-object item should be rejected");
+    assert_eq!(err.envelope().code, "INVALID_INPUT");
+}
+
+#[tokio::test]
+async fn entity_batch_summarize_object_form_rejects_missing_requests() {
+    let app = App::new(RecordingTransport::default());
+    let err = app
+        .entity_batch_summarize(overrides(), json!({"not_requests": []}))
+        .await
+        .expect_err("object without `requests` should be rejected");
+    assert_eq!(err.envelope().code, "INVALID_INPUT");
+    assert!(
+        err.envelope().message.contains("requests"),
+        "error should mention missing `requests` field"
+    );
+}
+
+#[tokio::test]
+async fn entity_batch_summarize_object_form_rejects_non_array_requests() {
+    let app = App::new(RecordingTransport::default());
+    let err = app
+        .entity_batch_summarize(overrides(), json!({"requests": "not an array"}))
+        .await
+        .expect_err("non-array `requests` should be rejected");
+    assert_eq!(err.envelope().code, "INVALID_INPUT");
+}
