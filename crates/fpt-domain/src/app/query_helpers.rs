@@ -107,26 +107,7 @@ pub(crate) fn build_query_params(input: Option<Value>) -> Result<Vec<(String, St
     for (key, value) in object {
         match key.as_str() {
             "page" => {
-                let page = value.as_object().ok_or_else(|| {
-                    AppError::invalid_input(
-                        "`page` must be a JSON object like `{\"number\": 1, \"size\": 50}`",
-                    )
-                    .with_operation("build_query_params")
-                    .with_invalid_field("page")
-                    .with_expected_shape("a JSON object like `{\"number\": 1, \"size\": 50}`")
-                })?;
-                if let Some(number) = page.get("number") {
-                    params.push((
-                        "page[number]".to_string(),
-                        scalar_to_string(number, "page.number")?,
-                    ));
-                }
-                if let Some(size) = page.get("size") {
-                    params.push((
-                        "page[size]".to_string(),
-                        scalar_to_string(size, "page.size")?,
-                    ));
-                }
+                push_page_params(&mut params, value, "build_query_params")?;
             }
             "fields" | "entity_fields" => {
                 let joined = string_list_to_csv(value, key)?;
@@ -141,6 +122,41 @@ pub(crate) fn build_query_params(input: Option<Value>) -> Result<Vec<(String, St
     }
 
     Ok(params)
+}
+
+/// Parse a `page` JSON value and push `page[number]` / `page[size]` query
+/// parameters into the given list.
+///
+/// The `page` value must be a JSON object like `{"number": 1, "size": 25}`.
+/// Both `number` and `size` are optional; when present they are converted via
+/// [`scalar_to_string`].
+///
+/// `operation` is the caller's operation name used in error messages so that
+/// validation errors point back to the right context.
+pub(crate) fn push_page_params(
+    params: &mut Vec<(String, String)>,
+    page: &Value,
+    operation: &str,
+) -> Result<()> {
+    let page = page.as_object().ok_or_else(|| {
+        AppError::invalid_input("`page` must be a JSON object like `{\"number\": 1, \"size\": 25}`")
+            .with_operation(operation)
+            .with_invalid_field("page")
+            .with_expected_shape("a JSON object like `{\"number\": 1, \"size\": 25}`")
+    })?;
+    if let Some(number) = page.get("number") {
+        params.push((
+            "page[number]".to_string(),
+            scalar_to_string(number, "page.number")?,
+        ));
+    }
+    if let Some(size) = page.get("size") {
+        params.push((
+            "page[size]".to_string(),
+            scalar_to_string(size, "page.size")?,
+        ));
+    }
+    Ok(())
 }
 
 /// Convert a JSON scalar (string, number, or bool) to its string representation.

@@ -46,7 +46,7 @@ impl FromStr for AuthMode {
             .with_operation("parse_auth_mode")
             .with_invalid_field("auth_mode")
             .with_received_value(other)
-            .with_allowed_values(["script", "user-password", "session-token"]) 
+            .with_allowed_values(["script", "user-password", "session-token"])
             .with_hint("Use one of the supported auth mode names in CLI flags, environment variables, or persisted config.")),
         }
     }
