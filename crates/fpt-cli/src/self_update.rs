@@ -318,23 +318,11 @@ async fn fetch_release(
         .get(url)
         .send()
         .await
-        .map_err(|error| {
-            AppError::network(format!(
-                "could not request GitHub release metadata: {error}"
-            ))
-            .with_operation("fetch_release")
-            .with_transport("rest")
-            .with_resource(format!("repos/{owner}/{repo}/releases"))
-            .retryable(true)
-        })?
+        .map_err(map_network_error(
+            "could not request GitHub release metadata",
+        ))?
         .error_for_status()
-        .map_err(|error| {
-            AppError::network(format!("GitHub release metadata request failed: {error}"))
-                .with_operation("fetch_release")
-                .with_transport("rest")
-                .with_resource(format!("repos/{owner}/{repo}/releases"))
-                .with_hint("Check the repository name and ensure the release tag exists.")
-        })?
+        .map_err(map_network_error("GitHub release metadata request failed"))?
         .json::<GitHubRelease>()
         .await
         .map_err(|error| {
@@ -365,18 +353,14 @@ async fn download_bytes(client: &reqwest::Client, url: &str) -> Result<Vec<u8>> 
         .header(ACCEPT, "application/octet-stream")
         .send()
         .await
-        .map_err(|error| {
-            AppError::network(format!("could not download the release asset: {error}"))
-        })?
+        .map_err(map_network_error("could not download the release asset"))?
         .error_for_status()
-        .map_err(|error| AppError::network(format!("release asset download failed: {error}")))?
+        .map_err(map_network_error("release asset download failed"))?
         .bytes()
         .await
-        .map_err(|error| {
-            AppError::network(format!(
-                "could not read the downloaded release asset body: {error}"
-            ))
-        })?;
+        .map_err(map_network_error(
+            "could not read the downloaded release asset body",
+        ))?;
 
     Ok(bytes.to_vec())
 }
@@ -386,31 +370,18 @@ async fn download_text(client: &reqwest::Client, url: &str) -> Result<String> {
         .get(url)
         .send()
         .await
-        .map_err(|error| {
-            AppError::network(format!("could not download the checksum file: {error}"))
-        })?
+        .map_err(map_network_error("could not download the checksum file"))?
         .error_for_status()
-        .map_err(|error| AppError::network(format!("checksum file download failed: {error}")))?
+        .map_err(map_network_error("checksum file download failed"))?
         .text()
         .await
-        .map_err(|error| {
-            AppError::network(format!("could not read the checksum file body: {error}"))
-        })
+        .map_err(map_network_error("could not read the checksum file body"))
 }
 
 fn write_bytes(path: &Path, bytes: &[u8]) -> Result<()> {
-    let mut file = File::create(path).map_err(|error| {
-        AppError::internal(format!(
-            "could not create temporary file `{}`: {error}",
-            path.display()
-        ))
-    })?;
-    file.write_all(bytes).map_err(|error| {
-        AppError::internal(format!(
-            "could not write temporary file `{}`: {error}",
-            path.display()
-        ))
-    })
+    let mut file = File::create(path).map_err(map_io_error("create temporary file", path))?;
+    file.write_all(bytes)
+        .map_err(map_io_error("write temporary file", path))
 }
 
 fn verify_checksum(checksums: &str, asset_name: &str, archive_bytes: &[u8]) -> Result<()> {
@@ -467,12 +438,8 @@ fn extract_binary(
 }
 
 fn extract_tar_gz_binary(archive_path: &Path, binary_name: &str, destination: &Path) -> Result<()> {
-    let file = File::open(archive_path).map_err(|error| {
-        AppError::internal(format!(
-            "could not open release archive `{}`: {error}",
-            archive_path.display()
-        ))
-    })?;
+    let file =
+        File::open(archive_path).map_err(map_io_error("open release archive", archive_path))?;
     let decoder = GzDecoder::new(file);
     let mut archive = Archive::new(decoder);
 
@@ -480,12 +447,8 @@ fn extract_tar_gz_binary(archive_path: &Path, binary_name: &str, destination: &P
         let mut entry = entry.map_err(map_archive_error)?;
         let path = entry.path().map_err(map_archive_error)?;
         if path.file_name().and_then(|value| value.to_str()) == Some(binary_name) {
-            let mut output = File::create(destination).map_err(|error| {
-                AppError::internal(format!(
-                    "could not create extracted binary `{}`: {error}",
-                    destination.display()
-                ))
-            })?;
+            let mut output = File::create(destination)
+                .map_err(map_io_error("create extracted binary", destination))?;
             io::copy(&mut entry, &mut output).map_err(map_archive_error)?;
             return Ok(());
         }
@@ -495,12 +458,8 @@ fn extract_tar_gz_binary(archive_path: &Path, binary_name: &str, destination: &P
 }
 
 fn extract_zip_binary(archive_path: &Path, binary_name: &str, destination: &Path) -> Result<()> {
-    let file = File::open(archive_path).map_err(|error| {
-        AppError::internal(format!(
-            "could not open release archive `{}`: {error}",
-            archive_path.display()
-        ))
-    })?;
+    let file =
+        File::open(archive_path).map_err(map_io_error("open release archive", archive_path))?;
     let mut archive = ZipArchive::new(file).map_err(|error| {
         AppError::internal(format!("could not read the zip archive structure: {error}"))
     })?;
@@ -510,12 +469,8 @@ fn extract_zip_binary(archive_path: &Path, binary_name: &str, destination: &Path
             AppError::internal(format!("could not read zip entry {index}: {error}"))
         })?;
         if entry.name().ends_with(binary_name) && !entry.is_dir() {
-            let mut output = File::create(destination).map_err(|error| {
-                AppError::internal(format!(
-                    "could not create extracted binary `{}`: {error}",
-                    destination.display()
-                ))
-            })?;
+            let mut output = File::create(destination)
+                .map_err(map_io_error("create extracted binary", destination))?;
             io::copy(&mut entry, &mut output).map_err(|error| {
                 AppError::internal(format!("could not extract zip entry to disk: {error}"))
             })?;
@@ -535,6 +490,16 @@ fn binary_not_found_error(binary_name: &str, archive_path: &Path) -> AppError {
     ))
 }
 
+/// Shorthand for mapping an I/O error that occurs while working with a file path.
+fn map_io_error<'a>(context: &'a str, path: &'a Path) -> impl FnOnce(io::Error) -> AppError + 'a {
+    move |error| AppError::internal(format!("could not {context} `{}`: {error}", path.display()))
+}
+
+/// Shorthand for mapping an error into a network-level `AppError` with a message.
+fn map_network_error(message: &str) -> impl FnOnce(reqwest::Error) -> AppError + '_ {
+    move |error| AppError::network(format!("{message}: {error}"))
+}
+
 fn ensure_executable(path: &Path) -> Result<()> {
     #[cfg(not(unix))]
     let _ = path;
@@ -545,20 +510,11 @@ fn ensure_executable(path: &Path) -> Result<()> {
         use std::os::unix::fs::PermissionsExt;
 
         let mut permissions = fs::metadata(path)
-            .map_err(|error| {
-                AppError::internal(format!(
-                    "could not read file metadata for `{}`: {error}",
-                    path.display()
-                ))
-            })?
+            .map_err(map_io_error("read file metadata for", path))?
             .permissions();
         permissions.set_mode(0o755);
-        fs::set_permissions(path, permissions).map_err(|error| {
-            AppError::internal(format!(
-                "could not set executable permissions on `{}`: {error}",
-                path.display()
-            ))
-        })?;
+        fs::set_permissions(path, permissions)
+            .map_err(map_io_error("set executable permissions on", path))?;
     }
 
     Ok(())

@@ -1185,3 +1185,253 @@ async fn rest_errors_map_auth_and_api_failures() {
     assert_eq!(api_error.envelope().code, "API_ERROR");
     assert_eq!(api_error.envelope().transport.as_deref(), Some("rest"));
 }
+
+// --- Upload URL edge cases ---
+
+#[tokio::test]
+async fn upload_url_with_content_type_and_multipart_upload() {
+    let server = MockServer::start();
+    let auth = mock_auth(&server);
+    let upload = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1.1/entity/versions/10/sg_uploaded_movie/_upload")
+            .query_param("filename", "clip.mov")
+            .query_param("multipart_upload", "true")
+            .query_param("content_type", "video/quicktime")
+            .header("authorization", "Bearer token-123");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({
+                "links": {
+                    "upload": "https://s3.example.com/multipart-upload",
+                    "complete_upload": "https://s3.example.com/complete"
+                }
+            }));
+    });
+    let transport = RestTransport::default();
+    let config = script_config(&server);
+
+    let response = transport
+        .upload_url(
+            &config,
+            fpt_domain::transport::UploadUrlRequest {
+                entity: "Version",
+                id: 10,
+                field_name: "sg_uploaded_movie",
+                file_name: "clip.mov",
+                content_type: Some("video/quicktime"),
+                multipart_upload: true,
+            },
+        )
+        .await
+        .expect("upload url with content_type and multipart succeeds");
+
+    assert_eq!(auth.hits(), 1);
+    assert_eq!(upload.hits(), 1);
+    assert_eq!(
+        response["links"]["upload"],
+        "https://s3.example.com/multipart-upload"
+    );
+    assert_eq!(
+        response["links"]["complete_upload"],
+        "https://s3.example.com/complete"
+    );
+}
+
+// --- Entity unfollow error case ---
+
+#[tokio::test]
+async fn entity_unfollow_rejects_user_without_id() {
+    let server = MockServer::start();
+    let _auth = mock_auth(&server);
+    let transport = RestTransport::default();
+    let config = script_config(&server);
+
+    let error = transport
+        .entity_unfollow(&config, "Shot", 50, &json!({"type": "HumanUser"}))
+        .await
+        .expect_err("unfollow without user id should fail");
+
+    assert_eq!(error.envelope().code, "INVALID_INPUT");
+}
+
+// --- Activity stream with query parameters ---
+
+#[tokio::test]
+async fn activity_stream_passes_query_parameters() {
+    let server = MockServer::start();
+    let auth = mock_auth(&server);
+    let activity = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1.1/entity/shots/42/activity_stream")
+            .query_param("entity_fields", "Shot.code,Shot.sg_status_list")
+            .header("authorization", "Bearer token-123");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({"data": [{"id": 1, "type": "activity"}]}));
+    });
+    let transport = RestTransport::default();
+    let config = script_config(&server);
+
+    let response = transport
+        .activity_stream(
+            &config,
+            "Shot",
+            42,
+            &[(
+                "entity_fields".to_string(),
+                "Shot.code,Shot.sg_status_list".to_string(),
+            )],
+        )
+        .await
+        .expect("activity stream with params succeeds");
+
+    assert_eq!(auth.hits(), 1);
+    assert_eq!(activity.hits(), 1);
+    assert_eq!(response["data"][0]["type"], "activity");
+}
+
+// --- Event log with query parameters ---
+
+#[tokio::test]
+async fn event_log_entries_passes_query_parameters() {
+    let server = MockServer::start();
+    let auth = mock_auth(&server);
+    let event_log = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1.1/entity/event_log_entries")
+            .query_param("fields", "event_type,created_at")
+            .query_param("sort", "-created_at")
+            .header("authorization", "Bearer token-123");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({"data": [{"id": 100, "event_type": "Shotgun_Shot_Change"}]}));
+    });
+    let transport = RestTransport::default();
+    let config = script_config(&server);
+
+    let response = transport
+        .event_log_entries(
+            &config,
+            &[
+                ("fields".to_string(), "event_type,created_at".to_string()),
+                ("sort".to_string(), "-created_at".to_string()),
+            ],
+        )
+        .await
+        .expect("event log entries with params succeeds");
+
+    assert_eq!(auth.hits(), 1);
+    assert_eq!(event_log.hits(), 1);
+    assert_eq!(response["data"][0]["event_type"], "Shotgun_Shot_Change");
+}
+
+// --- User following with query parameters ---
+
+#[tokio::test]
+async fn user_following_passes_query_parameters() {
+    let server = MockServer::start();
+    let auth = mock_auth(&server);
+    let following = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1.1/entity/human_users/7/following")
+            .query_param("fields", "code,type")
+            .query_param("page[size]", "10")
+            .header("authorization", "Bearer token-123");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({"data": [{"type": "Shot", "id": 1, "code": "shot_010"}]}));
+    });
+    let transport = RestTransport::default();
+    let config = script_config(&server);
+
+    let response = transport
+        .user_following(
+            &config,
+            7,
+            &[
+                ("fields".to_string(), "code,type".to_string()),
+                ("page[size]".to_string(), "10".to_string()),
+            ],
+        )
+        .await
+        .expect("user following with params succeeds");
+
+    assert_eq!(auth.hits(), 1);
+    assert_eq!(following.hits(), 1);
+    assert_eq!(response["data"][0]["code"], "shot_010");
+}
+
+// --- Entity relationships with query parameters ---
+
+#[tokio::test]
+async fn entity_relationships_passes_query_parameters() {
+    let server = MockServer::start();
+    let auth = mock_auth(&server);
+    let relationships = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1.1/entity/shots/42/relationships/assets")
+            .query_param("fields", "code,sg_status_list")
+            .query_param("page[size]", "50")
+            .header("authorization", "Bearer token-123");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({"data": [{"type": "Asset", "id": 5, "code": "hero_prop"}]}));
+    });
+    let transport = RestTransport::default();
+    let config = script_config(&server);
+
+    let response = transport
+        .entity_relationships(
+            &config,
+            "Shot",
+            42,
+            "assets",
+            &[
+                ("fields".to_string(), "code,sg_status_list".to_string()),
+                ("page[size]".to_string(), "50".to_string()),
+            ],
+        )
+        .await
+        .expect("entity relationships with params succeeds");
+
+    assert_eq!(auth.hits(), 1);
+    assert_eq!(relationships.hits(), 1);
+    assert_eq!(response["data"][0]["code"], "hero_prop");
+}
+
+// --- Note threads with query parameters ---
+
+#[tokio::test]
+async fn note_threads_passes_query_parameters() {
+    let server = MockServer::start();
+    let auth = mock_auth(&server);
+    let note_threads = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1.1/entity/notes/100/thread_contents")
+            .query_param("fields", "content,user,created_at")
+            .query_param("page[size]", "5")
+            .header("authorization", "Bearer token-123");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({"data": [{"type": "Reply", "id": 200, "content": "Looks good"}]}));
+    });
+    let transport = RestTransport::default();
+    let config = script_config(&server);
+
+    let response = transport
+        .note_threads(
+            &config,
+            100,
+            &[
+                ("fields".to_string(), "content,user,created_at".to_string()),
+                ("page[size]".to_string(), "5".to_string()),
+            ],
+        )
+        .await
+        .expect("note threads with params succeeds");
+
+    assert_eq!(auth.hits(), 1);
+    assert_eq!(note_threads.hits(), 1);
+    assert_eq!(response["data"][0]["content"], "Looks good");
+}
