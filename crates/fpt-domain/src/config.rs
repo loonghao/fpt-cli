@@ -352,13 +352,14 @@ pub fn save_persisted_config(config: &PersistedConnectionConfig) -> Result<PathB
         })?;
     }
 
-    let contents = serde_json::to_string_pretty(config).map_err(|error| {
+    let mut contents = serde_json::to_string_pretty(config).map_err(|error| {
         AppError::internal(format!(
             "could not serialize persisted config as JSON: {error}"
         ))
         .with_operation("serialize_persisted_config")
     })?;
-    fs::write(&path, format!("{contents}\n")).map_err(|error| {
+    contents.push('\n');
+    fs::write(&path, &contents).map_err(|error| {
         AppError::internal(format!(
             "could not write persisted config file `{}`: {error}",
             path.display()

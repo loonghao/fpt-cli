@@ -158,22 +158,18 @@ pub async fn run(args: SelfUpdateArgs) -> Result<Value> {
 }
 
 fn split_repository(repository: &str) -> Result<(String, String)> {
-    let (owner, repo) = repository.split_once('/').ok_or_else(|| {
+    let bad_format = || {
         AppError::invalid_input("repository override must use the format `owner/repo`")
             .with_operation("split_repository")
             .with_invalid_field("repository")
             .with_received_value(repository)
             .with_expected_shape("`owner/repo`, for example `loonghao/fpt-cli`")
-    })?;
+    };
+
+    let (owner, repo) = repository.split_once('/').ok_or_else(bad_format)?;
 
     if owner.is_empty() || repo.is_empty() {
-        return Err(AppError::invalid_input(
-            "repository override must use the format `owner/repo`",
-        )
-        .with_operation("split_repository")
-        .with_invalid_field("repository")
-        .with_received_value(repository)
-        .with_expected_shape("`owner/repo`, for example `loonghao/fpt-cli`"));
+        return Err(bad_format());
     }
 
     Ok((owner.to_string(), repo.to_string()))
@@ -495,11 +491,7 @@ fn extract_tar_gz_binary(archive_path: &Path, binary_name: &str, destination: &P
         }
     }
 
-    Err(AppError::internal(format!(
-        "binary `{}` was not found inside archive `{}`",
-        binary_name,
-        archive_path.display()
-    )))
+    Err(binary_not_found_error(binary_name, archive_path))
 }
 
 fn extract_zip_binary(archive_path: &Path, binary_name: &str, destination: &Path) -> Result<()> {
@@ -531,11 +523,16 @@ fn extract_zip_binary(archive_path: &Path, binary_name: &str, destination: &Path
         }
     }
 
-    Err(AppError::internal(format!(
+    Err(binary_not_found_error(binary_name, archive_path))
+}
+
+/// Shared error for when the expected binary is missing from an archive.
+fn binary_not_found_error(binary_name: &str, archive_path: &Path) -> AppError {
+    AppError::internal(format!(
         "binary `{}` was not found inside archive `{}`",
         binary_name,
         archive_path.display()
-    )))
+    ))
 }
 
 fn ensure_executable(path: &Path) -> Result<()> {
