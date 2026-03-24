@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.2.19](https://github.com/loonghao/fpt-cli/compare/v0.2.18...v0.2.19) (2026-03-24)
+
+
+### Code Refactoring
+
+* consolidate self_update map_err helpers and add edge-case transport tests ([#92](https://github.com/loonghao/fpt-cli/issues/92)) ([e252079](https://github.com/loonghao/fpt-cli/commit/e2520796eec3f4626da3dfb1122833447e31076c))
+
+
+### Miscellaneous Chores
+
+* extract shared page-param parser and fix trailing whitespace ([#90](https://github.com/loonghao/fpt-cli/issues/90)) ([7dcc581](https://github.com/loonghao/fpt-cli/commit/7dcc581094e15601c0bda9dd73774178ca922878))
+
 ## [0.2.18](https://github.com/loonghao/fpt-cli/compare/v0.2.17...v0.2.18) (2026-03-24)
 
 
