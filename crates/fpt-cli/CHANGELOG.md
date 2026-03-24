@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.16](https://github.com/loonghao/fpt-cli/compare/v0.2.15...v0.2.16) (2026-03-24)
+
+
+### Features
+
+* add schema entity-update, entity-delete, and batch find-one commands ([88289bb](https://github.com/loonghao/fpt-cli/commit/88289bba014532fadc108c946f3fc40cda3b5395))
+
 ## [0.2.15](https://github.com/loonghao/fpt-cli/compare/v0.2.14...v0.2.15) (2026-03-23)
 
 
