@@ -537,6 +537,31 @@ impl RestTransport {
         Ok(payload)
     }
 
+    /// Check whether the response is a 429 rate-limit and, if eligible for
+    /// retry, sleep for the appropriate backoff duration.
+    ///
+    /// Returns `true` when the caller should `continue` its retry loop.
+    /// Returns `false` when the response should be parsed normally.
+    async fn should_retry_rate_limit(
+        status: StatusCode,
+        attempt: u32,
+        max_attempts: u32,
+        debug: bool,
+    ) -> bool {
+        if status == StatusCode::TOO_MANY_REQUESTS && attempt < max_attempts {
+            let delay = Self::backoff_delay(attempt);
+            if debug {
+                eprintln!(
+                    "[debug] rate-limited (429) on attempt {attempt}/{max_attempts}, retrying after {}ms",
+                    delay.as_millis()
+                );
+            }
+            tokio::time::sleep(delay).await;
+            return true;
+        }
+        false
+    }
+
     async fn authorized_json_request(
         &self,
         config: &ConnectionSettings,
@@ -572,15 +597,7 @@ impl RestTransport {
             })?;
 
             let status = response.status();
-            if status == StatusCode::TOO_MANY_REQUESTS && attempt < max_attempts {
-                let delay = Self::backoff_delay(attempt);
-                if debug {
-                    eprintln!(
-                        "[debug] rate-limited (429) on attempt {attempt}/{max_attempts}, retrying after {}ms",
-                        delay.as_millis()
-                    );
-                }
-                tokio::time::sleep(delay).await;
+            if Self::should_retry_rate_limit(status, attempt, max_attempts, debug).await {
                 continue;
             }
 
@@ -638,15 +655,7 @@ impl RestTransport {
                 })?;
 
             let status = response.status();
-            if status == StatusCode::TOO_MANY_REQUESTS && attempt < max_attempts {
-                let delay = Self::backoff_delay(attempt);
-                if debug {
-                    eprintln!(
-                        "[debug] rate-limited (429) on attempt {attempt}/{max_attempts}, retrying after {}ms",
-                        delay.as_millis()
-                    );
-                }
-                tokio::time::sleep(delay).await;
+            if Self::should_retry_rate_limit(status, attempt, max_attempts, debug).await {
                 continue;
             }
 

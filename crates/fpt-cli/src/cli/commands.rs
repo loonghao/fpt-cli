@@ -1,4 +1,5 @@
 use clap::{Args, Parser, Subcommand, ValueEnum};
+use fpt_domain::app::batch::OnConflict;
 
 use super::common::{AuthModeArg, OutputFormatArg};
 use super::connection::ConnectionArgs;
@@ -620,4 +621,14 @@ pub enum OnConflictArg {
     Update,
     /// Return an error for the conflicting item
     Error,
+}
+
+impl From<OnConflictArg> for OnConflict {
+    fn from(value: OnConflictArg) -> Self {
+        match value {
+            OnConflictArg::Skip => OnConflict::Skip,
+            OnConflictArg::Update => OnConflict::Update,
+            OnConflictArg::Error => OnConflict::Error,
+        }
+    }
 }

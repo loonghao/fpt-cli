@@ -31,6 +31,21 @@ impl ErrorCode {
         }
     }
 
+    /// Maps each error code to a distinct process exit code.
+    ///
+    /// Exit codes are spaced by 10 so that future codes can be inserted
+    /// without breaking existing scripts that pattern-match on exit status.
+    ///
+    /// | Code                    | Exit |
+    /// |-------------------------|------|
+    /// | `InvalidInput`          |  10  |
+    /// | `AuthFailed`            |  20  |
+    /// | `NetworkError`          |  30  |
+    /// | `ApiError`              |  40  |
+    /// | `PolicyBlocked`         |  50  |
+    /// | `UnsupportedCapability` |  60  |
+    /// | `NotImplemented`        |  61  |
+    /// | `InternalError`         |  70  |
     pub const fn exit_code(self) -> i32 {
         match self {
             Self::InvalidInput => 10,

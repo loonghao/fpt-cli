@@ -1,14 +1,13 @@
 use crate::cli::{
     ActivityCommands, AuthCommands, BatchEntityCommands, Cli, Commands, DownloadCommands,
     EntityCommands, EventLogCommands, FollowersCommands, HierarchyCommands, InspectCommands,
-    NoteCommands, OnConflictArg, PreferencesCommands, SchemaCommands, SelfCommands, ServerCommands,
+    NoteCommands, PreferencesCommands, SchemaCommands, SelfCommands, ServerCommands,
     ThumbnailCommands, UploadCommands, WorkScheduleCommands,
 };
 use crate::config;
 use crate::self_update;
 use fpt_core::{AppError, Result, read_json_input};
 use fpt_domain::App;
-use fpt_domain::app::batch::OnConflict;
 use fpt_domain::transport::UploadUrlRequest;
 use serde_json::Value;
 
@@ -206,17 +205,12 @@ pub async fn run(cli: Cli) -> Result<Value> {
                     resume,
                 } => {
                     let body = required_json_input(input)?;
-                    let on_conflict = match on_conflict {
-                        OnConflictArg::Skip => OnConflict::Skip,
-                        OnConflictArg::Update => OnConflict::Update,
-                        OnConflictArg::Error => OnConflict::Error,
-                    };
                     app.entity_batch_upsert(
                         connection,
                         &entity,
                         body,
                         &key,
-                        on_conflict,
+                        on_conflict.into(),
                         dry_run,
                         checkpoint,
                         resume,
