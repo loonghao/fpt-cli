@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.17](https://github.com/loonghao/fpt-cli/compare/v0.2.16...v0.2.17) (2026-03-24)
+
+
+### Miscellaneous Chores
+
+* dependency consistency and COMMANDS ordering cleanup ([#79](https://github.com/loonghao/fpt-cli/issues/79)) ([2d52ce6](https://github.com/loonghao/fpt-cli/commit/2d52ce693bc93579660956a6c94a6c2e79e78176))
+* extract magic strings into named constants and minor code hygiene ([#81](https://github.com/loonghao/fpt-cli/issues/81)) ([d2d7bea](https://github.com/loonghao/fpt-cli/commit/d2d7beacac4422816b18a1e57cbb5fbeffbe5ebb))
+
 ## [0.2.16](https://github.com/loonghao/fpt-cli/compare/v0.2.15...v0.2.16) (2026-03-24)
 
 
