@@ -661,8 +661,7 @@ where
                         upsert_query_param(&mut params.query, "page[size]", "1");
                         match transport.entity_find(config, entity, params).await {
                             Ok(response) => {
-                                let record =
-                                    super::find::extract_find_one_response(response);
+                                let record = super::find::extract_find_one_response(response);
                                 match record {
                                     Ok(value) => json!({
                                         "index": index,
@@ -937,25 +936,29 @@ fn parse_batch_id_list_input(input: Value) -> Result<Vec<u64>> {
             let ids = object
                 .get("ids")
                 .ok_or_else(|| {
-                    AppError::invalid_input(
-                        "batch id list input is missing required field `ids`",
-                    )
-                    .with_operation("parse_batch_id_list_input")
-                    .with_missing_fields(["ids"])
-                    .with_expected_shape("a JSON object containing `ids` (array of positive integers)")
+                    AppError::invalid_input("batch id list input is missing required field `ids`")
+                        .with_operation("parse_batch_id_list_input")
+                        .with_missing_fields(["ids"])
+                        .with_expected_shape(
+                            "a JSON object containing `ids` (array of positive integers)",
+                        )
                 })?
                 .as_array()
-                .ok_or_else(|| AppError::invalid_input("`ids` must be a JSON array of positive integers")
-                    .with_operation("parse_batch_id_list_input")
-                    .with_invalid_field("ids")
-                    .with_expected_shape("a JSON array of positive integers"))?;
+                .ok_or_else(|| {
+                    AppError::invalid_input("`ids` must be a JSON array of positive integers")
+                        .with_operation("parse_batch_id_list_input")
+                        .with_invalid_field("ids")
+                        .with_expected_shape("a JSON array of positive integers")
+                })?;
             u64_list(ids, "ids")
         }
         _ => Err(AppError::invalid_input(
             "batch id list input must be either a JSON array of ids or an object containing `ids`",
         )
         .with_operation("parse_batch_id_list_input")
-        .with_expected_shape("a JSON array of positive integers, or a JSON object containing `ids`")),
+        .with_expected_shape(
+            "a JSON array of positive integers, or a JSON object containing `ids`",
+        )),
     }
 }
 
