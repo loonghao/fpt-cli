@@ -3072,10 +3072,7 @@ async fn entity_batch_summarize_rejects_empty_array() {
 async fn entity_batch_summarize_rejects_item_missing_entity() {
     let app = App::new(RecordingTransport::default());
     let err = app
-        .entity_batch_summarize(
-            overrides(),
-            json!([{"payload": {"filters": []}}]),
-        )
+        .entity_batch_summarize(overrides(), json!([{"payload": {"filters": []}}]))
         .await
         .expect_err("missing entity should be rejected");
     assert_eq!(err.envelope().code, "INVALID_INPUT");
@@ -3089,10 +3086,7 @@ async fn entity_batch_summarize_rejects_item_missing_entity() {
 async fn entity_batch_summarize_rejects_item_missing_payload() {
     let app = App::new(RecordingTransport::default());
     let err = app
-        .entity_batch_summarize(
-            overrides(),
-            json!([{"entity": "Shot"}]),
-        )
+        .entity_batch_summarize(overrides(), json!([{"entity": "Shot"}]))
         .await
         .expect_err("missing payload should be rejected");
     assert_eq!(err.envelope().code, "INVALID_INPUT");
