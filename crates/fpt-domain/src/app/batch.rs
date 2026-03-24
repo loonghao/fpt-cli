@@ -706,6 +706,54 @@ where
             elapsed_ms,
         ))
     }
+    pub async fn entity_batch_summarize(
+        &self,
+        overrides: ConnectionOverrides,
+        input: Value,
+    ) -> Result<Value> {
+        let requests = parse_batch_summarize_input(input)?;
+        let config = ConnectionSettings::resolve(overrides)?;
+        let transport = &self.transport;
+        let config = &config;
+        let started_at = Instant::now();
+        let mut results = stream::iter(requests.into_iter().enumerate())
+            .map(|(index, request)| async move {
+                let entity = request
+                    .get("entity")
+                    .and_then(Value::as_str)
+                    .unwrap_or("unknown")
+                    .to_string();
+                let payload = request.get("payload").cloned().unwrap_or(json!({}));
+                match transport.entity_summarize(config, &entity, &payload).await {
+                    Ok(response) => json!({
+                        "index": index,
+                        "entity": entity,
+                        "ok": true,
+                        "request": request,
+                        "response": response,
+                    }),
+                    Err(error) => json!({
+                        "index": index,
+                        "entity": entity,
+                        "ok": false,
+                        "request": request,
+                        "error": error.envelope(),
+                    }),
+                }
+            })
+            .buffer_unordered(batch_concurrency_limit())
+            .collect::<Vec<_>>()
+            .await;
+        sort_batch_results(&mut results);
+        let elapsed_ms = started_at.elapsed().as_millis() as u64;
+
+        Ok(batch_response_with_stats(
+            "entity.batch.summarize",
+            "_multi",
+            results,
+            elapsed_ms,
+        ))
+    }
 }
 
 /// Build a batch response that includes execution statistics.
@@ -1121,4 +1169,70 @@ fn write_checkpoint(writer: &Option<std::sync::Mutex<File>>, result: &Value) {
             }
         }
     }
+}
+
+/// Parse a batch summarize input.
+///
+/// Each request must be an object with `entity` (string) and `payload` (object).
+/// Accepts either a JSON array of request objects or an object containing `requests`.
+fn parse_batch_summarize_input(input: Value) -> Result<Vec<Value>> {
+    let items = match input {
+        Value::Array(values) => non_empty_items(values, "entity batch summarize requests")?,
+        Value::Object(object) => {
+            let requests = object
+                .get("requests")
+                .ok_or_else(|| {
+                    AppError::invalid_input(
+                        "entity batch summarize input is missing required field `requests`",
+                    )
+                    .with_operation("parse_batch_summarize_input")
+                    .with_missing_fields(["requests"])
+                    .with_expected_shape("a JSON object containing `requests` (array of summarize request objects)")
+                })?
+                .as_array()
+                .ok_or_else(|| AppError::invalid_input("`requests` must be a JSON array of objects")
+                    .with_operation("parse_batch_summarize_input")
+                    .with_invalid_field("requests")
+                    .with_expected_shape("a JSON array of summarize request objects"))?
+                .clone();
+            non_empty_items(requests, "requests")?
+        }
+        _ => {
+            return Err(AppError::invalid_input(
+                "entity batch summarize input must be either a JSON array of request objects or an object containing `requests`",
+            )
+            .with_operation("parse_batch_summarize_input")
+            .with_expected_shape("a JSON array of request objects, or a JSON object containing `requests`"));
+        }
+    };
+
+    // Validate each item has the required fields.
+    for (index, item) in items.iter().enumerate() {
+        let object = item.as_object().ok_or_else(|| {
+            AppError::invalid_input(format!(
+                "item {} in entity batch summarize must be a JSON object with `entity` and `payload`",
+                index + 1
+            ))
+            .with_operation("parse_batch_summarize_input")
+            .with_expected_shape("each request must be a JSON object containing `entity` (string) and `payload` (object)")
+        })?;
+        if !object.contains_key("entity") {
+            return Err(AppError::invalid_input(format!(
+                "item {} is missing required field `entity`",
+                index + 1
+            ))
+            .with_operation("parse_batch_summarize_input")
+            .with_missing_fields(["entity"]));
+        }
+        if !object.contains_key("payload") {
+            return Err(AppError::invalid_input(format!(
+                "item {} is missing required field `payload`",
+                index + 1
+            ))
+            .with_operation("parse_batch_summarize_input")
+            .with_missing_fields(["payload"]));
+        }
+    }
+
+    Ok(items)
 }

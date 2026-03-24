@@ -200,3 +200,51 @@ pub const SCHEMA_ENTITY_DELETE_SPEC: CommandSpec = CommandSpec {
     examples: SCHEMA_ENTITY_DELETE_EXAMPLES,
     notes: SCHEMA_ENTITY_DELETE_NOTES,
 };
+
+const SCHEMA_ENTITY_CREATE_EXAMPLES: &[&str] = &[
+    "fpt schema entity-create --input '{\"name\":{\"value\":\"CustomEntity01\"},\"schema_field_type\":{\"value\":\"entity\"}}' --site ...",
+];
+
+const SCHEMA_ENTITY_CREATE_NOTES: &[&str] = &[
+    "Creates a new custom entity type via POST /api/{ver}/schema",
+    "Requires admin-level credentials",
+    "The input body must contain at minimum a `name` property",
+];
+
+pub const SCHEMA_ENTITY_CREATE_SPEC: CommandSpec = CommandSpec {
+    name: "schema.entity-create",
+    summary: "Create a new custom entity type",
+    risk: RiskLevel::Write,
+    implemented: true,
+    supports_dry_run: false,
+    preferred_transport: "rest",
+    fallback_transport: None,
+    input: "entity definition JSON",
+    output: "json",
+    examples: SCHEMA_ENTITY_CREATE_EXAMPLES,
+    notes: SCHEMA_ENTITY_CREATE_NOTES,
+};
+
+const SCHEMA_ENTITY_REVIVE_EXAMPLES: &[&str] = &[
+    "fpt schema entity-revive CustomEntity01 --site ... --auth-mode script --script-name ... --script-key ...",
+];
+
+const SCHEMA_ENTITY_REVIVE_NOTES: &[&str] = &[
+    "Revives a previously retired entity type via POST /api/{ver}/schema/{entity_type}?revive=true",
+    "Requires admin-level credentials",
+    "The entity type must have been previously deleted (retired) and not yet purged",
+];
+
+pub const SCHEMA_ENTITY_REVIVE_SPEC: CommandSpec = CommandSpec {
+    name: "schema.entity-revive",
+    summary: "Revive a previously retired entity type",
+    risk: RiskLevel::Write,
+    implemented: true,
+    supports_dry_run: false,
+    preferred_transport: "rest",
+    fallback_transport: None,
+    input: "entity name",
+    output: "json",
+    examples: SCHEMA_ENTITY_REVIVE_EXAMPLES,
+    notes: SCHEMA_ENTITY_REVIVE_NOTES,
+};

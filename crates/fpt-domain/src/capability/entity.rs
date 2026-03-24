@@ -357,3 +357,72 @@ pub const ENTITY_BATCH_FIND_ONE_SPEC: CommandSpec = CommandSpec {
     examples: ENTITY_BATCH_FIND_ONE_EXAMPLES,
     notes: ENTITY_BATCH_NOTES,
 };
+
+const ENTITY_BATCH_UPSERT_EXAMPLES: &[&str] = &[
+    "fpt entity batch upsert Shot --input @items.json --key code --on-conflict skip --dry-run --output json",
+    "fpt entity batch upsert Shot --input @items.json --key code --on-conflict update --checkpoint upsert.jsonl --output json",
+];
+
+pub const ENTITY_BATCH_UPSERT_SPEC: CommandSpec = CommandSpec {
+    name: "entity.batch.upsert",
+    summary: "Create or update entities based on a key field (idempotent bulk upsert)",
+    risk: RiskLevel::Write,
+    implemented: true,
+    supports_dry_run: true,
+    preferred_transport: "rest",
+    fallback_transport: Some("rpc"),
+    input: "item body array + --key field + --on-conflict strategy",
+    output: "json",
+    examples: ENTITY_BATCH_UPSERT_EXAMPLES,
+    notes: ENTITY_BATCH_NOTES,
+};
+
+const ENTITY_COUNT_EXAMPLES: &[&str] = &[
+    "fpt entity count Shot --output json",
+    "fpt entity count Task --filter-dsl 'sg_status_list == \"ip\"' --output json",
+    "fpt entity count Version --input '{\"filters\":[[\"sg_status_list\",\"is\",\"ip\"]]}' --output json",
+];
+
+const ENTITY_COUNT_NOTES: &[&str] = &[
+    "Convenience wrapper around entity.summarize with record_count on the id field",
+    "Accepts optional --input (JSON filters) or --filter-dsl (DSL expression)",
+    "Returns the RPC summarize response with record_count",
+];
+
+pub const ENTITY_COUNT_SPEC: CommandSpec = CommandSpec {
+    name: "entity.count",
+    summary: "Count entity records matching optional filters",
+    risk: RiskLevel::Read,
+    implemented: true,
+    supports_dry_run: false,
+    preferred_transport: "rpc",
+    fallback_transport: None,
+    input: "optional filters JSON or --filter-dsl",
+    output: "json summary payload",
+    examples: ENTITY_COUNT_EXAMPLES,
+    notes: ENTITY_COUNT_NOTES,
+};
+
+const ENTITY_BATCH_SUMMARIZE_EXAMPLES: &[&str] = &[
+    "fpt entity batch summarize --input @batch_summaries.json --output json",
+];
+
+const ENTITY_BATCH_SUMMARIZE_NOTES: &[&str] = &[
+    "Runs multiple summarize queries concurrently in one CLI invocation",
+    "Each request must contain `entity` (string) and `payload` (summarize body object)",
+    "Results are aggregated with per-item ok/error envelopes",
+];
+
+pub const ENTITY_BATCH_SUMMARIZE_SPEC: CommandSpec = CommandSpec {
+    name: "entity.batch.summarize",
+    summary: "Run multiple summarize queries in one CLI invocation",
+    risk: RiskLevel::Read,
+    implemented: true,
+    supports_dry_run: false,
+    preferred_transport: "rpc",
+    fallback_transport: None,
+    input: "request object array / object with requests",
+    output: "json",
+    examples: ENTITY_BATCH_SUMMARIZE_EXAMPLES,
+    notes: ENTITY_BATCH_SUMMARIZE_NOTES,
+};
