@@ -5,6 +5,7 @@ use crate::config::{ConnectionOverrides, ConnectionSettings};
 use crate::transport::ShotgridTransport;
 
 use super::App;
+use super::query_helpers::normalize_filters;
 
 impl<T> App<T>
 where
@@ -88,66 +89,6 @@ fn normalize_summarize_input(input: Value) -> Result<Value> {
     }
 
     Ok(Value::Object(payload))
-}
-
-fn normalize_filters(filters: Value, filter_operator: Option<Value>) -> Result<Value> {
-    match filters {
-        Value::Array(items) => {
-            let filter_operator = normalize_filter_operator(filter_operator.as_ref())?
-                .unwrap_or_else(|| "all".to_string());
-            Ok(serde_json::json!({
-                "filter_operator": filter_operator,
-                "filters": items,
-            }))
-        }
-        Value::Object(mut object) => {
-            let filter_operator = normalize_filter_operator(filter_operator.as_ref())?;
-            if let Some(filter_operator) = filter_operator {
-                if object.contains_key("filter_operator") {
-                    return Err(AppError::invalid_input(
-                        "`filter_operator` cannot be set both at the top level and inside `filters`",
-                    )
-                    .with_operation("normalize_filters")
-                    .with_conflicting_fields(["filter_operator", "filters.filter_operator"]));
-                }
-                object.insert(
-                    "filter_operator".to_string(),
-                    Value::String(filter_operator),
-                );
-            }
-            Ok(Value::Object(object))
-        }
-        _ => Err(AppError::invalid_input(
-            "`filters` must be a JSON array or object",
-        )
-        .with_operation("normalize_filters")
-        .with_invalid_field("filters")
-        .with_expected_shape("a JSON array of filter conditions, or a JSON object with `filter_operator` and `filters`")),
-    }
-}
-
-fn normalize_filter_operator(filter_operator: Option<&Value>) -> Result<Option<String>> {
-    let Some(filter_operator) = filter_operator else {
-        return Ok(None);
-    };
-
-    let filter_operator = filter_operator.as_str().ok_or_else(|| {
-        AppError::invalid_input("`filter_operator` must be `all` or `any`")
-            .with_operation("normalize_filter_operator")
-            .with_invalid_field("filter_operator")
-            .with_allowed_values(["all", "any"])
-    })?;
-
-    match filter_operator {
-        "all" | "any" => Ok(Some(filter_operator.to_string())),
-        _ => Err(
-            AppError::invalid_input("`filter_operator` must be `all` or `any`")
-                .with_operation("normalize_filter_operator")
-                .with_invalid_field("filter_operator")
-                .with_received_value(filter_operator)
-                .with_allowed_values(["all", "any"]),
-        ),
-    }
 }
 
 fn normalize_summary_fields(summary_fields: Value) -> Result<Value> {

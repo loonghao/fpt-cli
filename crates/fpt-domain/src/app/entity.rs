@@ -10,6 +10,7 @@ use crate::transport::{
 
 use super::App;
 use super::find::{build_find_params, extract_find_one_response, upsert_query_param};
+use super::query_helpers::{build_query_params, normalize_filters};
 
 impl<T> App<T>
 where
@@ -148,7 +149,7 @@ where
         input: Option<Value>,
     ) -> Result<Value> {
         let config = ConnectionSettings::resolve(overrides)?;
-        let params = super::activity::build_common_query_params(input)?;
+        let params = build_query_params(input)?;
         self.transport
             .entity_relationships(&config, entity, id, related_field, &params)
             .await
@@ -264,7 +265,7 @@ fn build_count_payload(input: Option<Value>, filter_dsl: Option<String>) -> Resu
             })?;
             let filters = object.get("filters").cloned().unwrap_or(json!([]));
             let filter_operator = object.get("filter_operator").cloned();
-            normalize_count_filters(filters, filter_operator)?
+            normalize_filters(filters, filter_operator)?
         }
         (None, Some(dsl)) => {
             let parsed = parse_filter_dsl(&dsl)?;
@@ -296,59 +297,4 @@ fn build_count_payload(input: Option<Value>, filter_dsl: Option<String>) -> Resu
 
     payload.insert("filters".to_string(), filters);
     Ok(Value::Object(payload))
-}
-
-/// Normalize the `filters` value for a count payload.
-///
-/// Accepts either:
-/// * An array of filter conditions (wrapped with the default operator `all`)
-/// * An object with `filter_operator` and `filters` keys
-fn normalize_count_filters(filters: Value, filter_operator: Option<Value>) -> Result<Value> {
-    match filters {
-        Value::Array(items) => {
-            let operator = match filter_operator {
-                Some(op) => {
-                    let op_str = op.as_str().ok_or_else(|| {
-                        AppError::invalid_input("`filter_operator` must be `all` or `any`")
-                            .with_operation("normalize_count_filters")
-                            .with_invalid_field("filter_operator")
-                            .with_allowed_values(["all", "any"])
-                    })?;
-                    match op_str {
-                        "all" | "any" => op_str.to_string(),
-                        _ => return Err(AppError::invalid_input("`filter_operator` must be `all` or `any`")
-                            .with_operation("normalize_count_filters")
-                            .with_invalid_field("filter_operator")
-                            .with_received_value(op_str)
-                            .with_allowed_values(["all", "any"])),
-                    }
-                }
-                None => "all".to_string(),
-            };
-            Ok(json!({
-                "filter_operator": operator,
-                "filters": items,
-            }))
-        }
-        Value::Object(ref map) => {
-            if filter_operator.is_some() && map.contains_key("filter_operator") {
-                return Err(AppError::invalid_input(
-                    "`filter_operator` cannot be set both at the top level and inside `filters`",
-                )
-                .with_operation("normalize_count_filters")
-                .with_conflicting_fields(["filter_operator", "filters.filter_operator"]));
-            }
-            if let Some(op) = filter_operator {
-                let mut m = map.clone();
-                m.insert("filter_operator".to_string(), op);
-                Ok(Value::Object(m))
-            } else {
-                Ok(filters)
-            }
-        }
-        _ => Err(AppError::invalid_input("`filters` must be a JSON array or object")
-            .with_operation("normalize_count_filters")
-            .with_invalid_field("filters")
-            .with_expected_shape("a JSON array of filter conditions, or a JSON object with `filter_operator` and `filters`")),
-    }
 }

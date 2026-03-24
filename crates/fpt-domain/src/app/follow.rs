@@ -53,7 +53,7 @@ where
         input: Option<Value>,
     ) -> Result<Value> {
         let config = ConnectionSettings::resolve(overrides)?;
-        let params = super::activity::build_common_query_params(input)?;
+        let params = super::query_helpers::build_query_params(input)?;
         self.transport
             .user_following(&config, user_id, &params)
             .await

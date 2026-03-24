@@ -5,7 +5,7 @@ use crate::config::{ConnectionOverrides, ConnectionSettings};
 use crate::transport::ShotgridTransport;
 
 use super::App;
-use super::activity::build_common_query_params;
+use super::query_helpers::build_query_params;
 
 impl<T> App<T>
 where
@@ -18,7 +18,7 @@ where
         input: Option<Value>,
     ) -> Result<Value> {
         let config = ConnectionSettings::resolve(overrides)?;
-        let params = build_common_query_params(input)?;
+        let params = build_query_params(input)?;
         self.transport
             .note_threads(&config, note_id, &params)
             .await
