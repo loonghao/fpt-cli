@@ -72,19 +72,12 @@ where
             .map(|(index, id)| {
                 let fields = fields.clone();
                 async move {
+                    let id_val = json!(id);
                     match transport.entity_get(config, entity, id, fields).await {
-                        Ok(response) => json!({
-                            "index": index,
-                            "id": id,
-                            "ok": true,
-                            "response": response,
-                        }),
-                        Err(error) => json!({
-                            "index": index,
-                            "id": id,
-                            "ok": false,
-                            "error": error.envelope(),
-                        }),
+                        Ok(response) => {
+                            batch_result_ok(index, &[("id", id_val), ("response", response)])
+                        }
+                        Err(error) => batch_result_err(index, &error, &[("id", id_val)]),
                     }
                 }
             })
@@ -116,25 +109,12 @@ where
             .map(|(index, request)| async move {
                 match build_find_params(Some(request.clone()), None) {
                     Ok(params) => match transport.entity_find(config, entity, params).await {
-                        Ok(response) => json!({
-                            "index": index,
-                            "ok": true,
-                            "request": request,
-                            "response": response,
-                        }),
-                        Err(error) => json!({
-                            "index": index,
-                            "ok": false,
-                            "request": request,
-                            "error": error.envelope(),
-                        }),
+                        Ok(response) => {
+                            batch_result_ok(index, &[("request", request), ("response", response)])
+                        }
+                        Err(error) => batch_result_err(index, &error, &[("request", request)]),
                     },
-                    Err(error) => json!({
-                        "index": index,
-                        "ok": false,
-                        "request": request,
-                        "error": error.envelope(),
-                    }),
+                    Err(error) => batch_result_err(index, &error, &[("request", request)]),
                 }
             })
             .buffer_unordered(batch_concurrency_limit())
@@ -174,18 +154,10 @@ where
         let mut results = stream::iter(items.into_iter().enumerate())
             .map(|(index, body)| async move {
                 match transport.entity_create(config, entity, &body).await {
-                    Ok(response) => json!({
-                        "index": index,
-                        "ok": true,
-                        "request": body,
-                        "response": response,
-                    }),
-                    Err(error) => json!({
-                        "index": index,
-                        "ok": false,
-                        "request": body,
-                        "error": error.envelope(),
-                    }),
+                    Ok(response) => {
+                        batch_result_ok(index, &[("request", body), ("response", response)])
+                    }
+                    Err(error) => batch_result_err(index, &error, &[("request", body)]),
                 }
             })
             .buffer_unordered(batch_concurrency_limit())
@@ -228,20 +200,19 @@ where
                     .entity_update(config, entity, item.id, &item.body)
                     .await
                 {
-                    Ok(response) => json!({
-                        "index": index,
-                        "id": item.id,
-                        "ok": true,
-                        "request": item.body,
-                        "response": response,
-                    }),
-                    Err(error) => json!({
-                        "index": index,
-                        "id": item.id,
-                        "ok": false,
-                        "request": item.body,
-                        "error": error.envelope(),
-                    }),
+                    Ok(response) => batch_result_ok(
+                        index,
+                        &[
+                            ("id", json!(item.id)),
+                            ("request", item.body),
+                            ("response", response),
+                        ],
+                    ),
+                    Err(error) => batch_result_err(
+                        index,
+                        &error,
+                        &[("id", json!(item.id)), ("request", item.body)],
+                    ),
                 }
             })
             .buffer_unordered(batch_concurrency_limit())
@@ -371,13 +342,11 @@ where
                     let mut params = match build_find_params(Some(filter_input), None) {
                         Ok(p) => p,
                         Err(error) => {
-                            let result = json!({
-                                "index": index,
-                                "ok": false,
-                                "action": "error",
-                                "request": body,
-                                "error": error.envelope(),
-                            });
+                            let result = batch_result_err(
+                                index,
+                                &error,
+                                &[("action", json!("error")), ("request", body)],
+                            );
                             write_checkpoint(checkpoint_writer, &result);
                             return result;
                         }
@@ -394,13 +363,11 @@ where
                                 .cloned()
                         }
                         Err(error) => {
-                            let result = json!({
-                                "index": index,
-                                "ok": false,
-                                "action": "error",
-                                "request": body,
-                                "error": error.envelope(),
-                            });
+                            let result = batch_result_err(
+                                index,
+                                &error,
+                                &[("action", json!("error")), ("request", body)],
+                            );
                             write_checkpoint(checkpoint_writer, &result);
                             return result;
                         }
@@ -410,20 +377,19 @@ where
                         None => {
                             // No existing entity — create it.
                             match transport.entity_create(config, entity, &body).await {
-                                Ok(response) => json!({
-                                    "index": index,
-                                    "ok": true,
-                                    "action": "created",
-                                    "request": body,
-                                    "response": response,
-                                }),
-                                Err(error) => json!({
-                                    "index": index,
-                                    "ok": false,
-                                    "action": "error",
-                                    "request": body,
-                                    "error": error.envelope(),
-                                }),
+                                Ok(response) => batch_result_ok(
+                                    index,
+                                    &[
+                                        ("action", json!("created")),
+                                        ("request", body),
+                                        ("response", response),
+                                    ],
+                                ),
+                                Err(error) => batch_result_err(
+                                    index,
+                                    &error,
+                                    &[("action", json!("error")), ("request", body)],
+                                ),
                             }
                         }
                         Some(existing_entity) => {
@@ -478,22 +444,24 @@ where
                                         .entity_update(config, entity, existing_id, &body)
                                         .await
                                     {
-                                        Ok(response) => json!({
-                                            "index": index,
-                                            "ok": true,
-                                            "action": "updated",
-                                            "id": existing_id,
-                                            "request": body,
-                                            "response": response,
-                                        }),
-                                        Err(error) => json!({
-                                            "index": index,
-                                            "ok": false,
-                                            "action": "error",
-                                            "id": existing_id,
-                                            "request": body,
-                                            "error": error.envelope(),
-                                        }),
+                                        Ok(response) => batch_result_ok(
+                                            index,
+                                            &[
+                                                ("action", json!("updated")),
+                                                ("id", json!(existing_id)),
+                                                ("request", body),
+                                                ("response", response),
+                                            ],
+                                        ),
+                                        Err(error) => batch_result_err(
+                                            index,
+                                            &error,
+                                            &[
+                                                ("action", json!("error")),
+                                                ("id", json!(existing_id)),
+                                                ("request", body),
+                                            ],
+                                        ),
                                     }
                                 }
                             }
@@ -573,19 +541,12 @@ where
         let started_at = Instant::now();
         let mut results = stream::iter(ids.into_iter().enumerate())
             .map(|(index, id)| async move {
+                let id_val = json!(id);
                 match transport.entity_delete(config, entity, id).await {
-                    Ok(response) => json!({
-                        "index": index,
-                        "id": id,
-                        "ok": true,
-                        "response": response,
-                    }),
-                    Err(error) => json!({
-                        "index": index,
-                        "id": id,
-                        "ok": false,
-                        "error": error.envelope(),
-                    }),
+                    Ok(response) => {
+                        batch_result_ok(index, &[("id", id_val), ("response", response)])
+                    }
+                    Err(error) => batch_result_err(index, &error, &[("id", id_val)]),
                 }
             })
             .buffer_unordered(batch_concurrency_limit())
@@ -623,19 +584,12 @@ where
         let started_at = Instant::now();
         let mut results = stream::iter(ids.into_iter().enumerate())
             .map(|(index, id)| async move {
+                let id_val = json!(id);
                 match transport.entity_revive(config, entity, id).await {
-                    Ok(response) => json!({
-                        "index": index,
-                        "id": id,
-                        "ok": true,
-                        "response": response,
-                    }),
-                    Err(error) => json!({
-                        "index": index,
-                        "id": id,
-                        "ok": false,
-                        "error": error.envelope(),
-                    }),
+                    Ok(response) => {
+                        batch_result_ok(index, &[("id", id_val), ("response", response)])
+                    }
+                    Err(error) => batch_result_err(index, &error, &[("id", id_val)]),
                 }
             })
             .buffer_unordered(batch_concurrency_limit())
@@ -671,34 +625,19 @@ where
                             Ok(response) => {
                                 let record = super::find::extract_find_one_response(response);
                                 match record {
-                                    Ok(value) => json!({
-                                        "index": index,
-                                        "ok": true,
-                                        "request": request,
-                                        "response": value,
-                                    }),
-                                    Err(error) => json!({
-                                        "index": index,
-                                        "ok": false,
-                                        "request": request,
-                                        "error": error.envelope(),
-                                    }),
+                                    Ok(value) => batch_result_ok(
+                                        index,
+                                        &[("request", request), ("response", value)],
+                                    ),
+                                    Err(error) => {
+                                        batch_result_err(index, &error, &[("request", request)])
+                                    }
                                 }
                             }
-                            Err(error) => json!({
-                                "index": index,
-                                "ok": false,
-                                "request": request,
-                                "error": error.envelope(),
-                            }),
+                            Err(error) => batch_result_err(index, &error, &[("request", request)]),
                         }
                     }
-                    Err(error) => json!({
-                        "index": index,
-                        "ok": false,
-                        "request": request,
-                        "error": error.envelope(),
-                    }),
+                    Err(error) => batch_result_err(index, &error, &[("request", request)]),
                 }
             })
             .buffer_unordered(batch_concurrency_limit())
@@ -732,20 +671,19 @@ where
                     .to_string();
                 let payload = request.get("payload").cloned().unwrap_or(json!({}));
                 match transport.entity_summarize(config, &entity, &payload).await {
-                    Ok(response) => json!({
-                        "index": index,
-                        "entity": entity,
-                        "ok": true,
-                        "request": request,
-                        "response": response,
-                    }),
-                    Err(error) => json!({
-                        "index": index,
-                        "entity": entity,
-                        "ok": false,
-                        "request": request,
-                        "error": error.envelope(),
-                    }),
+                    Ok(response) => batch_result_ok(
+                        index,
+                        &[
+                            ("entity", json!(entity)),
+                            ("request", request),
+                            ("response", response),
+                        ],
+                    ),
+                    Err(error) => batch_result_err(
+                        index,
+                        &error,
+                        &[("entity", json!(entity)), ("request", request)],
+                    ),
                 }
             })
             .buffer_unordered(batch_concurrency_limit())
@@ -760,6 +698,40 @@ where
             elapsed_ms(started_at),
         ))
     }
+}
+
+/// Build a single successful batch result entry.
+///
+/// Accepts any number of extra key-value pairs that are merged into the
+/// resulting JSON object alongside the standard `"index"` and `"ok": true`
+/// fields.  This avoids scattering identical `json!({...})` templates
+/// across every batch method.
+fn batch_result_ok(index: usize, extras: &[(&str, Value)]) -> Value {
+    let mut map = serde_json::Map::with_capacity(3 + extras.len());
+    map.insert("index".to_string(), json!(index));
+    map.insert("ok".to_string(), json!(true));
+    for &(key, ref value) in extras {
+        map.insert(key.to_string(), value.clone());
+    }
+    Value::Object(map)
+}
+
+/// Build a single failed batch result entry.
+///
+/// Works like [`batch_result_ok`] but sets `"ok": false` and includes the
+/// serialised error envelope under the `"error"` key.
+fn batch_result_err(index: usize, error: &AppError, extras: &[(&str, Value)]) -> Value {
+    let mut map = serde_json::Map::with_capacity(4 + extras.len());
+    map.insert("index".to_string(), json!(index));
+    map.insert("ok".to_string(), json!(false));
+    for &(key, ref value) in extras {
+        map.insert(key.to_string(), value.clone());
+    }
+    map.insert(
+        "error".to_string(),
+        serde_json::to_value(error.envelope()).unwrap_or(json!({"code": "INTERNAL_ERROR"})),
+    );
+    Value::Object(map)
 }
 
 /// Build a batch response that includes execution statistics.

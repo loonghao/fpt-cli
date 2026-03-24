@@ -12,7 +12,7 @@ use serde_json::Value;
 /// The optional `filter_operator` (when supplied at the top level) is validated
 /// and merged into the result.  It is an error to specify `filter_operator`
 /// both at the top level **and** inside a `filters` object.
-pub fn normalize_filters(filters: Value, filter_operator: Option<Value>) -> Result<Value> {
+pub(crate) fn normalize_filters(filters: Value, filter_operator: Option<Value>) -> Result<Value> {
     match filters {
         Value::Array(items) => {
             let filter_operator = normalize_filter_operator(filter_operator.as_ref())?
@@ -52,7 +52,7 @@ pub fn normalize_filters(filters: Value, filter_operator: Option<Value>) -> Resu
 ///
 /// Returns `Ok(None)` when the operator is absent, `Ok(Some("all" | "any"))`
 /// when it is valid, or an error for any other value.
-pub fn normalize_filter_operator(filter_operator: Option<&Value>) -> Result<Option<String>> {
+fn normalize_filter_operator(filter_operator: Option<&Value>) -> Result<Option<String>> {
     let Some(filter_operator) = filter_operator else {
         return Ok(None);
     };
@@ -89,7 +89,7 @@ pub fn normalize_filter_operator(filter_operator: Option<&Value>) -> Result<Opti
 /// - `{"page": {"number": 1, "size": 50}}`
 /// - `{"entity_fields": "code,sg_status_list"}`
 /// - Any other top-level string/number/bool scalar key is forwarded as-is.
-pub fn build_query_params(input: Option<Value>) -> Result<Vec<(String, String)>> {
+pub(crate) fn build_query_params(input: Option<Value>) -> Result<Vec<(String, String)>> {
     let Some(input) = input else {
         return Ok(Vec::new());
     };
@@ -146,7 +146,7 @@ pub fn build_query_params(input: Option<Value>) -> Result<Vec<(String, String)>>
 /// Convert a JSON scalar (string, number, or bool) to its string representation.
 ///
 /// Used for query-string parameter encoding where all values must be strings.
-pub fn scalar_to_string(value: &Value, field_name: &str) -> Result<String> {
+pub(crate) fn scalar_to_string(value: &Value, field_name: &str) -> Result<String> {
     match value {
         Value::String(s) => Ok(s.clone()),
         Value::Number(n) => Ok(n.to_string()),
@@ -163,7 +163,7 @@ pub fn scalar_to_string(value: &Value, field_name: &str) -> Result<String> {
 /// strings into a single comma-joined string.
 ///
 /// This is the variant used by activity and note query parameter builders.
-pub fn string_list_to_csv(value: &Value, field_name: &str) -> Result<String> {
+fn string_list_to_csv(value: &Value, field_name: &str) -> Result<String> {
     if let Some(s) = value.as_str() {
         return Ok(s.to_string());
     }
@@ -191,7 +191,7 @@ pub fn string_list_to_csv(value: &Value, field_name: &str) -> Result<String> {
 ///
 /// Accepts either a comma-separated string or a JSON array of strings.
 /// Empty entries are filtered out.
-pub fn string_list(value: &Value, field_name: &str) -> Result<Vec<String>> {
+pub(crate) fn string_list(value: &Value, field_name: &str) -> Result<Vec<String>> {
     if let Some(value) = value.as_str() {
         let items = value
             .split(',')
