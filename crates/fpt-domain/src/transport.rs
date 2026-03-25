@@ -269,6 +269,25 @@ pub trait ShotgridTransport {
         config: &ConnectionSettings,
         entity: &str,
     ) -> Result<Value>;
+    async fn current_user(
+        &self,
+        config: &ConnectionSettings,
+        user_type: &str,
+        params: &[(String, String)],
+    ) -> Result<Value>;
+    async fn note_reply_read(
+        &self,
+        config: &ConnectionSettings,
+        note_id: u64,
+        reply_id: u64,
+        params: &[(String, String)],
+    ) -> Result<Value>;
+    async fn filmstrip_thumbnail(
+        &self,
+        config: &ConnectionSettings,
+        entity: &str,
+        id: u64,
+    ) -> Result<Value>;
 }
 
 #[derive(Debug, Clone)]
@@ -1269,6 +1288,48 @@ impl ShotgridTransport for RestTransport {
     ) -> Result<Value> {
         let path = format!("schema/{entity}");
         self.authorized_json_request(config, Method::POST, &path, &revive_query(), None)
+            .await
+    }
+
+    async fn current_user(
+        &self,
+        config: &ConnectionSettings,
+        user_type: &str,
+        params: &[(String, String)],
+    ) -> Result<Value> {
+        let collection = match user_type {
+            "ApiUser" | "api_user" | "api" => "api_users",
+            _ => "human_users",
+        };
+        let path = format!("entity/{collection}/current");
+        self.authorized_json_request(config, Method::GET, &path, params, None)
+            .await
+    }
+
+    async fn note_reply_read(
+        &self,
+        config: &ConnectionSettings,
+        note_id: u64,
+        reply_id: u64,
+        params: &[(String, String)],
+    ) -> Result<Value> {
+        let path = format!("entity/notes/{note_id}/thread_contents/{reply_id}");
+        self.authorized_json_request(config, Method::GET, &path, params, None)
+            .await
+    }
+
+    async fn filmstrip_thumbnail(
+        &self,
+        config: &ConnectionSettings,
+        entity: &str,
+        id: u64,
+    ) -> Result<Value> {
+        let path = format!(
+            "entity/{}/{}/filmstrip_image",
+            entity_collection_path(entity),
+            id
+        );
+        self.authorized_json_request(config, Method::GET, &path, &[], None)
             .await
     }
 }

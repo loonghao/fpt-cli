@@ -9,6 +9,7 @@ mod schema;
 mod self_update;
 mod server;
 mod upload;
+mod user;
 mod work_schedule;
 
 use fpt_core::CommandSpec;
@@ -65,6 +66,9 @@ static COMMANDS: &[CommandSpec] = &[
     // Note
     note::NOTE_THREADS_SPEC,
     note::NOTE_REPLY_CREATE_SPEC,
+    note::NOTE_REPLY_READ_SPEC,
+    // User
+    user::CURRENT_USER_SPEC,
     // Hierarchy
     hierarchy::HIERARCHY_SEARCH_SPEC,
     // Work schedule
@@ -74,6 +78,7 @@ static COMMANDS: &[CommandSpec] = &[
     upload::UPLOAD_URL_SPEC,
     upload::DOWNLOAD_URL_SPEC,
     upload::THUMBNAIL_URL_SPEC,
+    upload::FILMSTRIP_URL_SPEC,
     // Activity
     activity::ACTIVITY_STREAM_SPEC,
     activity::EVENT_LOG_ENTRIES_SPEC,

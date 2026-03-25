@@ -1,8 +1,8 @@
 use crate::cli::{
     ActivityCommands, AuthCommands, BatchEntityCommands, Cli, Commands, DownloadCommands,
-    EntityCommands, EventLogCommands, FollowersCommands, HierarchyCommands, InspectCommands,
-    NoteCommands, PreferencesCommands, SchemaCommands, SelfCommands, ServerCommands,
-    ThumbnailCommands, UploadCommands, WorkScheduleCommands,
+    EntityCommands, EventLogCommands, FilmstripCommands, FollowersCommands, HierarchyCommands,
+    InspectCommands, NoteCommands, PreferencesCommands, SchemaCommands, SelfCommands,
+    ServerCommands, ThumbnailCommands, UploadCommands, UserCommands, WorkScheduleCommands,
 };
 use crate::config;
 use crate::self_update;
@@ -321,6 +321,26 @@ pub async fn run(cli: Cli) -> Result<Value> {
             NoteCommands::ReplyCreate { note_id, input } => {
                 let body = required_json_input(input)?;
                 app.note_reply_create(connection, note_id, body).await
+            }
+            NoteCommands::ReplyRead {
+                note_id,
+                reply_id,
+                input,
+            } => {
+                let input = read_json_input(input.as_deref())?;
+                app.note_reply_read(connection, note_id, reply_id, input)
+                    .await
+            }
+        },
+        Commands::User(command) => match command {
+            UserCommands::Current { user_type, input } => {
+                let input = read_json_input(input.as_deref())?;
+                app.current_user(connection, &user_type, input).await
+            }
+        },
+        Commands::Filmstrip(command) => match command {
+            FilmstripCommands::Url { entity, id } => {
+                app.filmstrip_thumbnail(connection, &entity, id).await
             }
         },
         Commands::Hierarchy(command) => match command {
