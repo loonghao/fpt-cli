@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.20](https://github.com/loonghao/fpt-cli/compare/v0.2.19...v0.2.20) (2026-03-25)
+
+
+### Bug Fixes
+
+* **deps:** update rust crate lalrpop-util to 0.23 ([d861f4d](https://github.com/loonghao/fpt-cli/commit/d861f4d093f6a8fcfcc01182e8cb781836eae748))
+
 ## [0.2.19](https://github.com/loonghao/fpt-cli/compare/v0.2.18...v0.2.19) (2026-03-24)
 
 
