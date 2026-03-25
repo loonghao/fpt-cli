@@ -3947,7 +3947,6 @@ dependencies = [
  "syn 2.0.117",
  "tokio",
  "winapi",
- "windows-sys 0.52.0",
  "windows-sys 0.61.2",
 ]
 
