@@ -463,6 +463,38 @@ impl ShotgridTransport for RecordingTransport {
     ) -> Result<Value> {
         Ok(json!({"entity": entity, "revived": true}))
     }
+
+    async fn current_user(
+        &self,
+        _config: &ConnectionSettings,
+        user_type: &str,
+        _params: &[(String, String)],
+    ) -> Result<Value> {
+        Ok(json!({"user_type": user_type, "id": 1, "name": "Current User"}))
+    }
+
+    async fn note_reply_read(
+        &self,
+        _config: &ConnectionSettings,
+        note_id: u64,
+        reply_id: u64,
+        _params: &[(String, String)],
+    ) -> Result<Value> {
+        Ok(
+            json!({"note_id": note_id, "reply_id": reply_id, "content": "Reply content", "type": "Reply"}),
+        )
+    }
+
+    async fn filmstrip_thumbnail(
+        &self,
+        _config: &ConnectionSettings,
+        entity: &str,
+        id: u64,
+    ) -> Result<Value> {
+        Ok(
+            json!({"entity": entity, "id": id, "filmstrip_url": "https://example.com/filmstrip.jpg"}),
+        )
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -802,6 +834,34 @@ impl ShotgridTransport for FindOneTransport {
     ) -> Result<Value> {
         Err(AppError::not_implemented("unused"))
     }
+
+    async fn current_user(
+        &self,
+        _config: &ConnectionSettings,
+        _user_type: &str,
+        _params: &[(String, String)],
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+
+    async fn note_reply_read(
+        &self,
+        _config: &ConnectionSettings,
+        _note_id: u64,
+        _reply_id: u64,
+        _params: &[(String, String)],
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+
+    async fn filmstrip_thumbnail(
+        &self,
+        _config: &ConnectionSettings,
+        _entity: &str,
+        _id: u64,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
 }
 
 #[derive(Debug, Clone, Default)]
@@ -1130,6 +1190,34 @@ impl ShotgridTransport for NoteThreadsNotFoundTransport {
         &self,
         _config: &ConnectionSettings,
         _entity: &str,
+    ) -> Result<Value> {
+        Ok(json!({}))
+    }
+
+    async fn current_user(
+        &self,
+        _config: &ConnectionSettings,
+        _user_type: &str,
+        _params: &[(String, String)],
+    ) -> Result<Value> {
+        Ok(json!({}))
+    }
+
+    async fn note_reply_read(
+        &self,
+        _config: &ConnectionSettings,
+        _note_id: u64,
+        _reply_id: u64,
+        _params: &[(String, String)],
+    ) -> Result<Value> {
+        Ok(json!({}))
+    }
+
+    async fn filmstrip_thumbnail(
+        &self,
+        _config: &ConnectionSettings,
+        _entity: &str,
+        _id: u64,
     ) -> Result<Value> {
         Ok(json!({}))
     }
@@ -1473,6 +1561,34 @@ impl ShotgridTransport for SlowGetTransport {
         &self,
         _config: &ConnectionSettings,
         _entity: &str,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+
+    async fn current_user(
+        &self,
+        _config: &ConnectionSettings,
+        _user_type: &str,
+        _params: &[(String, String)],
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+
+    async fn note_reply_read(
+        &self,
+        _config: &ConnectionSettings,
+        _note_id: u64,
+        _reply_id: u64,
+        _params: &[(String, String)],
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+
+    async fn filmstrip_thumbnail(
+        &self,
+        _config: &ConnectionSettings,
+        _entity: &str,
+        _id: u64,
     ) -> Result<Value> {
         Err(AppError::not_implemented("unused"))
     }
@@ -3128,4 +3244,89 @@ async fn entity_batch_summarize_object_form_rejects_non_array_requests() {
         .await
         .expect_err("non-array `requests` should be rejected");
     assert_eq!(err.envelope().code, "INVALID_INPUT");
+}
+
+// ────────────────────────────────────────────────────────────────────
+// current_user, note.reply-read, filmstrip.url
+// ────────────────────────────────────────────────────────────────────
+
+#[tokio::test]
+async fn current_user_delegates_to_transport() {
+    let app = App::new(RecordingTransport::default());
+    let result = app
+        .current_user(overrides(), "human", None)
+        .await
+        .expect("current_user succeeds");
+    assert_eq!(result["user_type"], "human");
+    assert_eq!(result["id"], 1);
+    assert_eq!(result["name"], "Current User");
+}
+
+#[tokio::test]
+async fn current_user_with_api_type() {
+    let app = App::new(RecordingTransport::default());
+    let result = app
+        .current_user(overrides(), "api", None)
+        .await
+        .expect("current_user with api type succeeds");
+    assert_eq!(result["user_type"], "api");
+}
+
+#[tokio::test]
+async fn current_user_rejects_invalid_user_type() {
+    let app = App::new(RecordingTransport::default());
+    let err = app
+        .current_user(overrides(), "invalid_type", None)
+        .await
+        .expect_err("invalid user_type should be rejected");
+    assert_eq!(err.envelope().code, "INVALID_INPUT");
+    assert!(
+        err.envelope().message.contains("unsupported user type"),
+        "error should mention unsupported user type"
+    );
+}
+
+#[tokio::test]
+async fn note_reply_read_delegates_to_transport() {
+    let app = App::new(RecordingTransport::default());
+    let result = app
+        .note_reply_read(overrides(), 456, 789, None)
+        .await
+        .expect("note_reply_read succeeds");
+    assert_eq!(result["note_id"], 456);
+    assert_eq!(result["reply_id"], 789);
+    assert_eq!(result["content"], "Reply content");
+    assert_eq!(result["type"], "Reply");
+}
+
+#[tokio::test]
+async fn filmstrip_thumbnail_delegates_to_transport() {
+    let app = App::new(RecordingTransport::default());
+    let result = app
+        .filmstrip_thumbnail(overrides(), "Version", 456)
+        .await
+        .expect("filmstrip_thumbnail succeeds");
+    assert_eq!(result["entity"], "Version");
+    assert_eq!(result["id"], 456);
+    assert_eq!(result["filmstrip_url"], "https://example.com/filmstrip.jpg");
+}
+
+#[tokio::test]
+async fn capabilities_includes_new_user_note_filmstrip_specs() {
+    let app = App::new(RecordingTransport::default());
+    let result = app.capabilities(env!("CARGO_PKG_VERSION"));
+    let commands = result["commands"].as_array().expect("commands array");
+    let names: Vec<&str> = commands.iter().filter_map(|c| c["name"].as_str()).collect();
+    assert!(
+        names.contains(&"user.current"),
+        "should include user.current"
+    );
+    assert!(
+        names.contains(&"note.reply-read"),
+        "should include note.reply-read"
+    );
+    assert!(
+        names.contains(&"filmstrip.url"),
+        "should include filmstrip.url"
+    );
 }

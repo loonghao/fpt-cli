@@ -226,6 +226,26 @@ impl ShotgridTransport for RecordingTransport {
     async fn schema_entity_revive(&self, _: &ConnectionSettings, _: &str) -> Result<Value> {
         Ok(json!({}))
     }
+    async fn current_user(
+        &self,
+        _: &ConnectionSettings,
+        _: &str,
+        _: &[(String, String)],
+    ) -> Result<Value> {
+        Ok(json!({}))
+    }
+    async fn note_reply_read(
+        &self,
+        _: &ConnectionSettings,
+        _: u64,
+        _: u64,
+        _: &[(String, String)],
+    ) -> Result<Value> {
+        Ok(json!({}))
+    }
+    async fn filmstrip_thumbnail(&self, _: &ConnectionSettings, _: &str, _: u64) -> Result<Value> {
+        Ok(json!({}))
+    }
 }
 
 fn test_overrides() -> ConnectionOverrides {

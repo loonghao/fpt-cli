@@ -41,4 +41,16 @@ where
         let config = ConnectionSettings::resolve(overrides)?;
         self.transport.thumbnail_url(&config, entity, id).await
     }
+
+    pub async fn filmstrip_thumbnail(
+        &self,
+        overrides: ConnectionOverrides,
+        entity: &str,
+        id: u64,
+    ) -> Result<Value> {
+        let config = ConnectionSettings::resolve(overrides)?;
+        self.transport
+            .filmstrip_thumbnail(&config, entity, id)
+            .await
+    }
 }

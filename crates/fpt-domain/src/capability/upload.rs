@@ -74,3 +74,28 @@ pub const THUMBNAIL_URL_SPEC: CommandSpec = CommandSpec {
     examples: THUMBNAIL_URL_EXAMPLES,
     notes: THUMBNAIL_NOTES,
 };
+
+const FILMSTRIP_URL_EXAMPLES: &[&str] = &[
+    "fpt filmstrip url Version 456 --site ... --auth-mode script --script-name ... --script-key ...",
+    "fpt filmstrip url Shot 123 --site ...",
+];
+
+const FILMSTRIP_NOTES: &[&str] = &[
+    "Returns the filmstrip thumbnail image URL for the specified entity record",
+    "Uses the REST endpoint GET /entity/{type}/{id}/filmstrip_image",
+    "Filmstrip thumbnails are typically available on Version and Shot entities",
+];
+
+pub const FILMSTRIP_URL_SPEC: CommandSpec = CommandSpec {
+    name: "filmstrip.url",
+    summary: "Get the filmstrip thumbnail image URL for an entity record",
+    risk: RiskLevel::Read,
+    implemented: true,
+    supports_dry_run: false,
+    preferred_transport: "rest",
+    fallback_transport: None,
+    input: "entity + id",
+    output: "json with filmstrip_url",
+    examples: FILMSTRIP_URL_EXAMPLES,
+    notes: FILMSTRIP_NOTES,
+};

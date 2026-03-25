@@ -53,6 +53,10 @@ pub enum Commands {
     #[command(subcommand)]
     Note(NoteCommands),
     #[command(subcommand)]
+    User(UserCommands),
+    #[command(subcommand)]
+    Filmstrip(FilmstripCommands),
+    #[command(subcommand)]
     Hierarchy(HierarchyCommands),
     #[command(subcommand, name = "self")]
     SelfCommand(SelfCommands),
@@ -598,6 +602,18 @@ pub enum NoteCommands {
         #[arg(long)]
         input: String,
     },
+    #[command(
+        name = "reply-read",
+        about = "Read a single reply in a top-level Note thread"
+    )]
+    ReplyRead {
+        #[arg(help = "Top-level Note record id")]
+        note_id: u64,
+        #[arg(help = "Reply record id")]
+        reply_id: u64,
+        #[arg(long, help = "Optional query parameters as JSON (fields, etc.)")]
+        input: Option<String>,
+    },
 }
 
 #[derive(Debug, Subcommand)]
@@ -610,6 +626,30 @@ pub enum HierarchyCommands {
         #[arg(long)]
         input: String,
     },
+}
+
+#[derive(Debug, Subcommand)]
+pub enum UserCommands {
+    #[command(name = "current", about = "Get the currently authenticated user")]
+    Current {
+        #[arg(
+            long = "user-type",
+            default_value = "human",
+            help = "User type: human (HumanUser) or api (ApiUser)"
+        )]
+        user_type: String,
+        #[arg(long, help = "Optional query parameters as JSON (fields, etc.)")]
+        input: Option<String>,
+    },
+}
+
+#[derive(Debug, Subcommand)]
+pub enum FilmstripCommands {
+    #[command(
+        name = "url",
+        about = "Get the filmstrip thumbnail image URL for an entity record"
+    )]
+    Url { entity: String, id: u64 },
 }
 
 /// How to handle a conflict when an entity with the key field value already exists.

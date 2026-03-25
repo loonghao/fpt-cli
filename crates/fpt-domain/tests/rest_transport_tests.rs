@@ -1435,3 +1435,171 @@ async fn note_threads_passes_query_parameters() {
     assert_eq!(note_threads.hits(), 1);
     assert_eq!(response["data"][0]["content"], "Looks good");
 }
+
+// --- Current user endpoint ---
+
+#[tokio::test]
+async fn current_user_uses_expected_get_path_for_human() {
+    let server = MockServer::start();
+    let auth = mock_auth(&server);
+    let current_user = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1.1/entity/human_users/current")
+            .header("authorization", "Bearer token-123");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({"data": {"type": "HumanUser", "id": 1, "name": "Alice"}}));
+    });
+    let transport = RestTransport::default();
+    let config = script_config(&server);
+
+    let response = transport
+        .current_user(&config, "human", &[])
+        .await
+        .expect("current_user human succeeds");
+
+    assert_eq!(auth.hits(), 1);
+    assert_eq!(current_user.hits(), 1);
+    assert_eq!(response["data"]["name"], "Alice");
+}
+
+#[tokio::test]
+async fn current_user_uses_expected_get_path_for_api() {
+    let server = MockServer::start();
+    let auth = mock_auth(&server);
+    let current_user = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1.1/entity/api_users/current")
+            .header("authorization", "Bearer token-123");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({"data": {"type": "ApiUser", "id": 10, "name": "Bot"}}));
+    });
+    let transport = RestTransport::default();
+    let config = script_config(&server);
+
+    let response = transport
+        .current_user(&config, "api", &[])
+        .await
+        .expect("current_user api succeeds");
+
+    assert_eq!(auth.hits(), 1);
+    assert_eq!(current_user.hits(), 1);
+    assert_eq!(response["data"]["type"], "ApiUser");
+}
+
+#[tokio::test]
+async fn current_user_passes_query_parameters() {
+    let server = MockServer::start();
+    let auth = mock_auth(&server);
+    let current_user = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1.1/entity/human_users/current")
+            .query_param("fields", "login,name,email")
+            .header("authorization", "Bearer token-123");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({"data": {"type": "HumanUser", "id": 1}}));
+    });
+    let transport = RestTransport::default();
+    let config = script_config(&server);
+
+    let response = transport
+        .current_user(
+            &config,
+            "human",
+            &[("fields".to_string(), "login,name,email".to_string())],
+        )
+        .await
+        .expect("current_user with params succeeds");
+
+    assert_eq!(auth.hits(), 1);
+    assert_eq!(current_user.hits(), 1);
+    assert_eq!(response["data"]["type"], "HumanUser");
+}
+
+// --- Note reply read endpoint ---
+
+#[tokio::test]
+async fn note_reply_read_uses_expected_get_path() {
+    let server = MockServer::start();
+    let auth = mock_auth(&server);
+    let reply_read = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1.1/entity/notes/456/thread_contents/789")
+            .header("authorization", "Bearer token-123");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({"data": {"type": "Reply", "id": 789, "content": "Great work!"}}));
+    });
+    let transport = RestTransport::default();
+    let config = script_config(&server);
+
+    let response = transport
+        .note_reply_read(&config, 456, 789, &[])
+        .await
+        .expect("note_reply_read succeeds");
+
+    assert_eq!(auth.hits(), 1);
+    assert_eq!(reply_read.hits(), 1);
+    assert_eq!(response["data"]["id"], 789);
+    assert_eq!(response["data"]["content"], "Great work!");
+}
+
+#[tokio::test]
+async fn note_reply_read_passes_query_parameters() {
+    let server = MockServer::start();
+    let auth = mock_auth(&server);
+    let reply_read = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1.1/entity/notes/100/thread_contents/200")
+            .query_param("fields", "content,user")
+            .header("authorization", "Bearer token-123");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({"data": {"type": "Reply", "id": 200}}));
+    });
+    let transport = RestTransport::default();
+    let config = script_config(&server);
+
+    let response = transport
+        .note_reply_read(
+            &config,
+            100,
+            200,
+            &[("fields".to_string(), "content,user".to_string())],
+        )
+        .await
+        .expect("note_reply_read with params succeeds");
+
+    assert_eq!(auth.hits(), 1);
+    assert_eq!(reply_read.hits(), 1);
+    assert_eq!(response["data"]["id"], 200);
+}
+
+// --- Filmstrip thumbnail endpoint ---
+
+#[tokio::test]
+async fn filmstrip_thumbnail_uses_expected_get_path() {
+    let server = MockServer::start();
+    let auth = mock_auth(&server);
+    let filmstrip = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1.1/entity/versions/456/filmstrip_image")
+            .header("authorization", "Bearer token-123");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({"image": "https://sg-media.com/filmstrip/456.jpg"}));
+    });
+    let transport = RestTransport::default();
+    let config = script_config(&server);
+
+    let response = transport
+        .filmstrip_thumbnail(&config, "Version", 456)
+        .await
+        .expect("filmstrip_thumbnail succeeds");
+
+    assert_eq!(auth.hits(), 1);
+    assert_eq!(filmstrip.hits(), 1);
+    assert_eq!(response["image"], "https://sg-media.com/filmstrip/456.jpg");
+}

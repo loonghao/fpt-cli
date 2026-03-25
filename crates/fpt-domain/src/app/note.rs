@@ -37,6 +37,20 @@ where
             .note_reply_create(&config, note_id, &body)
             .await
     }
+
+    pub async fn note_reply_read(
+        &self,
+        overrides: ConnectionOverrides,
+        note_id: u64,
+        reply_id: u64,
+        input: Option<Value>,
+    ) -> Result<Value> {
+        let config = ConnectionSettings::resolve(overrides)?;
+        let params = build_query_params(input)?;
+        self.transport
+            .note_reply_read(&config, note_id, reply_id, &params)
+            .await
+    }
 }
 
 fn translate_note_threads_error(error: AppError, note_id: u64) -> AppError {

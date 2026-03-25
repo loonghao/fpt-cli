@@ -11,6 +11,7 @@ mod schema;
 mod server;
 mod summarize;
 mod upload;
+mod user;
 mod work_schedule;
 
 use std::env;
