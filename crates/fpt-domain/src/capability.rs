@@ -47,6 +47,9 @@ static COMMANDS: &[CommandSpec] = &[
     entity::ENTITY_REVIVE_SPEC,
     entity::ENTITY_TEXT_SEARCH_SPEC,
     entity::ENTITY_RELATIONSHIP_SPEC,
+    entity::ENTITY_RELATIONSHIP_CREATE_SPEC,
+    entity::ENTITY_RELATIONSHIP_UPDATE_SPEC,
+    entity::ENTITY_SHARE_SPEC,
     entity::ENTITY_UPDATE_LAST_ACCESSED_SPEC,
     // Entity — batch operations
     entity::ENTITY_BATCH_GET_SPEC,

@@ -332,6 +332,37 @@ pub enum EntityCommands {
         input: Option<String>,
     },
     #[command(
+        name = "relationship-create",
+        about = "Add links to a multi-entity relationship field"
+    )]
+    RelationshipCreate {
+        entity: String,
+        id: u64,
+        #[arg(long, help = "Related field name (e.g. shots, assets)")]
+        field: String,
+        #[arg(long)]
+        input: String,
+    },
+    #[command(
+        name = "relationship-update",
+        about = "Replace links in a multi-entity relationship field"
+    )]
+    RelationshipUpdate {
+        entity: String,
+        id: u64,
+        #[arg(long, help = "Related field name (e.g. shots, assets)")]
+        field: String,
+        #[arg(long)]
+        input: String,
+    },
+    #[command(name = "share", about = "Share an entity record to other projects")]
+    Share {
+        entity: String,
+        id: u64,
+        #[arg(long)]
+        input: String,
+    },
+    #[command(
         name = "update-last-accessed",
         about = "Update the last-accessed timestamp for a project"
     )]

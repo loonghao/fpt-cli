@@ -155,6 +155,50 @@ where
             .await
     }
 
+    pub async fn entity_relationship_create(
+        &self,
+        overrides: ConnectionOverrides,
+        entity: &str,
+        id: u64,
+        related_field: &str,
+        body: Value,
+    ) -> Result<Value> {
+        validate_relationship_body(&body)?;
+        let config = ConnectionSettings::resolve(overrides)?;
+        self.transport
+            .entity_relationship_create(&config, entity, id, related_field, &body)
+            .await
+    }
+
+    pub async fn entity_relationship_update(
+        &self,
+        overrides: ConnectionOverrides,
+        entity: &str,
+        id: u64,
+        related_field: &str,
+        body: Value,
+    ) -> Result<Value> {
+        validate_relationship_body(&body)?;
+        let config = ConnectionSettings::resolve(overrides)?;
+        self.transport
+            .entity_relationship_update(&config, entity, id, related_field, &body)
+            .await
+    }
+
+    pub async fn entity_share(
+        &self,
+        overrides: ConnectionOverrides,
+        entity: &str,
+        id: u64,
+        body: Value,
+    ) -> Result<Value> {
+        validate_share_body(&body)?;
+        let config = ConnectionSettings::resolve(overrides)?;
+        self.transport
+            .entity_share(&config, entity, id, &body)
+            .await
+    }
+
     pub async fn project_update_last_accessed(
         &self,
         overrides: ConnectionOverrides,
@@ -297,4 +341,41 @@ fn build_count_payload(input: Option<Value>, filter_dsl: Option<String>) -> Resu
 
     payload.insert("filters".to_string(), filters);
     Ok(Value::Object(payload))
+}
+
+/// Validate that the relationship write body is a JSON object containing a `data` field.
+fn validate_relationship_body(body: &Value) -> Result<()> {
+    let object = body.as_object().ok_or_else(|| {
+        AppError::invalid_input("relationship write body must be a JSON object")
+            .with_operation("validate_relationship_body")
+            .with_expected_shape(
+                "a JSON object containing `data` (array of entity link objects with `type` and `id`)",
+            )
+    })?;
+
+    if !object.contains_key("data") {
+        return Err(AppError::invalid_input(
+            "relationship write body must contain a `data` field with an array of entity links",
+        )
+        .with_operation("validate_relationship_body")
+        .with_missing_fields(["data"])
+        .with_expected_shape(
+            "a JSON object containing `data` (array of entity link objects with `type` and `id`)",
+        ));
+    }
+
+    Ok(())
+}
+
+/// Validate that the entity share body is a JSON object containing `entities` or `projects`.
+fn validate_share_body(body: &Value) -> Result<()> {
+    body.as_object().ok_or_else(|| {
+        AppError::invalid_input("entity share body must be a JSON object")
+            .with_operation("validate_share_body")
+            .with_expected_shape(
+                "a JSON object describing the share target (e.g. containing `entities` or project links)",
+            )
+    })?;
+
+    Ok(())
 }

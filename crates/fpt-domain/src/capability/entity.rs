@@ -316,6 +316,75 @@ pub const ENTITY_RELATIONSHIP_SPEC: CommandSpec = CommandSpec {
     notes: ENTITY_RELATIONSHIP_NOTES,
 };
 
+const ENTITY_RELATIONSHIP_CREATE_EXAMPLES: &[&str] = &[
+    "fpt entity relationship-create Shot 123 --field assets --input '{\"data\":[{\"type\":\"Asset\",\"id\":7}]}' --site ...",
+];
+
+const ENTITY_RELATIONSHIP_CREATE_NOTES: &[&str] = &[
+    "Adds links to a multi-entity relationship field via POST /api/{ver}/entity/{type}/{id}/relationships/{field}",
+    "Input must be a JSON object containing `data` (array of entity link objects with `type` and `id`)",
+];
+
+pub const ENTITY_RELATIONSHIP_CREATE_SPEC: CommandSpec = CommandSpec {
+    name: "entity.relationship-create",
+    summary: "Add links to a multi-entity relationship field",
+    risk: RiskLevel::Write,
+    implemented: true,
+    supports_dry_run: false,
+    preferred_transport: "rest",
+    fallback_transport: None,
+    input: "entity + id + field name + JSON body with data array",
+    output: "json",
+    examples: ENTITY_RELATIONSHIP_CREATE_EXAMPLES,
+    notes: ENTITY_RELATIONSHIP_CREATE_NOTES,
+};
+
+const ENTITY_RELATIONSHIP_UPDATE_EXAMPLES: &[&str] = &[
+    "fpt entity relationship-update Shot 123 --field assets --input '{\"data\":[{\"type\":\"Asset\",\"id\":7}]}' --site ...",
+];
+
+const ENTITY_RELATIONSHIP_UPDATE_NOTES: &[&str] = &[
+    "Replaces all links in a multi-entity relationship field via PUT /api/{ver}/entity/{type}/{id}/relationships/{field}",
+    "Input must be a JSON object containing `data` (array of entity link objects with `type` and `id`)",
+];
+
+pub const ENTITY_RELATIONSHIP_UPDATE_SPEC: CommandSpec = CommandSpec {
+    name: "entity.relationship-update",
+    summary: "Replace links in a multi-entity relationship field",
+    risk: RiskLevel::Write,
+    implemented: true,
+    supports_dry_run: false,
+    preferred_transport: "rest",
+    fallback_transport: None,
+    input: "entity + id + field name + JSON body with data array",
+    output: "json",
+    examples: ENTITY_RELATIONSHIP_UPDATE_EXAMPLES,
+    notes: ENTITY_RELATIONSHIP_UPDATE_NOTES,
+};
+
+const ENTITY_SHARE_EXAMPLES: &[&str] = &[
+    "fpt entity share Shot 123 --input '{\"entities\":[{\"type\":\"Project\",\"id\":85}]}' --site ...",
+];
+
+const ENTITY_SHARE_NOTES: &[&str] = &[
+    "Shares an entity record to other projects via POST /api/{ver}/entity/{type}/{id}/_share",
+    "Input must be a JSON object describing the share target",
+];
+
+pub const ENTITY_SHARE_SPEC: CommandSpec = CommandSpec {
+    name: "entity.share",
+    summary: "Share an entity record to other projects",
+    risk: RiskLevel::Write,
+    implemented: true,
+    supports_dry_run: false,
+    preferred_transport: "rest",
+    fallback_transport: None,
+    input: "entity + id + JSON body describing share target",
+    output: "json",
+    examples: ENTITY_SHARE_EXAMPLES,
+    notes: ENTITY_SHARE_NOTES,
+};
+
 const ENTITY_UPDATE_LAST_ACCESSED_EXAMPLES: &[&str] = &[
     "fpt entity update-last-accessed 123 --site ... --auth-mode script --script-name ... --script-key ...",
 ];
