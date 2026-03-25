@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.2.21](https://github.com/loonghao/fpt-cli/compare/v0.2.20...v0.2.21) (2026-03-25)
+
+
+### Features
+
+* add entity relationship write (create/update) and entity share endpoints ([cd892b2](https://github.com/loonghao/fpt-cli/commit/cd892b2719feb6c19b1034eb8181965ab2263868))
+* add preferences update, note reply update/delete endpoints ([#98](https://github.com/loonghao/fpt-cli/issues/98)) ([189ba5c](https://github.com/loonghao/fpt-cli/commit/189ba5c9f12bd9f6df351dc556ca2fc2fadff7a6))
+* add user.current, note.reply-read, and filmstrip.url CLI commands ([#94](https://github.com/loonghao/fpt-cli/issues/94)) ([11f35fb](https://github.com/loonghao/fpt-cli/commit/11f35fb000a41130265e7874ad84fd9a26022334))
+
 ## [0.2.20](https://github.com/loonghao/fpt-cli/compare/v0.2.19...v0.2.20) (2026-03-25)
 
 
