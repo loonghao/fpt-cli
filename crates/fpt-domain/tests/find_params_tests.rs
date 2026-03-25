@@ -246,6 +246,21 @@ impl ShotgridTransport for RecordingTransport {
     async fn filmstrip_thumbnail(&self, _: &ConnectionSettings, _: &str, _: u64) -> Result<Value> {
         Ok(json!({}))
     }
+    async fn preferences_update(&self, _: &ConnectionSettings, _: &Value) -> Result<Value> {
+        Ok(json!({}))
+    }
+    async fn note_reply_update(
+        &self,
+        _: &ConnectionSettings,
+        _: u64,
+        _: u64,
+        _: &Value,
+    ) -> Result<Value> {
+        Ok(json!({}))
+    }
+    async fn note_reply_delete(&self, _: &ConnectionSettings, _: u64, _: u64) -> Result<Value> {
+        Ok(json!({}))
+    }
 }
 
 fn test_overrides() -> ConnectionOverrides {

@@ -295,6 +295,10 @@ pub async fn run(cli: Cli) -> Result<Value> {
         },
         Commands::Preferences(command) => match command {
             PreferencesCommands::Get => app.preferences_get(connection).await,
+            PreferencesCommands::Update { input } => {
+                let body = required_json_input(input)?;
+                app.preferences_update(connection, body).await
+            }
         },
         Commands::Followers(command) => match command {
             FollowersCommands::List { entity, id } => {
@@ -330,6 +334,18 @@ pub async fn run(cli: Cli) -> Result<Value> {
                 let input = read_json_input(input.as_deref())?;
                 app.note_reply_read(connection, note_id, reply_id, input)
                     .await
+            }
+            NoteCommands::ReplyUpdate {
+                note_id,
+                reply_id,
+                input,
+            } => {
+                let body = required_json_input(input)?;
+                app.note_reply_update(connection, note_id, reply_id, body)
+                    .await
+            }
+            NoteCommands::ReplyDelete { note_id, reply_id } => {
+                app.note_reply_delete(connection, note_id, reply_id).await
             }
         },
         Commands::User(command) => match command {

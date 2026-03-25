@@ -533,6 +533,11 @@ pub enum EventLogCommands {
 pub enum PreferencesCommands {
     #[command(name = "get", about = "Read site-level ShotGrid preferences")]
     Get,
+    #[command(name = "update", about = "Update site-level ShotGrid preferences")]
+    Update {
+        #[arg(long)]
+        input: String,
+    },
 }
 
 #[derive(Debug, Subcommand)]
@@ -613,6 +618,28 @@ pub enum NoteCommands {
         reply_id: u64,
         #[arg(long, help = "Optional query parameters as JSON (fields, etc.)")]
         input: Option<String>,
+    },
+    #[command(
+        name = "reply-update",
+        about = "Update an existing reply in a top-level Note thread"
+    )]
+    ReplyUpdate {
+        #[arg(help = "Top-level Note record id")]
+        note_id: u64,
+        #[arg(help = "Reply record id")]
+        reply_id: u64,
+        #[arg(long)]
+        input: String,
+    },
+    #[command(
+        name = "reply-delete",
+        about = "Delete a reply from a top-level Note thread"
+    )]
+    ReplyDelete {
+        #[arg(help = "Top-level Note record id")]
+        note_id: u64,
+        #[arg(help = "Reply record id")]
+        reply_id: u64,
     },
 }
 
