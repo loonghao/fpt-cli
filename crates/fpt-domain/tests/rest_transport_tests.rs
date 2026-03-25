@@ -1688,3 +1688,90 @@ async fn note_reply_delete_uses_expected_delete_path() {
     assert_eq!(reply_delete.hits(), 1);
     assert_eq!(response["ok"], true);
 }
+
+// --- Entity relationship create endpoint ---
+
+#[tokio::test]
+async fn entity_relationship_create_uses_expected_post_path() {
+    let server = MockServer::start();
+    let auth = mock_auth(&server);
+    let rel_create = server.mock(|when, then| {
+        when.method(POST)
+            .path("/api/v1.1/entity/shots/42/relationships/assets")
+            .header("authorization", "Bearer token-123");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({"data": [{"type": "Asset", "id": 7}]}));
+    });
+    let transport = RestTransport::default();
+    let config = script_config(&server);
+    let body = json!({"data": [{"type": "Asset", "id": 7}]});
+
+    let response = transport
+        .entity_relationship_create(&config, "Shot", 42, "assets", &body)
+        .await
+        .expect("entity_relationship_create succeeds");
+
+    assert_eq!(auth.hits(), 1);
+    assert_eq!(rel_create.hits(), 1);
+    assert_eq!(response["data"][0]["type"], "Asset");
+    assert_eq!(response["data"][0]["id"], 7);
+}
+
+// --- Entity relationship update endpoint ---
+
+#[tokio::test]
+async fn entity_relationship_update_uses_expected_put_path() {
+    let server = MockServer::start();
+    let auth = mock_auth(&server);
+    let rel_update = server.mock(|when, then| {
+        when.method(PUT)
+            .path("/api/v1.1/entity/shots/42/relationships/assets")
+            .header("authorization", "Bearer token-123");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({"data": [{"type": "Asset", "id": 10}]}));
+    });
+    let transport = RestTransport::default();
+    let config = script_config(&server);
+    let body = json!({"data": [{"type": "Asset", "id": 10}]});
+
+    let response = transport
+        .entity_relationship_update(&config, "Shot", 42, "assets", &body)
+        .await
+        .expect("entity_relationship_update succeeds");
+
+    assert_eq!(auth.hits(), 1);
+    assert_eq!(rel_update.hits(), 1);
+    assert_eq!(response["data"][0]["type"], "Asset");
+    assert_eq!(response["data"][0]["id"], 10);
+}
+
+// --- Entity share endpoint ---
+
+#[tokio::test]
+async fn entity_share_uses_expected_post_path() {
+    let server = MockServer::start();
+    let auth = mock_auth(&server);
+    let share = server.mock(|when, then| {
+        when.method(POST)
+            .path("/api/v1.1/entity/shots/42/_share")
+            .header("authorization", "Bearer token-123");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({"ok": true, "shared_to": [{"type": "Project", "id": 85}]}));
+    });
+    let transport = RestTransport::default();
+    let config = script_config(&server);
+    let body = json!({"entities": [{"type": "Project", "id": 85}]});
+
+    let response = transport
+        .entity_share(&config, "Shot", 42, &body)
+        .await
+        .expect("entity_share succeeds");
+
+    assert_eq!(auth.hits(), 1);
+    assert_eq!(share.hits(), 1);
+    assert_eq!(response["ok"], true);
+    assert_eq!(response["shared_to"][0]["type"], "Project");
+}

@@ -145,6 +145,30 @@ pub async fn run(cli: Cli) -> Result<Value> {
                 app.entity_relationships(connection, &entity, id, &field, input)
                     .await
             }
+            EntityCommands::RelationshipCreate {
+                entity,
+                id,
+                field,
+                input,
+            } => {
+                let body = required_json_input(input)?;
+                app.entity_relationship_create(connection, &entity, id, &field, body)
+                    .await
+            }
+            EntityCommands::RelationshipUpdate {
+                entity,
+                id,
+                field,
+                input,
+            } => {
+                let body = required_json_input(input)?;
+                app.entity_relationship_update(connection, &entity, id, &field, body)
+                    .await
+            }
+            EntityCommands::Share { entity, id, input } => {
+                let body = required_json_input(input)?;
+                app.entity_share(connection, &entity, id, body).await
+            }
             EntityCommands::UpdateLastAccessed { project_id } => {
                 app.project_update_last_accessed(connection, project_id)
                     .await

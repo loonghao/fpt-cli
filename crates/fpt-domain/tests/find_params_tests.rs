@@ -261,6 +261,35 @@ impl ShotgridTransport for RecordingTransport {
     async fn note_reply_delete(&self, _: &ConnectionSettings, _: u64, _: u64) -> Result<Value> {
         Ok(json!({}))
     }
+    async fn entity_relationship_create(
+        &self,
+        _: &ConnectionSettings,
+        _: &str,
+        _: u64,
+        _: &str,
+        _: &Value,
+    ) -> Result<Value> {
+        Ok(json!({}))
+    }
+    async fn entity_relationship_update(
+        &self,
+        _: &ConnectionSettings,
+        _: &str,
+        _: u64,
+        _: &str,
+        _: &Value,
+    ) -> Result<Value> {
+        Ok(json!({}))
+    }
+    async fn entity_share(
+        &self,
+        _: &ConnectionSettings,
+        _: &str,
+        _: u64,
+        _: &Value,
+    ) -> Result<Value> {
+        Ok(json!({}))
+    }
 }
 
 fn test_overrides() -> ConnectionOverrides {

@@ -522,6 +522,38 @@ impl ShotgridTransport for RecordingTransport {
     ) -> Result<Value> {
         Ok(json!({"ok": true, "note_id": note_id, "reply_id": reply_id, "status": 200}))
     }
+
+    async fn entity_relationship_create(
+        &self,
+        _config: &ConnectionSettings,
+        entity: &str,
+        id: u64,
+        related_field: &str,
+        body: &Value,
+    ) -> Result<Value> {
+        Ok(json!({"entity": entity, "id": id, "related_field": related_field, "created": body}))
+    }
+
+    async fn entity_relationship_update(
+        &self,
+        _config: &ConnectionSettings,
+        entity: &str,
+        id: u64,
+        related_field: &str,
+        body: &Value,
+    ) -> Result<Value> {
+        Ok(json!({"entity": entity, "id": id, "related_field": related_field, "updated": body}))
+    }
+
+    async fn entity_share(
+        &self,
+        _config: &ConnectionSettings,
+        entity: &str,
+        id: u64,
+        body: &Value,
+    ) -> Result<Value> {
+        Ok(json!({"entity": entity, "id": id, "shared": body}))
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -916,6 +948,38 @@ impl ShotgridTransport for FindOneTransport {
     ) -> Result<Value> {
         Err(AppError::not_implemented("unused"))
     }
+
+    async fn entity_relationship_create(
+        &self,
+        _config: &ConnectionSettings,
+        _entity: &str,
+        _id: u64,
+        _related_field: &str,
+        _body: &Value,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+
+    async fn entity_relationship_update(
+        &self,
+        _config: &ConnectionSettings,
+        _entity: &str,
+        _id: u64,
+        _related_field: &str,
+        _body: &Value,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+
+    async fn entity_share(
+        &self,
+        _config: &ConnectionSettings,
+        _entity: &str,
+        _id: u64,
+        _body: &Value,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
 }
 
 #[derive(Debug, Clone, Default)]
@@ -1299,6 +1363,38 @@ impl ShotgridTransport for NoteThreadsNotFoundTransport {
         _config: &ConnectionSettings,
         _note_id: u64,
         _reply_id: u64,
+    ) -> Result<Value> {
+        Ok(json!({}))
+    }
+
+    async fn entity_relationship_create(
+        &self,
+        _config: &ConnectionSettings,
+        _entity: &str,
+        _id: u64,
+        _related_field: &str,
+        _body: &Value,
+    ) -> Result<Value> {
+        Ok(json!({}))
+    }
+
+    async fn entity_relationship_update(
+        &self,
+        _config: &ConnectionSettings,
+        _entity: &str,
+        _id: u64,
+        _related_field: &str,
+        _body: &Value,
+    ) -> Result<Value> {
+        Ok(json!({}))
+    }
+
+    async fn entity_share(
+        &self,
+        _config: &ConnectionSettings,
+        _entity: &str,
+        _id: u64,
+        _body: &Value,
     ) -> Result<Value> {
         Ok(json!({}))
     }
@@ -1697,6 +1793,38 @@ impl ShotgridTransport for SlowGetTransport {
         _config: &ConnectionSettings,
         _note_id: u64,
         _reply_id: u64,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+
+    async fn entity_relationship_create(
+        &self,
+        _config: &ConnectionSettings,
+        _entity: &str,
+        _id: u64,
+        _related_field: &str,
+        _body: &Value,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+
+    async fn entity_relationship_update(
+        &self,
+        _config: &ConnectionSettings,
+        _entity: &str,
+        _id: u64,
+        _related_field: &str,
+        _body: &Value,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+
+    async fn entity_share(
+        &self,
+        _config: &ConnectionSettings,
+        _entity: &str,
+        _id: u64,
+        _body: &Value,
     ) -> Result<Value> {
         Err(AppError::not_implemented("unused"))
     }
@@ -3522,5 +3650,118 @@ async fn capabilities_includes_new_preferences_and_note_specs() {
     assert!(
         names.contains(&"note.reply-delete"),
         "should include note.reply-delete"
+    );
+}
+
+// ────────────────────────────────────────────────────────────────────
+// New API endpoint tests: entity_relationship_create, entity_relationship_update, entity_share
+// ────────────────────────────────────────────────────────────────────
+
+#[tokio::test]
+async fn entity_relationship_create_delegates_to_transport() {
+    let app = App::new(RecordingTransport::default());
+    let body = json!({"data": [{"type": "Asset", "id": 7}]});
+    let result = app
+        .entity_relationship_create(overrides(), "Shot", 42, "assets", body.clone())
+        .await
+        .expect("entity_relationship_create succeeds");
+    assert_eq!(result["entity"], "Shot");
+    assert_eq!(result["id"], 42);
+    assert_eq!(result["related_field"], "assets");
+    assert_eq!(result["created"], body);
+}
+
+#[tokio::test]
+async fn entity_relationship_create_requires_data_field() {
+    let app = App::new(RecordingTransport::default());
+    let body = json!({"links": [{"type": "Asset", "id": 7}]});
+    let err = app
+        .entity_relationship_create(overrides(), "Shot", 42, "assets", body)
+        .await
+        .expect_err("missing data field should be rejected");
+    assert_eq!(err.envelope().code, "INVALID_INPUT");
+    assert!(
+        err.envelope().message.contains("data"),
+        "error should mention missing data field"
+    );
+}
+
+#[tokio::test]
+async fn entity_relationship_create_requires_json_object() {
+    let app = App::new(RecordingTransport::default());
+    let body = json!([{"type": "Asset", "id": 7}]);
+    let err = app
+        .entity_relationship_create(overrides(), "Shot", 42, "assets", body)
+        .await
+        .expect_err("non-object should be rejected");
+    assert_eq!(err.envelope().code, "INVALID_INPUT");
+}
+
+#[tokio::test]
+async fn entity_relationship_update_delegates_to_transport() {
+    let app = App::new(RecordingTransport::default());
+    let body = json!({"data": [{"type": "Asset", "id": 10}]});
+    let result = app
+        .entity_relationship_update(overrides(), "Shot", 42, "assets", body.clone())
+        .await
+        .expect("entity_relationship_update succeeds");
+    assert_eq!(result["entity"], "Shot");
+    assert_eq!(result["id"], 42);
+    assert_eq!(result["related_field"], "assets");
+    assert_eq!(result["updated"], body);
+}
+
+#[tokio::test]
+async fn entity_relationship_update_requires_data_field() {
+    let app = App::new(RecordingTransport::default());
+    let body = json!({"entities": [{"type": "Asset", "id": 10}]});
+    let err = app
+        .entity_relationship_update(overrides(), "Shot", 42, "assets", body)
+        .await
+        .expect_err("missing data field should be rejected");
+    assert_eq!(err.envelope().code, "INVALID_INPUT");
+}
+
+#[tokio::test]
+async fn entity_share_delegates_to_transport() {
+    let app = App::new(RecordingTransport::default());
+    let body = json!({"entities": [{"type": "Project", "id": 85}]});
+    let result = app
+        .entity_share(overrides(), "Shot", 42, body.clone())
+        .await
+        .expect("entity_share succeeds");
+    assert_eq!(result["entity"], "Shot");
+    assert_eq!(result["id"], 42);
+    assert_eq!(result["shared"], body);
+}
+
+#[tokio::test]
+async fn entity_share_requires_json_object() {
+    let app = App::new(RecordingTransport::default());
+    let body = json!("not an object");
+    let err = app
+        .entity_share(overrides(), "Shot", 42, body)
+        .await
+        .expect_err("non-object should be rejected");
+    assert_eq!(err.envelope().code, "INVALID_INPUT");
+}
+
+#[tokio::test]
+async fn capabilities_includes_new_relationship_and_share_specs() {
+    let app = App::new(RecordingTransport::default());
+    let result = app.capabilities(env!("CARGO_PKG_VERSION"));
+    let commands = result["commands"].as_array().expect("commands array");
+    let names: Vec<&str> = commands.iter().filter_map(|c| c["name"].as_str()).collect();
+    assert!(
+        names.contains(&"entity.relationship-create"),
+        "should include entity.relationship-create"
+    );
+    assert!(
+        names.contains(&"entity.relationship-update"),
+        "should include entity.relationship-update"
+    );
+    assert!(
+        names.contains(&"entity.share"),
+        "should include entity.share"
     );
 }
