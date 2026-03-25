@@ -67,6 +67,8 @@ static COMMANDS: &[CommandSpec] = &[
     note::NOTE_THREADS_SPEC,
     note::NOTE_REPLY_CREATE_SPEC,
     note::NOTE_REPLY_READ_SPEC,
+    note::NOTE_REPLY_UPDATE_SPEC,
+    note::NOTE_REPLY_DELETE_SPEC,
     // User
     user::CURRENT_USER_SPEC,
     // Hierarchy
@@ -83,6 +85,7 @@ static COMMANDS: &[CommandSpec] = &[
     activity::ACTIVITY_STREAM_SPEC,
     activity::EVENT_LOG_ENTRIES_SPEC,
     activity::PREFERENCES_GET_SPEC,
+    activity::PREFERENCES_UPDATE_SPEC,
     // Self-update & config
     self_update::SELF_UPDATE_SPEC,
     self_update::CONFIG_GET_SPEC,

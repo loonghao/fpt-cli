@@ -71,3 +71,51 @@ pub const NOTE_REPLY_READ_SPEC: CommandSpec = CommandSpec {
     examples: NOTE_REPLY_READ_EXAMPLES,
     notes: NOTE_REPLY_READ_NOTES,
 };
+
+const NOTE_REPLY_UPDATE_EXAMPLES: &[&str] = &[
+    "fpt note reply-update 456 789 --input '{\"content\":\"Updated reply text\"}' --site ... --auth-mode script --script-name ... --script-key ...",
+];
+
+const NOTE_REPLY_UPDATE_NOTES: &[&str] = &[
+    "Updates an existing reply in a Note thread via PUT /entity/notes/{note_id}/thread_contents/{reply_id}",
+    "Input JSON must include a `content` field with the updated reply text",
+    "The note_id must be a top-level Note record id and reply_id must be a valid reply id",
+];
+
+pub const NOTE_REPLY_UPDATE_SPEC: CommandSpec = CommandSpec {
+    name: "note.reply-update",
+    summary: "Update an existing reply in a top-level Note thread",
+    risk: RiskLevel::Write,
+    implemented: true,
+    supports_dry_run: false,
+    preferred_transport: "rest",
+    fallback_transport: None,
+    input: "note_id + reply_id + reply body JSON with content",
+    output: "json",
+    examples: NOTE_REPLY_UPDATE_EXAMPLES,
+    notes: NOTE_REPLY_UPDATE_NOTES,
+};
+
+const NOTE_REPLY_DELETE_EXAMPLES: &[&str] = &[
+    "fpt note reply-delete 456 789 --site ... --auth-mode script --script-name ... --script-key ...",
+];
+
+const NOTE_REPLY_DELETE_NOTES: &[&str] = &[
+    "Deletes an existing reply in a Note thread via DELETE /entity/notes/{note_id}/thread_contents/{reply_id}",
+    "The note_id must be a top-level Note record id and reply_id must be a valid reply id",
+    "This operation is destructive and cannot be undone",
+];
+
+pub const NOTE_REPLY_DELETE_SPEC: CommandSpec = CommandSpec {
+    name: "note.reply-delete",
+    summary: "Delete a reply from a top-level Note thread",
+    risk: RiskLevel::Destructive,
+    implemented: true,
+    supports_dry_run: false,
+    preferred_transport: "rest",
+    fallback_transport: None,
+    input: "note_id + reply_id",
+    output: "json",
+    examples: NOTE_REPLY_DELETE_EXAMPLES,
+    notes: NOTE_REPLY_DELETE_NOTES,
+};

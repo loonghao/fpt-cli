@@ -51,6 +51,32 @@ where
             .note_reply_read(&config, note_id, reply_id, &params)
             .await
     }
+
+    pub async fn note_reply_update(
+        &self,
+        overrides: ConnectionOverrides,
+        note_id: u64,
+        reply_id: u64,
+        body: Value,
+    ) -> Result<Value> {
+        let config = ConnectionSettings::resolve(overrides)?;
+        validate_note_reply_body(&body)?;
+        self.transport
+            .note_reply_update(&config, note_id, reply_id, &body)
+            .await
+    }
+
+    pub async fn note_reply_delete(
+        &self,
+        overrides: ConnectionOverrides,
+        note_id: u64,
+        reply_id: u64,
+    ) -> Result<Value> {
+        let config = ConnectionSettings::resolve(overrides)?;
+        self.transport
+            .note_reply_delete(&config, note_id, reply_id)
+            .await
+    }
 }
 
 fn translate_note_threads_error(error: AppError, note_id: u64) -> AppError {

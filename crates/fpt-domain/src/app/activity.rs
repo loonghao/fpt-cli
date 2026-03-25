@@ -39,4 +39,13 @@ where
         let config = ConnectionSettings::resolve(overrides)?;
         self.transport.preferences_get(&config).await
     }
+
+    pub async fn preferences_update(
+        &self,
+        overrides: ConnectionOverrides,
+        body: Value,
+    ) -> Result<Value> {
+        let config = ConnectionSettings::resolve(overrides)?;
+        self.transport.preferences_update(&config, &body).await
+    }
 }

@@ -76,3 +76,27 @@ pub const PREFERENCES_GET_SPEC: CommandSpec = CommandSpec {
     examples: PREFERENCES_GET_EXAMPLES,
     notes: PREFERENCES_GET_NOTES,
 };
+
+const PREFERENCES_UPDATE_EXAMPLES: &[&str] = &[
+    "fpt preferences update --input '{\"name\":\"value\"}' --site ... --auth-mode script --script-name ... --script-key ...",
+];
+
+const PREFERENCES_UPDATE_NOTES: &[&str] = &[
+    "Uses the REST endpoint PUT /preferences",
+    "Updates site-level ShotGrid preferences",
+    "Input must be a JSON object with preference key-value pairs",
+];
+
+pub const PREFERENCES_UPDATE_SPEC: CommandSpec = CommandSpec {
+    name: "preferences.update",
+    summary: "Update site-level ShotGrid preferences",
+    risk: RiskLevel::Write,
+    implemented: true,
+    supports_dry_run: false,
+    preferred_transport: "rest",
+    fallback_transport: None,
+    input: "JSON object with preference key-value pairs",
+    output: "json preferences object",
+    examples: PREFERENCES_UPDATE_EXAMPLES,
+    notes: PREFERENCES_UPDATE_NOTES,
+};

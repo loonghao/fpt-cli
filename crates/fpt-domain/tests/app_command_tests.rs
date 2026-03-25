@@ -495,6 +495,33 @@ impl ShotgridTransport for RecordingTransport {
             json!({"entity": entity, "id": id, "filmstrip_url": "https://example.com/filmstrip.jpg"}),
         )
     }
+
+    async fn preferences_update(
+        &self,
+        _config: &ConnectionSettings,
+        body: &Value,
+    ) -> Result<Value> {
+        Ok(json!({"ok": true, "preferences": body}))
+    }
+
+    async fn note_reply_update(
+        &self,
+        _config: &ConnectionSettings,
+        note_id: u64,
+        reply_id: u64,
+        body: &Value,
+    ) -> Result<Value> {
+        Ok(json!({"note_id": note_id, "reply_id": reply_id, "updated": body}))
+    }
+
+    async fn note_reply_delete(
+        &self,
+        _config: &ConnectionSettings,
+        note_id: u64,
+        reply_id: u64,
+    ) -> Result<Value> {
+        Ok(json!({"ok": true, "note_id": note_id, "reply_id": reply_id, "status": 200}))
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -862,6 +889,33 @@ impl ShotgridTransport for FindOneTransport {
     ) -> Result<Value> {
         Err(AppError::not_implemented("unused"))
     }
+
+    async fn preferences_update(
+        &self,
+        _config: &ConnectionSettings,
+        _body: &Value,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+
+    async fn note_reply_update(
+        &self,
+        _config: &ConnectionSettings,
+        _note_id: u64,
+        _reply_id: u64,
+        _body: &Value,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+
+    async fn note_reply_delete(
+        &self,
+        _config: &ConnectionSettings,
+        _note_id: u64,
+        _reply_id: u64,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
 }
 
 #[derive(Debug, Clone, Default)]
@@ -1218,6 +1272,33 @@ impl ShotgridTransport for NoteThreadsNotFoundTransport {
         _config: &ConnectionSettings,
         _entity: &str,
         _id: u64,
+    ) -> Result<Value> {
+        Ok(json!({}))
+    }
+
+    async fn preferences_update(
+        &self,
+        _config: &ConnectionSettings,
+        _body: &Value,
+    ) -> Result<Value> {
+        Ok(json!({}))
+    }
+
+    async fn note_reply_update(
+        &self,
+        _config: &ConnectionSettings,
+        _note_id: u64,
+        _reply_id: u64,
+        _body: &Value,
+    ) -> Result<Value> {
+        Ok(json!({}))
+    }
+
+    async fn note_reply_delete(
+        &self,
+        _config: &ConnectionSettings,
+        _note_id: u64,
+        _reply_id: u64,
     ) -> Result<Value> {
         Ok(json!({}))
     }
@@ -1589,6 +1670,33 @@ impl ShotgridTransport for SlowGetTransport {
         _config: &ConnectionSettings,
         _entity: &str,
         _id: u64,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+
+    async fn preferences_update(
+        &self,
+        _config: &ConnectionSettings,
+        _body: &Value,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+
+    async fn note_reply_update(
+        &self,
+        _config: &ConnectionSettings,
+        _note_id: u64,
+        _reply_id: u64,
+        _body: &Value,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+
+    async fn note_reply_delete(
+        &self,
+        _config: &ConnectionSettings,
+        _note_id: u64,
+        _reply_id: u64,
     ) -> Result<Value> {
         Err(AppError::not_implemented("unused"))
     }
@@ -3328,5 +3436,91 @@ async fn capabilities_includes_new_user_note_filmstrip_specs() {
     assert!(
         names.contains(&"filmstrip.url"),
         "should include filmstrip.url"
+    );
+}
+
+// New API endpoint tests: preferences_update, note_reply_update, note_reply_delete
+// ────────────────────────────────────────────────────────────────────
+
+#[tokio::test]
+async fn preferences_update_delegates_to_transport() {
+    let app = App::new(RecordingTransport::default());
+    let body = json!({"format_date_fields": "YYYY-MM-DD"});
+    let result = app
+        .preferences_update(overrides(), body.clone())
+        .await
+        .expect("preferences_update succeeds");
+    assert_eq!(result["ok"], true);
+    assert_eq!(result["preferences"], body);
+}
+
+#[tokio::test]
+async fn note_reply_update_delegates_to_transport() {
+    let app = App::new(RecordingTransport::default());
+    let body = json!({"content": "Updated reply"});
+    let result = app
+        .note_reply_update(overrides(), 456, 789, body.clone())
+        .await
+        .expect("note_reply_update succeeds");
+    assert_eq!(result["note_id"], 456);
+    assert_eq!(result["reply_id"], 789);
+    assert_eq!(result["updated"], body);
+}
+
+#[tokio::test]
+async fn note_reply_update_requires_content_field() {
+    let app = App::new(RecordingTransport::default());
+    let body = json!({"type": "Reply"});
+    let err = app
+        .note_reply_update(overrides(), 456, 789, body)
+        .await
+        .expect_err("missing content should be rejected");
+    assert_eq!(err.envelope().code, "INVALID_INPUT");
+    assert!(
+        err.envelope().message.contains("content"),
+        "error should mention missing content field"
+    );
+}
+
+#[tokio::test]
+async fn note_reply_update_requires_json_object() {
+    let app = App::new(RecordingTransport::default());
+    let body = json!("just a string");
+    let err = app
+        .note_reply_update(overrides(), 456, 789, body)
+        .await
+        .expect_err("non-object should be rejected");
+    assert_eq!(err.envelope().code, "INVALID_INPUT");
+}
+
+#[tokio::test]
+async fn note_reply_delete_delegates_to_transport() {
+    let app = App::new(RecordingTransport::default());
+    let result = app
+        .note_reply_delete(overrides(), 456, 789)
+        .await
+        .expect("note_reply_delete succeeds");
+    assert_eq!(result["ok"], true);
+    assert_eq!(result["note_id"], 456);
+    assert_eq!(result["reply_id"], 789);
+}
+
+#[tokio::test]
+async fn capabilities_includes_new_preferences_and_note_specs() {
+    let app = App::new(RecordingTransport::default());
+    let result = app.capabilities(env!("CARGO_PKG_VERSION"));
+    let commands = result["commands"].as_array().expect("commands array");
+    let names: Vec<&str> = commands.iter().filter_map(|c| c["name"].as_str()).collect();
+    assert!(
+        names.contains(&"preferences.update"),
+        "should include preferences.update"
+    );
+    assert!(
+        names.contains(&"note.reply-update"),
+        "should include note.reply-update"
+    );
+    assert!(
+        names.contains(&"note.reply-delete"),
+        "should include note.reply-delete"
     );
 }

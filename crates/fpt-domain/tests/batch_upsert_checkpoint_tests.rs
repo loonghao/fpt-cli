@@ -463,6 +463,33 @@ impl ShotgridTransport for UpsertTransport {
     ) -> Result<Value> {
         Err(AppError::not_implemented("unused"))
     }
+
+    async fn preferences_update(
+        &self,
+        _config: &fpt_domain::ConnectionSettings,
+        _body: &Value,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+
+    async fn note_reply_update(
+        &self,
+        _config: &fpt_domain::ConnectionSettings,
+        _note_id: u64,
+        _reply_id: u64,
+        _body: &Value,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+
+    async fn note_reply_delete(
+        &self,
+        _config: &fpt_domain::ConnectionSettings,
+        _note_id: u64,
+        _reply_id: u64,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
 }
 
 // ---------------------------------------------------------------------------

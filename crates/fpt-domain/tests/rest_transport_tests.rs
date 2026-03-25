@@ -1603,3 +1603,88 @@ async fn filmstrip_thumbnail_uses_expected_get_path() {
     assert_eq!(filmstrip.hits(), 1);
     assert_eq!(response["image"], "https://sg-media.com/filmstrip/456.jpg");
 }
+
+// --- Preferences update endpoint ---
+
+#[tokio::test]
+async fn preferences_update_uses_expected_put_path() {
+    let server = MockServer::start();
+    let auth = mock_auth(&server);
+    let prefs = server.mock(|when, then| {
+        when.method(PUT)
+            .path("/api/v1.1/preferences")
+            .header("authorization", "Bearer token-123");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({"ok": true}));
+    });
+    let transport = RestTransport::default();
+    let config = script_config(&server);
+    let body = json!({"format_date_fields": "YYYY-MM-DD"});
+
+    let response = transport
+        .preferences_update(&config, &body)
+        .await
+        .expect("preferences_update succeeds");
+
+    assert_eq!(auth.hits(), 1);
+    assert_eq!(prefs.hits(), 1);
+    assert_eq!(response["ok"], true);
+}
+
+// --- Note reply update endpoint ---
+
+#[tokio::test]
+async fn note_reply_update_uses_expected_put_path() {
+    let server = MockServer::start();
+    let auth = mock_auth(&server);
+    let reply_update = server.mock(|when, then| {
+        when.method(PUT)
+            .path("/api/v1.1/entity/notes/100/thread_contents/200")
+            .header("authorization", "Bearer token-123");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(
+                json!({"data": {"type": "Reply", "id": 200, "attributes": {"content": "Updated"}}}),
+            );
+    });
+    let transport = RestTransport::default();
+    let config = script_config(&server);
+    let body = json!({"content": "Updated"});
+
+    let response = transport
+        .note_reply_update(&config, 100, 200, &body)
+        .await
+        .expect("note_reply_update succeeds");
+
+    assert_eq!(auth.hits(), 1);
+    assert_eq!(reply_update.hits(), 1);
+    assert_eq!(response["data"]["id"], 200);
+}
+
+// --- Note reply delete endpoint ---
+
+#[tokio::test]
+async fn note_reply_delete_uses_expected_delete_path() {
+    let server = MockServer::start();
+    let auth = mock_auth(&server);
+    let reply_delete = server.mock(|when, then| {
+        when.method(DELETE)
+            .path("/api/v1.1/entity/notes/100/thread_contents/200")
+            .header("authorization", "Bearer token-123");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({"ok": true}));
+    });
+    let transport = RestTransport::default();
+    let config = script_config(&server);
+
+    let response = transport
+        .note_reply_delete(&config, 100, 200)
+        .await
+        .expect("note_reply_delete succeeds");
+
+    assert_eq!(auth.hits(), 1);
+    assert_eq!(reply_delete.hits(), 1);
+    assert_eq!(response["ok"], true);
+}

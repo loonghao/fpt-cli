@@ -288,6 +288,20 @@ pub trait ShotgridTransport {
         entity: &str,
         id: u64,
     ) -> Result<Value>;
+    async fn preferences_update(&self, config: &ConnectionSettings, body: &Value) -> Result<Value>;
+    async fn note_reply_update(
+        &self,
+        config: &ConnectionSettings,
+        note_id: u64,
+        reply_id: u64,
+        body: &Value,
+    ) -> Result<Value>;
+    async fn note_reply_delete(
+        &self,
+        config: &ConnectionSettings,
+        note_id: u64,
+        reply_id: u64,
+    ) -> Result<Value>;
 }
 
 #[derive(Debug, Clone)]
@@ -1330,6 +1344,34 @@ impl ShotgridTransport for RestTransport {
             id
         );
         self.authorized_json_request(config, Method::GET, &path, &[], None)
+            .await
+    }
+
+    async fn preferences_update(&self, config: &ConnectionSettings, body: &Value) -> Result<Value> {
+        self.authorized_json_request(config, Method::PUT, "preferences", &[], Some(body))
+            .await
+    }
+
+    async fn note_reply_update(
+        &self,
+        config: &ConnectionSettings,
+        note_id: u64,
+        reply_id: u64,
+        body: &Value,
+    ) -> Result<Value> {
+        let path = format!("entity/notes/{note_id}/thread_contents/{reply_id}");
+        self.authorized_json_request(config, Method::PUT, &path, &[], Some(body))
+            .await
+    }
+
+    async fn note_reply_delete(
+        &self,
+        config: &ConnectionSettings,
+        note_id: u64,
+        reply_id: u64,
+    ) -> Result<Value> {
+        let path = format!("entity/notes/{note_id}/thread_contents/{reply_id}");
+        self.authorized_json_request(config, Method::DELETE, &path, &[], None)
             .await
     }
 }
