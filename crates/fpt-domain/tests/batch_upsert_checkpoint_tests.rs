@@ -522,6 +522,17 @@ impl ShotgridTransport for UpsertTransport {
     ) -> Result<Value> {
         Err(AppError::not_implemented("unused"))
     }
+
+    async fn entity_relationship_delete(
+        &self,
+        _config: &fpt_domain::ConnectionSettings,
+        _entity: &str,
+        _id: u64,
+        _related_field: &str,
+        _body: &Value,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
 }
 
 // ---------------------------------------------------------------------------

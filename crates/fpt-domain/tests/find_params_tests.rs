@@ -290,6 +290,16 @@ impl ShotgridTransport for RecordingTransport {
     ) -> Result<Value> {
         Ok(json!({}))
     }
+    async fn entity_relationship_delete(
+        &self,
+        _: &ConnectionSettings,
+        _: &str,
+        _: u64,
+        _: &str,
+        _: &Value,
+    ) -> Result<Value> {
+        Ok(json!({}))
+    }
 }
 
 fn test_overrides() -> ConnectionOverrides {

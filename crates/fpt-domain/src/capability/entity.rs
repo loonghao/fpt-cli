@@ -362,6 +362,29 @@ pub const ENTITY_RELATIONSHIP_UPDATE_SPEC: CommandSpec = CommandSpec {
     notes: ENTITY_RELATIONSHIP_UPDATE_NOTES,
 };
 
+const ENTITY_RELATIONSHIP_DELETE_EXAMPLES: &[&str] = &[
+    "fpt entity relationship-delete Shot 123 --field assets --input '{\"data\":[{\"type\":\"Asset\",\"id\":7}]}' --site ...",
+];
+
+const ENTITY_RELATIONSHIP_DELETE_NOTES: &[&str] = &[
+    "Removes links from a multi-entity relationship field via DELETE /api/{ver}/entity/{type}/{id}/relationships/{field}",
+    "Input must be a JSON object containing `data` (array of entity link objects with `type` and `id` to remove)",
+];
+
+pub const ENTITY_RELATIONSHIP_DELETE_SPEC: CommandSpec = CommandSpec {
+    name: "entity.relationship-delete",
+    summary: "Remove links from a multi-entity relationship field",
+    risk: RiskLevel::Destructive,
+    implemented: true,
+    supports_dry_run: false,
+    preferred_transport: "rest",
+    fallback_transport: None,
+    input: "entity + id + field name + JSON body with data array",
+    output: "json",
+    examples: ENTITY_RELATIONSHIP_DELETE_EXAMPLES,
+    notes: ENTITY_RELATIONSHIP_DELETE_NOTES,
+};
+
 const ENTITY_SHARE_EXAMPLES: &[&str] = &[
     "fpt entity share Shot 123 --input '{\"entities\":[{\"type\":\"Project\",\"id\":85}]}' --site ...",
 ];

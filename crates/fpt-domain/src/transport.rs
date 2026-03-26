@@ -325,6 +325,14 @@ pub trait ShotgridTransport {
         id: u64,
         body: &Value,
     ) -> Result<Value>;
+    async fn entity_relationship_delete(
+        &self,
+        config: &ConnectionSettings,
+        entity: &str,
+        id: u64,
+        related_field: &str,
+        body: &Value,
+    ) -> Result<Value>;
 }
 
 #[derive(Debug, Clone)]
@@ -1443,6 +1451,24 @@ impl ShotgridTransport for RestTransport {
     ) -> Result<Value> {
         let path = format!("entity/{}/{}/_share", entity_collection_path(entity), id);
         self.authorized_json_request(config, Method::POST, &path, &[], Some(body))
+            .await
+    }
+
+    async fn entity_relationship_delete(
+        &self,
+        config: &ConnectionSettings,
+        entity: &str,
+        id: u64,
+        related_field: &str,
+        body: &Value,
+    ) -> Result<Value> {
+        let path = format!(
+            "entity/{}/{}/relationships/{}",
+            entity_collection_path(entity),
+            id,
+            related_field
+        );
+        self.authorized_json_request(config, Method::DELETE, &path, &[], Some(body))
             .await
     }
 }

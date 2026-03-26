@@ -545,6 +545,17 @@ impl ShotgridTransport for RecordingTransport {
         Ok(json!({"entity": entity, "id": id, "related_field": related_field, "updated": body}))
     }
 
+    async fn entity_relationship_delete(
+        &self,
+        _config: &ConnectionSettings,
+        entity: &str,
+        id: u64,
+        related_field: &str,
+        body: &Value,
+    ) -> Result<Value> {
+        Ok(json!({"entity": entity, "id": id, "related_field": related_field, "deleted": body}))
+    }
+
     async fn entity_share(
         &self,
         _config: &ConnectionSettings,
@@ -961,6 +972,17 @@ impl ShotgridTransport for FindOneTransport {
     }
 
     async fn entity_relationship_update(
+        &self,
+        _config: &ConnectionSettings,
+        _entity: &str,
+        _id: u64,
+        _related_field: &str,
+        _body: &Value,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+
+    async fn entity_relationship_delete(
         &self,
         _config: &ConnectionSettings,
         _entity: &str,
@@ -1398,6 +1420,17 @@ impl ShotgridTransport for NoteThreadsNotFoundTransport {
     ) -> Result<Value> {
         Ok(json!({}))
     }
+
+    async fn entity_relationship_delete(
+        &self,
+        _config: &ConnectionSettings,
+        _entity: &str,
+        _id: u64,
+        _related_field: &str,
+        _body: &Value,
+    ) -> Result<Value> {
+        Ok(json!({}))
+    }
 }
 
 #[derive(Debug, Clone, Default)]
@@ -1824,6 +1857,17 @@ impl ShotgridTransport for SlowGetTransport {
         _config: &ConnectionSettings,
         _entity: &str,
         _id: u64,
+        _body: &Value,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+
+    async fn entity_relationship_delete(
+        &self,
+        _config: &ConnectionSettings,
+        _entity: &str,
+        _id: u64,
+        _related_field: &str,
         _body: &Value,
     ) -> Result<Value> {
         Err(AppError::not_implemented("unused"))
@@ -3761,7 +3805,47 @@ async fn capabilities_includes_new_relationship_and_share_specs() {
         "should include entity.relationship-update"
     );
     assert!(
+        names.contains(&"entity.relationship-delete"),
+        "should include entity.relationship-delete"
+    );
+    assert!(
         names.contains(&"entity.share"),
         "should include entity.share"
     );
+}
+
+#[tokio::test]
+async fn entity_relationship_delete_delegates_to_transport() {
+    let app = App::new(RecordingTransport::default());
+    let body = json!({"data": [{"type": "Asset", "id": 7}]});
+    let result = app
+        .entity_relationship_delete(overrides(), "Shot", 42, "assets", body.clone())
+        .await
+        .expect("entity_relationship_delete succeeds");
+    assert_eq!(result["entity"], "Shot");
+    assert_eq!(result["id"], 42);
+    assert_eq!(result["related_field"], "assets");
+    assert_eq!(result["deleted"], body);
+}
+
+#[tokio::test]
+async fn entity_relationship_delete_requires_data_field() {
+    let app = App::new(RecordingTransport::default());
+    let body = json!({"links": [{"type": "Asset", "id": 7}]});
+    let err = app
+        .entity_relationship_delete(overrides(), "Shot", 42, "assets", body)
+        .await
+        .expect_err("missing data field should be rejected");
+    assert_eq!(err.envelope().code, "INVALID_INPUT");
+}
+
+#[tokio::test]
+async fn entity_relationship_delete_requires_json_object() {
+    let app = App::new(RecordingTransport::default());
+    let body = json!([{"type": "Asset", "id": 7}]);
+    let err = app
+        .entity_relationship_delete(overrides(), "Shot", 42, "assets", body)
+        .await
+        .expect_err("non-object should be rejected");
+    assert_eq!(err.envelope().code, "INVALID_INPUT");
 }
