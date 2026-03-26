@@ -708,10 +708,7 @@ pub enum HierarchyCommands {
         #[arg(long)]
         input: String,
     },
-    #[command(
-        name = "expand",
-        about = "Expand a node in the project hierarchy tree"
-    )]
+    #[command(name = "expand", about = "Expand a node in the project hierarchy tree")]
     Expand {
         #[arg(long)]
         input: String,
@@ -749,10 +746,7 @@ pub enum ScheduleCommands {
         about = "Read work day rules from the ShotGrid scheduling system"
     )]
     WorkDayRules {
-        #[arg(
-            long,
-            help = "Optional query parameters as JSON (page, etc.)"
-        )]
+        #[arg(long, help = "Optional query parameters as JSON (page, etc.)")]
         input: Option<String>,
     },
     #[command(

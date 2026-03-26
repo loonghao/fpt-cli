@@ -1035,11 +1035,7 @@ impl ShotgridTransport for FindOneTransport {
     ) -> Result<Value> {
         Err(AppError::not_implemented("unused"))
     }
-    async fn hierarchy_expand(
-        &self,
-        _config: &ConnectionSettings,
-        _body: &Value,
-    ) -> Result<Value> {
+    async fn hierarchy_expand(&self, _config: &ConnectionSettings, _body: &Value) -> Result<Value> {
         Err(AppError::not_implemented("unused"))
     }
     async fn schedule_work_day_rules(
@@ -1496,11 +1492,7 @@ impl ShotgridTransport for NoteThreadsNotFoundTransport {
     ) -> Result<Value> {
         Ok(json!({}))
     }
-    async fn hierarchy_expand(
-        &self,
-        _config: &ConnectionSettings,
-        _body: &Value,
-    ) -> Result<Value> {
+    async fn hierarchy_expand(&self, _config: &ConnectionSettings, _body: &Value) -> Result<Value> {
         Ok(json!({}))
     }
     async fn schedule_work_day_rules(
@@ -1969,11 +1961,7 @@ impl ShotgridTransport for SlowGetTransport {
     ) -> Result<Value> {
         Err(AppError::not_implemented("unused"))
     }
-    async fn hierarchy_expand(
-        &self,
-        _config: &ConnectionSettings,
-        _body: &Value,
-    ) -> Result<Value> {
+    async fn hierarchy_expand(&self, _config: &ConnectionSettings, _body: &Value) -> Result<Value> {
         Err(AppError::not_implemented("unused"))
     }
     async fn schedule_work_day_rules(
@@ -4039,10 +4027,7 @@ async fn schedule_work_day_rules_update_rejects_non_object() {
 #[tokio::test]
 async fn license_delegates_to_transport() {
     let app = App::new(RecordingTransport::default());
-    let result = app
-        .license(overrides())
-        .await
-        .expect("license succeeds");
+    let result = app.license(overrides()).await.expect("license succeeds");
     assert_eq!(result["data"]["current_users"], 10);
     assert_eq!(result["data"]["max_users"], 50);
 }
@@ -4086,10 +4071,7 @@ async fn capabilities_includes_new_api_specs() {
         names.contains(&"schedule.work-day-rules-update"),
         "should include schedule.work-day-rules-update"
     );
-    assert!(
-        names.contains(&"license.get"),
-        "should include license.get"
-    );
+    assert!(names.contains(&"license.get"), "should include license.get");
     assert!(
         names.contains(&"preferences.custom-entity"),
         "should include preferences.custom-entity"

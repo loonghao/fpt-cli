@@ -1,9 +1,9 @@
 use crate::cli::{
     ActivityCommands, AuthCommands, BatchEntityCommands, Cli, Commands, DownloadCommands,
     EntityCommands, EventLogCommands, FilmstripCommands, FollowersCommands, HierarchyCommands,
-    InspectCommands, LicenseCommands, NoteCommands, PreferencesCommands, SchemaCommands,
-    ScheduleCommands, SelfCommands, ServerCommands, ThumbnailCommands, UploadCommands,
-    UserCommands, WorkScheduleCommands,
+    InspectCommands, LicenseCommands, NoteCommands, PreferencesCommands, ScheduleCommands,
+    SchemaCommands, SelfCommands, ServerCommands, ThumbnailCommands, UploadCommands, UserCommands,
+    WorkScheduleCommands,
 };
 use crate::config;
 use crate::self_update;

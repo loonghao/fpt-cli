@@ -6,7 +6,7 @@ pub use commands::{
     ActivityCommands, AuthCommands, BatchEntityCommands, Cli, Commands, ConfigClearArgs,
     ConfigCommands, ConfigSetArgs, DownloadCommands, EntityCommands, EventLogCommands,
     FilmstripCommands, FollowersCommands, HierarchyCommands, InspectCommands, LicenseCommands,
-    NoteCommands, PreferencesCommands, SchemaCommands, ScheduleCommands, SelfCommands,
+    NoteCommands, PreferencesCommands, ScheduleCommands, SchemaCommands, SelfCommands,
     SelfUpdateArgs, ServerCommands, ThumbnailCommands, UploadCommands, UserCommands,
     WorkScheduleCommands,
 };

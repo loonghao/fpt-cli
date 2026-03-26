@@ -1909,10 +1909,7 @@ async fn license_uses_expected_get_path() {
     let transport = RestTransport::default();
     let config = script_config(&server);
 
-    let response = transport
-        .license(&config)
-        .await
-        .expect("license succeeds");
+    let response = transport.license(&config).await.expect("license succeeds");
 
     assert_eq!(auth.calls(), 1);
     assert_eq!(license.calls(), 1);

@@ -321,11 +321,7 @@ impl ShotgridTransport for RecordingTransport {
     async fn license(&self, _: &ConnectionSettings) -> Result<Value> {
         Ok(json!({}))
     }
-    async fn preferences_custom_entity(
-        &self,
-        _: &ConnectionSettings,
-        _: &Value,
-    ) -> Result<Value> {
+    async fn preferences_custom_entity(&self, _: &ConnectionSettings, _: &Value) -> Result<Value> {
         Ok(json!({}))
     }
 }

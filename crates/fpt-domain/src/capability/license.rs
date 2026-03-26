@@ -1,8 +1,7 @@
 use fpt_core::{CommandSpec, RiskLevel};
 
-const LICENSE_EXAMPLES: &[&str] = &[
-    "fpt license get --site ... --auth-mode script --script-name ... --script-key ...",
-];
+const LICENSE_EXAMPLES: &[&str] =
+    &["fpt license get --site ... --auth-mode script --script-name ... --script-key ..."];
 
 const LICENSE_NOTES: &[&str] = &[
     "Retrieve the current ShotGrid site license information",
