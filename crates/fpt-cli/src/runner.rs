@@ -1,8 +1,9 @@
 use crate::cli::{
     ActivityCommands, AuthCommands, BatchEntityCommands, Cli, Commands, DownloadCommands,
     EntityCommands, EventLogCommands, FilmstripCommands, FollowersCommands, HierarchyCommands,
-    InspectCommands, NoteCommands, PreferencesCommands, SchemaCommands, SelfCommands,
-    ServerCommands, ThumbnailCommands, UploadCommands, UserCommands, WorkScheduleCommands,
+    InspectCommands, LicenseCommands, NoteCommands, PreferencesCommands, ScheduleCommands,
+    SchemaCommands, SelfCommands, ServerCommands, ThumbnailCommands, UploadCommands, UserCommands,
+    WorkScheduleCommands,
 };
 use crate::config;
 use crate::self_update;
@@ -333,6 +334,10 @@ pub async fn run(cli: Cli) -> Result<Value> {
                 let body = required_json_input(input)?;
                 app.preferences_update(connection, body).await
             }
+            PreferencesCommands::CustomEntity { input } => {
+                let body = required_json_input(input)?;
+                app.preferences_custom_entity(connection, body).await
+            }
         },
         Commands::Followers(command) => match command {
             FollowersCommands::List { entity, id } => {
@@ -398,6 +403,24 @@ pub async fn run(cli: Cli) -> Result<Value> {
                 let body = required_json_input(input)?;
                 app.hierarchy_search(connection, body).await
             }
+            HierarchyCommands::Expand { input } => {
+                let body = required_json_input(input)?;
+                app.hierarchy_expand(connection, body).await
+            }
+        },
+        Commands::Schedule(command) => match command {
+            ScheduleCommands::WorkDayRules { input } => {
+                let input = read_json_input(input.as_deref())?;
+                app.schedule_work_day_rules(connection, input).await
+            }
+            ScheduleCommands::WorkDayRulesUpdate { rule_id, input } => {
+                let body = required_json_input(input)?;
+                app.schedule_work_day_rules_update(connection, rule_id, body)
+                    .await
+            }
+        },
+        Commands::License(command) => match command {
+            LicenseCommands::Get => app.license(connection).await,
         },
         Commands::SelfCommand(command) => match command {
             SelfCommands::Update(args) => self_update::run(args).await,

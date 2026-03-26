@@ -4,7 +4,9 @@ mod core;
 mod entity;
 mod follow;
 mod hierarchy;
+mod license;
 mod note;
+mod schedule;
 mod schema;
 mod self_update;
 mod server;
@@ -77,6 +79,12 @@ static COMMANDS: &[CommandSpec] = &[
     user::CURRENT_USER_SPEC,
     // Hierarchy
     hierarchy::HIERARCHY_SEARCH_SPEC,
+    hierarchy::HIERARCHY_EXPAND_SPEC,
+    // Schedule
+    schedule::SCHEDULE_WORK_DAY_RULES_SPEC,
+    schedule::SCHEDULE_WORK_DAY_RULES_UPDATE_SPEC,
+    // License
+    license::LICENSE_GET_SPEC,
     // Work schedule
     work_schedule::WORK_SCHEDULE_READ_SPEC,
     work_schedule::WORK_SCHEDULE_UPDATE_SPEC,
@@ -90,6 +98,7 @@ static COMMANDS: &[CommandSpec] = &[
     activity::EVENT_LOG_ENTRIES_SPEC,
     activity::PREFERENCES_GET_SPEC,
     activity::PREFERENCES_UPDATE_SPEC,
+    activity::PREFERENCES_CUSTOM_ENTITY_SPEC,
     // Self-update & config
     self_update::SELF_UPDATE_SPEC,
     self_update::CONFIG_GET_SPEC,

@@ -18,4 +18,13 @@ where
         let config = ConnectionSettings::resolve(overrides)?;
         self.transport.hierarchy(&config, &body).await
     }
+
+    pub async fn hierarchy_expand(
+        &self,
+        overrides: ConnectionOverrides,
+        body: Value,
+    ) -> Result<Value> {
+        let config = ConnectionSettings::resolve(overrides)?;
+        self.transport.hierarchy_expand(&config, &body).await
+    }
 }

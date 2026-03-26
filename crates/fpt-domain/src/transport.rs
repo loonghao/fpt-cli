@@ -336,6 +336,24 @@ pub trait ShotgridTransport {
         related_field: &str,
         body: &Value,
     ) -> Result<Value>;
+    async fn hierarchy_expand(&self, config: &ConnectionSettings, body: &Value) -> Result<Value>;
+    async fn schedule_work_day_rules(
+        &self,
+        config: &ConnectionSettings,
+        params: &[(String, String)],
+    ) -> Result<Value>;
+    async fn schedule_work_day_rules_update(
+        &self,
+        config: &ConnectionSettings,
+        rule_id: u64,
+        body: &Value,
+    ) -> Result<Value>;
+    async fn license(&self, config: &ConnectionSettings) -> Result<Value>;
+    async fn preferences_custom_entity(
+        &self,
+        config: &ConnectionSettings,
+        body: &Value,
+    ) -> Result<Value>;
 }
 
 #[derive(Debug, Clone)]
@@ -1473,6 +1491,51 @@ impl ShotgridTransport for RestTransport {
         );
         self.authorized_json_request(config, Method::DELETE, &path, &[], Some(body))
             .await
+    }
+
+    async fn hierarchy_expand(&self, config: &ConnectionSettings, body: &Value) -> Result<Value> {
+        self.authorized_json_request(config, Method::POST, "hierarchy/expand", &[], Some(body))
+            .await
+    }
+
+    async fn schedule_work_day_rules(
+        &self,
+        config: &ConnectionSettings,
+        params: &[(String, String)],
+    ) -> Result<Value> {
+        self.authorized_json_request(config, Method::GET, "schedule/work_day_rules", params, None)
+            .await
+    }
+
+    async fn schedule_work_day_rules_update(
+        &self,
+        config: &ConnectionSettings,
+        rule_id: u64,
+        body: &Value,
+    ) -> Result<Value> {
+        let path = format!("schedule/work_day_rules/{rule_id}");
+        self.authorized_json_request(config, Method::PUT, &path, &[], Some(body))
+            .await
+    }
+
+    async fn license(&self, config: &ConnectionSettings) -> Result<Value> {
+        self.authorized_json_request(config, Method::GET, "license", &[], None)
+            .await
+    }
+
+    async fn preferences_custom_entity(
+        &self,
+        config: &ConnectionSettings,
+        body: &Value,
+    ) -> Result<Value> {
+        self.authorized_json_request(
+            config,
+            Method::POST,
+            "preferences/custom_entity",
+            &[],
+            Some(body),
+        )
+        .await
     }
 }
 
