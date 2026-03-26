@@ -21,9 +21,9 @@ fn mock_auth(server: &MockServer) -> Mock<'_> {
         when.method(POST)
             .path("/api/v1.1/auth/access_token")
             .header("accept", "application/json")
-            .body_contains("grant_type=client_credentials")
-            .body_contains("client_id=openclaw")
-            .body_contains("client_secret=secret-key");
+            .body_includes("grant_type=client_credentials")
+            .body_includes("client_id=openclaw")
+            .body_includes("client_secret=secret-key");
         then.status(200)
             .header("content-type", "application/json")
             .json_body(json!({
@@ -48,7 +48,7 @@ async fn auth_test_uses_script_oauth_form_payload() {
     assert_eq!(response["ok"], true);
     assert_eq!(response["grant_type"], "client_credentials");
     assert_eq!(response["token_received"], true);
-    assert_eq!(auth.hits(), 1);
+    assert_eq!(auth.calls(), 1);
 }
 
 #[tokio::test]
@@ -83,9 +83,9 @@ async fn schema_commands_reuse_cached_token_and_hit_expected_paths() {
         .await
         .expect("schema fields succeeds");
 
-    assert_eq!(auth.hits(), 1, "access token should be reused in-process");
-    assert_eq!(schema_entities.hits(), 1);
-    assert_eq!(schema_fields.hits(), 1);
+    assert_eq!(auth.calls(), 1, "access token should be reused in-process");
+    assert_eq!(schema_entities.calls(), 1);
+    assert_eq!(schema_fields.calls(), 1);
 }
 
 #[tokio::test]
@@ -174,10 +174,10 @@ async fn entity_get_and_find_use_expected_read_endpoints() {
         .await
         .expect("entity search succeeds");
 
-    assert_eq!(auth.hits(), 1);
-    assert_eq!(entity_get.hits(), 1);
-    assert_eq!(entity_find.hits(), 1);
-    assert_eq!(entity_search.hits(), 1);
+    assert_eq!(auth.calls(), 1);
+    assert_eq!(entity_get.calls(), 1);
+    assert_eq!(entity_find.calls(), 1);
+    assert_eq!(entity_search.calls(), 1);
 }
 
 #[tokio::test]
@@ -205,8 +205,8 @@ async fn note_threads_use_documented_note_thread_endpoint() {
         .await
         .expect("note threads succeeds");
 
-    assert_eq!(auth.hits(), 1);
-    assert_eq!(note_threads.hits(), 1);
+    assert_eq!(auth.calls(), 1);
+    assert_eq!(note_threads.calls(), 1);
 }
 
 #[tokio::test]
@@ -328,9 +328,9 @@ async fn rpc_methods_use_expected_paths_and_payloads() {
         .await
         .expect("entity summarize succeeds");
 
-    assert_eq!(revive.hits(), 1);
-    assert_eq!(work_schedule.hits(), 1);
-    assert_eq!(summarize.hits(), 1);
+    assert_eq!(revive.calls(), 1);
+    assert_eq!(work_schedule.calls(), 1);
+    assert_eq!(summarize.calls(), 1);
     assert_eq!(revive_response, json!(true));
     assert_eq!(work_schedule_response["2026-03-16"]["working"], true);
     assert_eq!(summarize_response["summaries"]["id"]["record_count"], 3);
@@ -380,10 +380,10 @@ async fn entity_write_commands_use_expected_methods_and_parse_empty_delete() {
         .await
         .expect("entity delete succeeds");
 
-    assert_eq!(auth.hits(), 1);
-    assert_eq!(entity_create.hits(), 1);
-    assert_eq!(entity_update.hits(), 1);
-    assert_eq!(entity_delete.hits(), 1);
+    assert_eq!(auth.calls(), 1);
+    assert_eq!(entity_create.calls(), 1);
+    assert_eq!(entity_update.calls(), 1);
+    assert_eq!(entity_delete.calls(), 1);
     assert_eq!(create_response["data"]["id"], 10);
     assert_eq!(update_response["data"]["updated"], true);
     assert_eq!(delete_response["ok"], true);
@@ -412,8 +412,8 @@ async fn entity_followers_uses_expected_get_endpoint() {
         .await
         .expect("entity followers succeeds");
 
-    assert_eq!(auth.hits(), 1);
-    assert_eq!(followers.hits(), 1);
+    assert_eq!(auth.calls(), 1);
+    assert_eq!(followers.calls(), 1);
     assert_eq!(response["data"][0]["id"], 10);
 }
 
@@ -438,8 +438,8 @@ async fn entity_follow_posts_user_to_followers_endpoint() {
         .await
         .expect("entity follow succeeds");
 
-    assert_eq!(auth.hits(), 1);
-    assert_eq!(follow.hits(), 1);
+    assert_eq!(auth.calls(), 1);
+    assert_eq!(follow.calls(), 1);
     assert_eq!(response["data"]["id"], 7);
 }
 
@@ -461,8 +461,8 @@ async fn entity_unfollow_deletes_user_from_followers_endpoint() {
         .await
         .expect("entity unfollow succeeds");
 
-    assert_eq!(auth.hits(), 1);
-    assert_eq!(unfollow.hits(), 1);
+    assert_eq!(auth.calls(), 1);
+    assert_eq!(unfollow.calls(), 1);
     assert_eq!(response["ok"], true);
     assert_eq!(response["status"], 204);
 }
@@ -501,8 +501,8 @@ async fn upload_url_uses_expected_get_endpoint_with_query_params() {
         .await
         .expect("upload url succeeds");
 
-    assert_eq!(auth.hits(), 1);
-    assert_eq!(upload.hits(), 1);
+    assert_eq!(auth.calls(), 1);
+    assert_eq!(upload.calls(), 1);
     assert_eq!(response["links"]["upload"], "https://s3.example.com/upload");
 }
 
@@ -526,8 +526,8 @@ async fn download_url_uses_expected_get_endpoint() {
         .await
         .expect("download url succeeds");
 
-    assert_eq!(auth.hits(), 1);
-    assert_eq!(download.hits(), 1);
+    assert_eq!(auth.calls(), 1);
+    assert_eq!(download.calls(), 1);
     assert_eq!(
         response["links"]["download"],
         "https://s3.example.com/download"
@@ -554,8 +554,8 @@ async fn thumbnail_url_uses_expected_get_endpoint() {
         .await
         .expect("thumbnail url succeeds");
 
-    assert_eq!(auth.hits(), 1);
-    assert_eq!(thumbnail.hits(), 1);
+    assert_eq!(auth.calls(), 1);
+    assert_eq!(thumbnail.calls(), 1);
     assert_eq!(
         response["links"]["thumb"],
         "https://s3.example.com/thumb.jpg"
@@ -589,8 +589,8 @@ async fn schema_field_create_posts_to_expected_path() {
         .await
         .expect("schema field create succeeds");
 
-    assert_eq!(auth.hits(), 1);
-    assert_eq!(field_create.hits(), 1);
+    assert_eq!(auth.calls(), 1);
+    assert_eq!(field_create.calls(), 1);
     assert_eq!(response["data"]["name"], "sg_custom_field");
 }
 
@@ -622,8 +622,8 @@ async fn schema_field_update_puts_to_expected_path() {
         .await
         .expect("schema field update succeeds");
 
-    assert_eq!(auth.hits(), 1);
-    assert_eq!(field_update.hits(), 1);
+    assert_eq!(auth.calls(), 1);
+    assert_eq!(field_update.calls(), 1);
     assert_eq!(response["data"]["name"], "Renamed Field");
 }
 
@@ -645,8 +645,8 @@ async fn schema_field_delete_uses_delete_method() {
         .await
         .expect("schema field delete succeeds");
 
-    assert_eq!(auth.hits(), 1);
-    assert_eq!(field_delete.hits(), 1);
+    assert_eq!(auth.calls(), 1);
+    assert_eq!(field_delete.calls(), 1);
     assert_eq!(response["ok"], true);
     assert_eq!(response["status"], 204);
 }
@@ -671,8 +671,8 @@ async fn schema_field_read_uses_get_method() {
         .await
         .expect("schema field read succeeds");
 
-    assert_eq!(auth.hits(), 1);
-    assert_eq!(field_read.hits(), 1);
+    assert_eq!(auth.calls(), 1);
+    assert_eq!(field_read.calls(), 1);
     assert_eq!(response["data"]["data_type"], "text");
 }
 
@@ -697,8 +697,8 @@ async fn schema_field_revive_posts_with_revive_query_param() {
         .await
         .expect("schema field revive succeeds");
 
-    assert_eq!(auth.hits(), 1);
-    assert_eq!(field_revive.hits(), 1);
+    assert_eq!(auth.calls(), 1);
+    assert_eq!(field_revive.calls(), 1);
     assert_eq!(response["data"]["revived"], true);
 }
 
@@ -724,8 +724,8 @@ async fn schema_entity_read_uses_expected_get_path() {
         .await
         .expect("schema entity read succeeds");
 
-    assert_eq!(auth.hits(), 1);
-    assert_eq!(entity_read.hits(), 1);
+    assert_eq!(auth.calls(), 1);
+    assert_eq!(entity_read.calls(), 1);
     assert_eq!(response["data"]["name"], "CustomEntity01");
 }
 
@@ -754,8 +754,8 @@ async fn schema_entity_update_uses_put_method() {
         .await
         .expect("schema entity update succeeds");
 
-    assert_eq!(auth.hits(), 1);
-    assert_eq!(entity_update.hits(), 1);
+    assert_eq!(auth.calls(), 1);
+    assert_eq!(entity_update.calls(), 1);
     assert_eq!(response["data"]["name"], "Renamed Entity");
 }
 
@@ -777,8 +777,8 @@ async fn schema_entity_delete_uses_delete_method() {
         .await
         .expect("schema entity delete succeeds");
 
-    assert_eq!(auth.hits(), 1);
-    assert_eq!(entity_delete.hits(), 1);
+    assert_eq!(auth.calls(), 1);
+    assert_eq!(entity_delete.calls(), 1);
     assert_eq!(response["ok"], true);
     assert_eq!(response["status"], 204);
 }
@@ -807,8 +807,8 @@ async fn schema_entity_create_posts_to_schema_root() {
         .await
         .expect("schema entity create succeeds");
 
-    assert_eq!(auth.hits(), 1);
-    assert_eq!(entity_create.hits(), 1);
+    assert_eq!(auth.calls(), 1);
+    assert_eq!(entity_create.calls(), 1);
     assert_eq!(response["data"]["name"], "CustomEntity02");
 }
 
@@ -833,8 +833,8 @@ async fn schema_entity_revive_posts_with_revive_query_param() {
         .await
         .expect("schema entity revive succeeds");
 
-    assert_eq!(auth.hits(), 1);
-    assert_eq!(entity_revive.hits(), 1);
+    assert_eq!(auth.calls(), 1);
+    assert_eq!(entity_revive.calls(), 1);
     assert_eq!(response["data"]["revived"], true);
 }
 
@@ -866,8 +866,8 @@ async fn hierarchy_search_posts_to_expected_path() {
         .await
         .expect("hierarchy search succeeds");
 
-    assert_eq!(auth.hits(), 1);
-    assert_eq!(hierarchy.hits(), 1);
+    assert_eq!(auth.calls(), 1);
+    assert_eq!(hierarchy.calls(), 1);
     assert_eq!(response["data"][0]["name"], "root");
 }
 
@@ -895,8 +895,8 @@ async fn text_search_posts_to_expected_path() {
         .await
         .expect("text search succeeds");
 
-    assert_eq!(auth.hits(), 1);
-    assert_eq!(text_search.hits(), 1);
+    assert_eq!(auth.calls(), 1);
+    assert_eq!(text_search.calls(), 1);
     assert_eq!(response["data"][0]["type"], "Shot");
 }
 
@@ -920,8 +920,8 @@ async fn activity_stream_uses_expected_get_path() {
         .await
         .expect("activity stream succeeds");
 
-    assert_eq!(auth.hits(), 1);
-    assert_eq!(activity.hits(), 1);
+    assert_eq!(auth.calls(), 1);
+    assert_eq!(activity.calls(), 1);
     assert_eq!(response["data"], json!([]));
 }
 
@@ -945,8 +945,8 @@ async fn event_log_entries_uses_expected_get_path() {
         .await
         .expect("event log entries succeeds");
 
-    assert_eq!(auth.hits(), 1);
-    assert_eq!(event_log.hits(), 1);
+    assert_eq!(auth.calls(), 1);
+    assert_eq!(event_log.calls(), 1);
     assert_eq!(response["data"], json!([]));
 }
 
@@ -970,8 +970,8 @@ async fn preferences_get_uses_expected_get_path() {
         .await
         .expect("preferences get succeeds");
 
-    assert_eq!(auth.hits(), 1);
-    assert_eq!(prefs.hits(), 1);
+    assert_eq!(auth.calls(), 1);
+    assert_eq!(prefs.calls(), 1);
     assert_eq!(response["data"]["format_currency_field"], "USD");
 }
 
@@ -997,8 +997,8 @@ async fn entity_relationships_uses_expected_get_path() {
         .await
         .expect("entity relationships succeeds");
 
-    assert_eq!(auth.hits(), 1);
-    assert_eq!(relationships.hits(), 1);
+    assert_eq!(auth.calls(), 1);
+    assert_eq!(relationships.calls(), 1);
     assert_eq!(response["data"][0]["type"], "Asset");
 }
 
@@ -1022,8 +1022,8 @@ async fn user_following_uses_expected_get_path() {
         .await
         .expect("user following succeeds");
 
-    assert_eq!(auth.hits(), 1);
-    assert_eq!(following.hits(), 1);
+    assert_eq!(auth.calls(), 1);
+    assert_eq!(following.calls(), 1);
     assert_eq!(response["data"], json!([]));
 }
 
@@ -1047,8 +1047,8 @@ async fn project_update_last_accessed_uses_expected_put_path() {
         .await
         .expect("project update last accessed succeeds");
 
-    assert_eq!(auth.hits(), 1);
-    assert_eq!(update_accessed.hits(), 1);
+    assert_eq!(auth.calls(), 1);
+    assert_eq!(update_accessed.calls(), 1);
     assert_eq!(response["data"]["ok"], true);
 }
 
@@ -1075,8 +1075,8 @@ async fn note_reply_create_posts_to_expected_path() {
         .await
         .expect("note reply create succeeds");
 
-    assert_eq!(auth.hits(), 1);
-    assert_eq!(reply.hits(), 1);
+    assert_eq!(auth.calls(), 1);
+    assert_eq!(reply.calls(), 1);
     assert_eq!(response["data"]["type"], "Reply");
 }
 
@@ -1115,7 +1115,7 @@ async fn work_schedule_update_uses_rpc_method() {
         .await
         .expect("work schedule update succeeds");
 
-    assert_eq!(ws_update.hits(), 1);
+    assert_eq!(ws_update.calls(), 1);
     assert_eq!(response["ok"], true);
 }
 
@@ -1140,7 +1140,7 @@ async fn server_info_uses_rpc_info_method() {
         .await
         .expect("server info succeeds");
 
-    assert_eq!(info.hits(), 1);
+    assert_eq!(info.calls(), 1);
     assert_eq!(response["version"], json!([8, 40, 0, 0]));
 }
 
@@ -1177,11 +1177,11 @@ async fn rest_errors_map_auth_and_api_failures() {
         .await
         .expect_err("api failure should be surfaced");
 
-    assert_eq!(auth_failure.hits(), 1);
+    assert_eq!(auth_failure.calls(), 1);
     assert_eq!(auth_error.envelope().code, "AUTH_FAILED");
     assert_eq!(auth_error.envelope().transport.as_deref(), Some("rest"));
-    assert_eq!(api_auth.hits(), 1);
-    assert_eq!(api_failure.hits(), 1);
+    assert_eq!(api_auth.calls(), 1);
+    assert_eq!(api_failure.calls(), 1);
     assert_eq!(api_error.envelope().code, "API_ERROR");
     assert_eq!(api_error.envelope().transport.as_deref(), Some("rest"));
 }
@@ -1226,8 +1226,8 @@ async fn upload_url_with_content_type_and_multipart_upload() {
         .await
         .expect("upload url with content_type and multipart succeeds");
 
-    assert_eq!(auth.hits(), 1);
-    assert_eq!(upload.hits(), 1);
+    assert_eq!(auth.calls(), 1);
+    assert_eq!(upload.calls(), 1);
     assert_eq!(
         response["links"]["upload"],
         "https://s3.example.com/multipart-upload"
@@ -1286,8 +1286,8 @@ async fn activity_stream_passes_query_parameters() {
         .await
         .expect("activity stream with params succeeds");
 
-    assert_eq!(auth.hits(), 1);
-    assert_eq!(activity.hits(), 1);
+    assert_eq!(auth.calls(), 1);
+    assert_eq!(activity.calls(), 1);
     assert_eq!(response["data"][0]["type"], "activity");
 }
 
@@ -1321,8 +1321,8 @@ async fn event_log_entries_passes_query_parameters() {
         .await
         .expect("event log entries with params succeeds");
 
-    assert_eq!(auth.hits(), 1);
-    assert_eq!(event_log.hits(), 1);
+    assert_eq!(auth.calls(), 1);
+    assert_eq!(event_log.calls(), 1);
     assert_eq!(response["data"][0]["event_type"], "Shotgun_Shot_Change");
 }
 
@@ -1357,8 +1357,8 @@ async fn user_following_passes_query_parameters() {
         .await
         .expect("user following with params succeeds");
 
-    assert_eq!(auth.hits(), 1);
-    assert_eq!(following.hits(), 1);
+    assert_eq!(auth.calls(), 1);
+    assert_eq!(following.calls(), 1);
     assert_eq!(response["data"][0]["code"], "shot_010");
 }
 
@@ -1395,8 +1395,8 @@ async fn entity_relationships_passes_query_parameters() {
         .await
         .expect("entity relationships with params succeeds");
 
-    assert_eq!(auth.hits(), 1);
-    assert_eq!(relationships.hits(), 1);
+    assert_eq!(auth.calls(), 1);
+    assert_eq!(relationships.calls(), 1);
     assert_eq!(response["data"][0]["code"], "hero_prop");
 }
 
@@ -1431,8 +1431,8 @@ async fn note_threads_passes_query_parameters() {
         .await
         .expect("note threads with params succeeds");
 
-    assert_eq!(auth.hits(), 1);
-    assert_eq!(note_threads.hits(), 1);
+    assert_eq!(auth.calls(), 1);
+    assert_eq!(note_threads.calls(), 1);
     assert_eq!(response["data"][0]["content"], "Looks good");
 }
 
@@ -1458,8 +1458,8 @@ async fn current_user_uses_expected_get_path_for_human() {
         .await
         .expect("current_user human succeeds");
 
-    assert_eq!(auth.hits(), 1);
-    assert_eq!(current_user.hits(), 1);
+    assert_eq!(auth.calls(), 1);
+    assert_eq!(current_user.calls(), 1);
     assert_eq!(response["data"]["name"], "Alice");
 }
 
@@ -1483,8 +1483,8 @@ async fn current_user_uses_expected_get_path_for_api() {
         .await
         .expect("current_user api succeeds");
 
-    assert_eq!(auth.hits(), 1);
-    assert_eq!(current_user.hits(), 1);
+    assert_eq!(auth.calls(), 1);
+    assert_eq!(current_user.calls(), 1);
     assert_eq!(response["data"]["type"], "ApiUser");
 }
 
@@ -1513,8 +1513,8 @@ async fn current_user_passes_query_parameters() {
         .await
         .expect("current_user with params succeeds");
 
-    assert_eq!(auth.hits(), 1);
-    assert_eq!(current_user.hits(), 1);
+    assert_eq!(auth.calls(), 1);
+    assert_eq!(current_user.calls(), 1);
     assert_eq!(response["data"]["type"], "HumanUser");
 }
 
@@ -1540,8 +1540,8 @@ async fn note_reply_read_uses_expected_get_path() {
         .await
         .expect("note_reply_read succeeds");
 
-    assert_eq!(auth.hits(), 1);
-    assert_eq!(reply_read.hits(), 1);
+    assert_eq!(auth.calls(), 1);
+    assert_eq!(reply_read.calls(), 1);
     assert_eq!(response["data"]["id"], 789);
     assert_eq!(response["data"]["content"], "Great work!");
 }
@@ -1572,8 +1572,8 @@ async fn note_reply_read_passes_query_parameters() {
         .await
         .expect("note_reply_read with params succeeds");
 
-    assert_eq!(auth.hits(), 1);
-    assert_eq!(reply_read.hits(), 1);
+    assert_eq!(auth.calls(), 1);
+    assert_eq!(reply_read.calls(), 1);
     assert_eq!(response["data"]["id"], 200);
 }
 
@@ -1599,8 +1599,8 @@ async fn filmstrip_thumbnail_uses_expected_get_path() {
         .await
         .expect("filmstrip_thumbnail succeeds");
 
-    assert_eq!(auth.hits(), 1);
-    assert_eq!(filmstrip.hits(), 1);
+    assert_eq!(auth.calls(), 1);
+    assert_eq!(filmstrip.calls(), 1);
     assert_eq!(response["image"], "https://sg-media.com/filmstrip/456.jpg");
 }
 
@@ -1627,8 +1627,8 @@ async fn preferences_update_uses_expected_put_path() {
         .await
         .expect("preferences_update succeeds");
 
-    assert_eq!(auth.hits(), 1);
-    assert_eq!(prefs.hits(), 1);
+    assert_eq!(auth.calls(), 1);
+    assert_eq!(prefs.calls(), 1);
     assert_eq!(response["ok"], true);
 }
 
@@ -1657,8 +1657,8 @@ async fn note_reply_update_uses_expected_put_path() {
         .await
         .expect("note_reply_update succeeds");
 
-    assert_eq!(auth.hits(), 1);
-    assert_eq!(reply_update.hits(), 1);
+    assert_eq!(auth.calls(), 1);
+    assert_eq!(reply_update.calls(), 1);
     assert_eq!(response["data"]["id"], 200);
 }
 
@@ -1684,8 +1684,8 @@ async fn note_reply_delete_uses_expected_delete_path() {
         .await
         .expect("note_reply_delete succeeds");
 
-    assert_eq!(auth.hits(), 1);
-    assert_eq!(reply_delete.hits(), 1);
+    assert_eq!(auth.calls(), 1);
+    assert_eq!(reply_delete.calls(), 1);
     assert_eq!(response["ok"], true);
 }
 
@@ -1712,8 +1712,8 @@ async fn entity_relationship_create_uses_expected_post_path() {
         .await
         .expect("entity_relationship_create succeeds");
 
-    assert_eq!(auth.hits(), 1);
-    assert_eq!(rel_create.hits(), 1);
+    assert_eq!(auth.calls(), 1);
+    assert_eq!(rel_create.calls(), 1);
     assert_eq!(response["data"][0]["type"], "Asset");
     assert_eq!(response["data"][0]["id"], 7);
 }
@@ -1741,8 +1741,8 @@ async fn entity_relationship_update_uses_expected_put_path() {
         .await
         .expect("entity_relationship_update succeeds");
 
-    assert_eq!(auth.hits(), 1);
-    assert_eq!(rel_update.hits(), 1);
+    assert_eq!(auth.calls(), 1);
+    assert_eq!(rel_update.calls(), 1);
     assert_eq!(response["data"][0]["type"], "Asset");
     assert_eq!(response["data"][0]["id"], 10);
 }
@@ -1770,8 +1770,8 @@ async fn entity_share_uses_expected_post_path() {
         .await
         .expect("entity_share succeeds");
 
-    assert_eq!(auth.hits(), 1);
-    assert_eq!(share.hits(), 1);
+    assert_eq!(auth.calls(), 1);
+    assert_eq!(share.calls(), 1);
     assert_eq!(response["ok"], true);
     assert_eq!(response["shared_to"][0]["type"], "Project");
 }
@@ -1800,7 +1800,7 @@ async fn entity_relationship_delete_uses_expected_delete_path() {
         .await
         .expect("entity_relationship_delete succeeds");
 
-    assert_eq!(auth.hits(), 1);
-    assert_eq!(rel_delete.hits(), 1);
+    assert_eq!(auth.calls(), 1);
+    assert_eq!(rel_delete.calls(), 1);
     assert_eq!(response["data"], json!([]));
 }

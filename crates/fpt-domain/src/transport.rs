@@ -27,6 +27,9 @@ const ENV_FPT_DEBUG: &str = "FPT_DEBUG";
 /// Environment variable for overriding the maximum number of retry attempts.
 const ENV_FPT_MAX_RETRIES: &str = "FPT_MAX_RETRIES";
 
+/// Error message used when the in-memory token cache `Mutex` is poisoned.
+const TOKEN_CACHE_POISONED: &str = "token cache is poisoned";
+
 /// Safety margin (in seconds) subtracted from the access-token TTL so that
 /// the token is refreshed before it actually expires on the server.
 const TOKEN_EXPIRY_MARGIN_SECS: u64 = 30;
@@ -486,7 +489,7 @@ impl RestTransport {
         });
 
         let mut cache = self.token_cache.lock().map_err(|_| {
-            AppError::internal("token cache is poisoned").with_operation("write_token_cache")
+            AppError::internal(TOKEN_CACHE_POISONED).with_operation("write_token_cache")
         })?;
         *cache = Some(CachedAccessToken {
             cache_key: Self::token_cache_key(config),
@@ -1529,7 +1532,7 @@ pub fn entity_collection_path(entity: &str) -> String {
     output
 }
 
-pub fn plan_entity_create(api_version: &str, entity: &str, body: Value) -> RequestPlan {
+pub(crate) fn plan_entity_create(api_version: &str, entity: &str, body: Value) -> RequestPlan {
     RequestPlan {
         transport: "rest",
         method: "POST",
@@ -1544,7 +1547,12 @@ pub fn plan_entity_create(api_version: &str, entity: &str, body: Value) -> Reque
     }
 }
 
-pub fn plan_entity_update(api_version: &str, entity: &str, id: u64, body: Value) -> RequestPlan {
+pub(crate) fn plan_entity_update(
+    api_version: &str,
+    entity: &str,
+    id: u64,
+    body: Value,
+) -> RequestPlan {
     RequestPlan {
         transport: "rest",
         method: "PUT",
@@ -1560,7 +1568,7 @@ pub fn plan_entity_update(api_version: &str, entity: &str, id: u64, body: Value)
     }
 }
 
-pub fn plan_entity_delete(api_version: &str, entity: &str, id: u64) -> RequestPlan {
+pub(crate) fn plan_entity_delete(api_version: &str, entity: &str, id: u64) -> RequestPlan {
     RequestPlan {
         transport: "rest",
         method: "DELETE",
@@ -1579,7 +1587,7 @@ pub fn plan_entity_delete(api_version: &str, entity: &str, id: u64) -> RequestPl
     }
 }
 
-pub fn plan_entity_revive(entity: &str, id: u64) -> RequestPlan {
+pub(crate) fn plan_entity_revive(entity: &str, id: u64) -> RequestPlan {
     RequestPlan {
         transport: "rpc",
         method: "POST",
