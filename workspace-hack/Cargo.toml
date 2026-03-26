@@ -22,7 +22,7 @@ futures-core = { version = "0.3" }
 futures-io = { version = "0.3" }
 futures-sink = { version = "0.3", default-features = false, features = ["std"] }
 futures-util = { version = "0.3", features = ["channel", "io", "sink"] }
-lalrpop-util = { version = "0.20", features = ["lexer"] }
+lalrpop-util = { version = "0.23", features = ["lexer"] }
 log = { version = "0.4", default-features = false, features = ["kv_unstable"] }
 memchr = { version = "2" }
 regex-automata = { version = "0.4", default-features = false, features = ["dfa", "hybrid", "meta", "nfa", "perf", "std", "unicode"] }
@@ -36,7 +36,7 @@ tokio = { version = "1", features = ["macros", "net", "rt-multi-thread", "signal
 [build-dependencies]
 bit-set = { version = "0.5", default-features = false, features = ["std"] }
 bit-vec = { version = "0.9", default-features = false, features = ["std"] }
-lalrpop-util = { version = "0.20", features = ["lexer"] }
+lalrpop-util = { version = "0.23", features = ["lexer"] }
 log = { version = "0.4", default-features = false, features = ["kv_unstable"] }
 memchr = { version = "2" }
 proc-macro2 = { version = "1" }
