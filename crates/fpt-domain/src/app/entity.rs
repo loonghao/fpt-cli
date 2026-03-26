@@ -185,6 +185,21 @@ where
             .await
     }
 
+    pub async fn entity_relationship_delete(
+        &self,
+        overrides: ConnectionOverrides,
+        entity: &str,
+        id: u64,
+        related_field: &str,
+        body: Value,
+    ) -> Result<Value> {
+        validate_relationship_body(&body)?;
+        let config = ConnectionSettings::resolve(overrides)?;
+        self.transport
+            .entity_relationship_delete(&config, entity, id, related_field, &body)
+            .await
+    }
+
     pub async fn entity_share(
         &self,
         overrides: ConnectionOverrides,

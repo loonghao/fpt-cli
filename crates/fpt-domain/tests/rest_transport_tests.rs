@@ -1775,3 +1775,32 @@ async fn entity_share_uses_expected_post_path() {
     assert_eq!(response["ok"], true);
     assert_eq!(response["shared_to"][0]["type"], "Project");
 }
+
+// --- Entity relationship delete endpoint ---
+
+#[tokio::test]
+async fn entity_relationship_delete_uses_expected_delete_path() {
+    let server = MockServer::start();
+    let auth = mock_auth(&server);
+    let rel_delete = server.mock(|when, then| {
+        when.method(DELETE)
+            .path("/api/v1.1/entity/shots/42/relationships/assets")
+            .header("authorization", "Bearer token-123")
+            .json_body(json!({"data": [{"type": "Asset", "id": 7}]}));
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({"data": []}));
+    });
+    let transport = RestTransport::default();
+    let config = script_config(&server);
+    let body = json!({"data": [{"type": "Asset", "id": 7}]});
+
+    let response = transport
+        .entity_relationship_delete(&config, "Shot", 42, "assets", &body)
+        .await
+        .expect("entity_relationship_delete succeeds");
+
+    assert_eq!(auth.hits(), 1);
+    assert_eq!(rel_delete.hits(), 1);
+    assert_eq!(response["data"], json!([]));
+}

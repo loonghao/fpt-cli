@@ -165,6 +165,16 @@ pub async fn run(cli: Cli) -> Result<Value> {
                 app.entity_relationship_update(connection, &entity, id, &field, body)
                     .await
             }
+            EntityCommands::RelationshipDelete {
+                entity,
+                id,
+                field,
+                input,
+            } => {
+                let body = required_json_input(input)?;
+                app.entity_relationship_delete(connection, &entity, id, &field, body)
+                    .await
+            }
             EntityCommands::Share { entity, id, input } => {
                 let body = required_json_input(input)?;
                 app.entity_share(connection, &entity, id, body).await

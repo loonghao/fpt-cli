@@ -355,6 +355,18 @@ pub enum EntityCommands {
         #[arg(long)]
         input: String,
     },
+    #[command(
+        name = "relationship-delete",
+        about = "Remove links from a multi-entity relationship field"
+    )]
+    RelationshipDelete {
+        entity: String,
+        id: u64,
+        #[arg(long, help = "Related field name (e.g. shots, assets)")]
+        field: String,
+        #[arg(long)]
+        input: String,
+    },
     #[command(name = "share", about = "Share an entity record to other projects")]
     Share {
         entity: String,
