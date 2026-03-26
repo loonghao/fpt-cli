@@ -202,6 +202,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "bit-set"
+version = "0.9.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "34ddef2995421ab6a5c779542c81ee77c115206f4ad9d5a8e05f4ff49716a3dd"
+dependencies = [
+ "bit-vec 0.9.1",
+]
+
+[[package]]
 name = "bit-vec"
 version = "0.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -647,7 +656,7 @@ version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "531e46835a22af56d1e3b66f04844bed63158bc094a628bec1d321d9b4c44bf2"
 dependencies = [
- "bit-set",
+ "bit-set 0.5.3",
  "regex-automata",
  "regex-syntax",
 ]
@@ -3547,7 +3556,7 @@ dependencies = [
 name = "workspace-hack"
 version = "0.1.0"
 dependencies = [
- "bit-set",
+ "bit-set 0.9.1",
  "bit-vec 0.9.1",
  "bitflags",
  "futures-channel",
