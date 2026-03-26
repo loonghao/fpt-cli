@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.22](https://github.com/loonghao/fpt-cli/compare/v0.2.21...v0.2.22) (2026-03-26)
+
+
+### Features
+
+* add entity relationship delete endpoint ([#100](https://github.com/loonghao/fpt-cli/issues/100)) ([68ed3d8](https://github.com/loonghao/fpt-cli/commit/68ed3d8e8275407dc81e4aa9c3e71e71c308c99e))
+
 ## [0.2.21](https://github.com/loonghao/fpt-cli/compare/v0.2.20...v0.2.21) (2026-03-25)
 
 
