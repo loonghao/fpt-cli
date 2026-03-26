@@ -48,4 +48,15 @@ where
         let config = ConnectionSettings::resolve(overrides)?;
         self.transport.preferences_update(&config, &body).await
     }
+
+    pub async fn preferences_custom_entity(
+        &self,
+        overrides: ConnectionOverrides,
+        body: Value,
+    ) -> Result<Value> {
+        let config = ConnectionSettings::resolve(overrides)?;
+        self.transport
+            .preferences_custom_entity(&config, &body)
+            .await
+    }
 }

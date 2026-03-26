@@ -533,6 +533,43 @@ impl ShotgridTransport for UpsertTransport {
     ) -> Result<Value> {
         Err(AppError::not_implemented("unused"))
     }
+
+    async fn hierarchy_expand(
+        &self,
+        _config: &fpt_domain::ConnectionSettings,
+        _body: &Value,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+
+    async fn schedule_work_day_rules(
+        &self,
+        _config: &fpt_domain::ConnectionSettings,
+        _params: &[(String, String)],
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+
+    async fn schedule_work_day_rules_update(
+        &self,
+        _config: &fpt_domain::ConnectionSettings,
+        _rule_id: u64,
+        _body: &Value,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+
+    async fn license(&self, _config: &fpt_domain::ConnectionSettings) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+
+    async fn preferences_custom_entity(
+        &self,
+        _config: &fpt_domain::ConnectionSettings,
+        _body: &Value,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
 }
 
 // ---------------------------------------------------------------------------

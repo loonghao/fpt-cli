@@ -58,6 +58,10 @@ pub enum Commands {
     Filmstrip(FilmstripCommands),
     #[command(subcommand)]
     Hierarchy(HierarchyCommands),
+    #[command(subcommand)]
+    Schedule(ScheduleCommands),
+    #[command(subcommand)]
+    License(LicenseCommands),
     #[command(subcommand, name = "self")]
     SelfCommand(SelfCommands),
     #[command(subcommand)]
@@ -581,6 +585,14 @@ pub enum PreferencesCommands {
         #[arg(long)]
         input: String,
     },
+    #[command(
+        name = "custom-entity",
+        about = "Enable a custom entity type on the ShotGrid site"
+    )]
+    CustomEntity {
+        #[arg(long)]
+        input: String,
+    },
 }
 
 #[derive(Debug, Subcommand)]
@@ -696,6 +708,14 @@ pub enum HierarchyCommands {
         #[arg(long)]
         input: String,
     },
+    #[command(
+        name = "expand",
+        about = "Expand a node in the project hierarchy tree"
+    )]
+    Expand {
+        #[arg(long)]
+        input: String,
+    },
 }
 
 #[derive(Debug, Subcommand)]
@@ -720,6 +740,37 @@ pub enum FilmstripCommands {
         about = "Get the filmstrip thumbnail image URL for an entity record"
     )]
     Url { entity: String, id: u64 },
+}
+
+#[derive(Debug, Subcommand)]
+pub enum ScheduleCommands {
+    #[command(
+        name = "work-day-rules",
+        about = "Read work day rules from the ShotGrid scheduling system"
+    )]
+    WorkDayRules {
+        #[arg(
+            long,
+            help = "Optional query parameters as JSON (page, etc.)"
+        )]
+        input: Option<String>,
+    },
+    #[command(
+        name = "work-day-rules-update",
+        about = "Update a specific work day rule by record id"
+    )]
+    WorkDayRulesUpdate {
+        #[arg(help = "Work day rule record id")]
+        rule_id: u64,
+        #[arg(long)]
+        input: String,
+    },
+}
+
+#[derive(Debug, Subcommand)]
+pub enum LicenseCommands {
+    #[command(name = "get", about = "Read the ShotGrid site license information")]
+    Get,
 }
 
 /// How to handle a conflict when an entity with the key field value already exists.

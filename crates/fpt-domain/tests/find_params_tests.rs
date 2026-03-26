@@ -300,6 +300,34 @@ impl ShotgridTransport for RecordingTransport {
     ) -> Result<Value> {
         Ok(json!({}))
     }
+    async fn hierarchy_expand(&self, _: &ConnectionSettings, _: &Value) -> Result<Value> {
+        Ok(json!({}))
+    }
+    async fn schedule_work_day_rules(
+        &self,
+        _: &ConnectionSettings,
+        _: &[(String, String)],
+    ) -> Result<Value> {
+        Ok(json!({}))
+    }
+    async fn schedule_work_day_rules_update(
+        &self,
+        _: &ConnectionSettings,
+        _: u64,
+        _: &Value,
+    ) -> Result<Value> {
+        Ok(json!({}))
+    }
+    async fn license(&self, _: &ConnectionSettings) -> Result<Value> {
+        Ok(json!({}))
+    }
+    async fn preferences_custom_entity(
+        &self,
+        _: &ConnectionSettings,
+        _: &Value,
+    ) -> Result<Value> {
+        Ok(json!({}))
+    }
 }
 
 fn test_overrides() -> ConnectionOverrides {

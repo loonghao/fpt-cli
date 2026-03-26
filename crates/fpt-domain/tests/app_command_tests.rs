@@ -565,6 +565,39 @@ impl ShotgridTransport for RecordingTransport {
     ) -> Result<Value> {
         Ok(json!({"entity": entity, "id": id, "shared": body}))
     }
+
+    async fn hierarchy_expand(&self, _config: &ConnectionSettings, body: &Value) -> Result<Value> {
+        Ok(json!({"data": body}))
+    }
+
+    async fn schedule_work_day_rules(
+        &self,
+        _config: &ConnectionSettings,
+        _params: &[(String, String)],
+    ) -> Result<Value> {
+        Ok(json!({"data": []}))
+    }
+
+    async fn schedule_work_day_rules_update(
+        &self,
+        _config: &ConnectionSettings,
+        rule_id: u64,
+        body: &Value,
+    ) -> Result<Value> {
+        Ok(json!({"rule_id": rule_id, "updated": true, "body": body}))
+    }
+
+    async fn license(&self, _config: &ConnectionSettings) -> Result<Value> {
+        Ok(json!({"data": {"current_users": 10, "max_users": 50}}))
+    }
+
+    async fn preferences_custom_entity(
+        &self,
+        _config: &ConnectionSettings,
+        body: &Value,
+    ) -> Result<Value> {
+        Ok(json!({"ok": true, "enabled": body}))
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -1002,6 +1035,38 @@ impl ShotgridTransport for FindOneTransport {
     ) -> Result<Value> {
         Err(AppError::not_implemented("unused"))
     }
+    async fn hierarchy_expand(
+        &self,
+        _config: &ConnectionSettings,
+        _body: &Value,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+    async fn schedule_work_day_rules(
+        &self,
+        _config: &ConnectionSettings,
+        _params: &[(String, String)],
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+    async fn schedule_work_day_rules_update(
+        &self,
+        _config: &ConnectionSettings,
+        _rule_id: u64,
+        _body: &Value,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+    async fn license(&self, _config: &ConnectionSettings) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+    async fn preferences_custom_entity(
+        &self,
+        _config: &ConnectionSettings,
+        _body: &Value,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
 }
 
 #[derive(Debug, Clone, Default)]
@@ -1427,6 +1492,38 @@ impl ShotgridTransport for NoteThreadsNotFoundTransport {
         _entity: &str,
         _id: u64,
         _related_field: &str,
+        _body: &Value,
+    ) -> Result<Value> {
+        Ok(json!({}))
+    }
+    async fn hierarchy_expand(
+        &self,
+        _config: &ConnectionSettings,
+        _body: &Value,
+    ) -> Result<Value> {
+        Ok(json!({}))
+    }
+    async fn schedule_work_day_rules(
+        &self,
+        _config: &ConnectionSettings,
+        _params: &[(String, String)],
+    ) -> Result<Value> {
+        Ok(json!({}))
+    }
+    async fn schedule_work_day_rules_update(
+        &self,
+        _config: &ConnectionSettings,
+        _rule_id: u64,
+        _body: &Value,
+    ) -> Result<Value> {
+        Ok(json!({}))
+    }
+    async fn license(&self, _config: &ConnectionSettings) -> Result<Value> {
+        Ok(json!({}))
+    }
+    async fn preferences_custom_entity(
+        &self,
+        _config: &ConnectionSettings,
         _body: &Value,
     ) -> Result<Value> {
         Ok(json!({}))
@@ -1868,6 +1965,38 @@ impl ShotgridTransport for SlowGetTransport {
         _entity: &str,
         _id: u64,
         _related_field: &str,
+        _body: &Value,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+    async fn hierarchy_expand(
+        &self,
+        _config: &ConnectionSettings,
+        _body: &Value,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+    async fn schedule_work_day_rules(
+        &self,
+        _config: &ConnectionSettings,
+        _params: &[(String, String)],
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+    async fn schedule_work_day_rules_update(
+        &self,
+        _config: &ConnectionSettings,
+        _rule_id: u64,
+        _body: &Value,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+    async fn license(&self, _config: &ConnectionSettings) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+    async fn preferences_custom_entity(
+        &self,
+        _config: &ConnectionSettings,
         _body: &Value,
     ) -> Result<Value> {
         Err(AppError::not_implemented("unused"))
@@ -3848,4 +3977,121 @@ async fn entity_relationship_delete_requires_json_object() {
         .await
         .expect_err("non-object should be rejected");
     assert_eq!(err.envelope().code, "INVALID_INPUT");
+}
+
+// ---------------------------------------------------------------
+// Hierarchy expand
+// ---------------------------------------------------------------
+
+#[tokio::test]
+async fn hierarchy_expand_delegates_to_transport() {
+    let app = App::new(RecordingTransport::default());
+    let body = json!({"path": "/Project/65", "entity_fields": {"Shot": ["code"]}});
+    let result = app
+        .hierarchy_expand(overrides(), body.clone())
+        .await
+        .expect("hierarchy_expand succeeds");
+    assert_eq!(result["data"], body);
+}
+
+// ---------------------------------------------------------------
+// Schedule work day rules
+// ---------------------------------------------------------------
+
+#[tokio::test]
+async fn schedule_work_day_rules_delegates_to_transport() {
+    let app = App::new(RecordingTransport::default());
+    let result = app
+        .schedule_work_day_rules(overrides(), None)
+        .await
+        .expect("schedule_work_day_rules succeeds");
+    assert!(result.get("data").is_some());
+}
+
+#[tokio::test]
+async fn schedule_work_day_rules_update_delegates_to_transport() {
+    let app = App::new(RecordingTransport::default());
+    let body = json!({"date": "2026-04-01", "is_working": false, "description": "Holiday"});
+    let result = app
+        .schedule_work_day_rules_update(overrides(), 42, body.clone())
+        .await
+        .expect("schedule_work_day_rules_update succeeds");
+    assert_eq!(result["rule_id"], 42);
+    assert_eq!(result["updated"], true);
+    assert_eq!(result["body"], body);
+}
+
+#[tokio::test]
+async fn schedule_work_day_rules_update_rejects_non_object() {
+    let app = App::new(RecordingTransport::default());
+    let body = json!("not an object");
+    let err = app
+        .schedule_work_day_rules_update(overrides(), 42, body)
+        .await
+        .expect_err("non-object should be rejected");
+    assert_eq!(err.envelope().code, "INVALID_INPUT");
+}
+
+// ---------------------------------------------------------------
+// License
+// ---------------------------------------------------------------
+
+#[tokio::test]
+async fn license_delegates_to_transport() {
+    let app = App::new(RecordingTransport::default());
+    let result = app
+        .license(overrides())
+        .await
+        .expect("license succeeds");
+    assert_eq!(result["data"]["current_users"], 10);
+    assert_eq!(result["data"]["max_users"], 50);
+}
+
+// ---------------------------------------------------------------
+// Preferences custom entity
+// ---------------------------------------------------------------
+
+#[tokio::test]
+async fn preferences_custom_entity_delegates_to_transport() {
+    let app = App::new(RecordingTransport::default());
+    let body = json!({"entity_type": "CustomEntity01"});
+    let result = app
+        .preferences_custom_entity(overrides(), body.clone())
+        .await
+        .expect("preferences_custom_entity succeeds");
+    assert_eq!(result["ok"], true);
+    assert_eq!(result["enabled"], body);
+}
+
+// ---------------------------------------------------------------
+// Capabilities include new commands
+// ---------------------------------------------------------------
+
+#[tokio::test]
+async fn capabilities_includes_new_api_specs() {
+    let app = App::new(RecordingTransport::default());
+    let result = app.capabilities(env!("CARGO_PKG_VERSION"));
+    let commands = result["commands"].as_array().expect("commands array");
+    let names: Vec<&str> = commands.iter().filter_map(|c| c["name"].as_str()).collect();
+
+    assert!(
+        names.contains(&"hierarchy.expand"),
+        "should include hierarchy.expand"
+    );
+    assert!(
+        names.contains(&"schedule.work-day-rules"),
+        "should include schedule.work-day-rules"
+    );
+    assert!(
+        names.contains(&"schedule.work-day-rules-update"),
+        "should include schedule.work-day-rules-update"
+    );
+    assert!(
+        names.contains(&"license.get"),
+        "should include license.get"
+    );
+    assert!(
+        names.contains(&"preferences.custom-entity"),
+        "should include preferences.custom-entity"
+    );
 }

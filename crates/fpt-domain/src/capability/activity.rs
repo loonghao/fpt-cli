@@ -100,3 +100,27 @@ pub const PREFERENCES_UPDATE_SPEC: CommandSpec = CommandSpec {
     examples: PREFERENCES_UPDATE_EXAMPLES,
     notes: PREFERENCES_UPDATE_NOTES,
 };
+
+const PREFERENCES_CUSTOM_ENTITY_EXAMPLES: &[&str] = &[
+    "fpt preferences custom-entity --input '{\"entity_type\":\"CustomEntity01\"}' --site ... --auth-mode script --script-name ... --script-key ...",
+];
+
+const PREFERENCES_CUSTOM_ENTITY_NOTES: &[&str] = &[
+    "Uses the REST endpoint POST /preferences/custom_entity",
+    "Enables a custom entity type on the ShotGrid site",
+    "Input must be a JSON object containing the `entity_type` to enable",
+];
+
+pub const PREFERENCES_CUSTOM_ENTITY_SPEC: CommandSpec = CommandSpec {
+    name: "preferences.custom-entity",
+    summary: "Enable a custom entity type on the ShotGrid site",
+    risk: RiskLevel::Write,
+    implemented: true,
+    supports_dry_run: false,
+    preferred_transport: "rest",
+    fallback_transport: None,
+    input: "JSON object with entity_type",
+    output: "json",
+    examples: PREFERENCES_CUSTOM_ENTITY_EXAMPLES,
+    notes: PREFERENCES_CUSTOM_ENTITY_NOTES,
+};

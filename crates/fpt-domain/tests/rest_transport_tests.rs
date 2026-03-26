@@ -1804,3 +1804,147 @@ async fn entity_relationship_delete_uses_expected_delete_path() {
     assert_eq!(rel_delete.calls(), 1);
     assert_eq!(response["data"], json!([]));
 }
+
+// ---------------------------------------------------------------
+// Hierarchy expand
+// ---------------------------------------------------------------
+
+#[tokio::test]
+async fn hierarchy_expand_uses_expected_post_path() {
+    let server = MockServer::start();
+    let auth = mock_auth(&server);
+    let hierarchy_expand = server.mock(|when, then| {
+        when.method(POST)
+            .path("/api/v1.1/hierarchy/expand")
+            .header("authorization", "Bearer token-123");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({"data": {"children": []}}));
+    });
+    let transport = RestTransport::default();
+    let config = script_config(&server);
+    let body = json!({"path": "/Project/65"});
+
+    let response = transport
+        .hierarchy_expand(&config, &body)
+        .await
+        .expect("hierarchy_expand succeeds");
+
+    assert_eq!(auth.calls(), 1);
+    assert_eq!(hierarchy_expand.calls(), 1);
+    assert!(response.get("data").is_some());
+}
+
+// ---------------------------------------------------------------
+// Schedule work day rules
+// ---------------------------------------------------------------
+
+#[tokio::test]
+async fn schedule_work_day_rules_uses_expected_get_path() {
+    let server = MockServer::start();
+    let auth = mock_auth(&server);
+    let rules = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1.1/schedule/work_day_rules")
+            .header("authorization", "Bearer token-123");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({"data": []}));
+    });
+    let transport = RestTransport::default();
+    let config = script_config(&server);
+
+    let response = transport
+        .schedule_work_day_rules(&config, &[])
+        .await
+        .expect("schedule_work_day_rules succeeds");
+
+    assert_eq!(auth.calls(), 1);
+    assert_eq!(rules.calls(), 1);
+    assert!(response.get("data").is_some());
+}
+
+#[tokio::test]
+async fn schedule_work_day_rules_update_uses_expected_put_path() {
+    let server = MockServer::start();
+    let auth = mock_auth(&server);
+    let rule_update = server.mock(|when, then| {
+        when.method(PUT)
+            .path("/api/v1.1/schedule/work_day_rules/42")
+            .header("authorization", "Bearer token-123");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({"ok": true}));
+    });
+    let transport = RestTransport::default();
+    let config = script_config(&server);
+    let body = json!({"date": "2026-04-01", "is_working": false});
+
+    let response = transport
+        .schedule_work_day_rules_update(&config, 42, &body)
+        .await
+        .expect("schedule_work_day_rules_update succeeds");
+
+    assert_eq!(auth.calls(), 1);
+    assert_eq!(rule_update.calls(), 1);
+    assert_eq!(response["ok"], true);
+}
+
+// ---------------------------------------------------------------
+// License
+// ---------------------------------------------------------------
+
+#[tokio::test]
+async fn license_uses_expected_get_path() {
+    let server = MockServer::start();
+    let auth = mock_auth(&server);
+    let license = server.mock(|when, then| {
+        when.method(GET)
+            .path("/api/v1.1/license")
+            .header("authorization", "Bearer token-123");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({"data": {"current_users": 10, "max_users": 50}}));
+    });
+    let transport = RestTransport::default();
+    let config = script_config(&server);
+
+    let response = transport
+        .license(&config)
+        .await
+        .expect("license succeeds");
+
+    assert_eq!(auth.calls(), 1);
+    assert_eq!(license.calls(), 1);
+    assert_eq!(response["data"]["current_users"], 10);
+}
+
+// ---------------------------------------------------------------
+// Preferences custom entity
+// ---------------------------------------------------------------
+
+#[tokio::test]
+async fn preferences_custom_entity_uses_expected_post_path() {
+    let server = MockServer::start();
+    let auth = mock_auth(&server);
+    let custom_entity = server.mock(|when, then| {
+        when.method(POST)
+            .path("/api/v1.1/preferences/custom_entity")
+            .header("authorization", "Bearer token-123");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({"ok": true}));
+    });
+    let transport = RestTransport::default();
+    let config = script_config(&server);
+    let body = json!({"entity_type": "CustomEntity01"});
+
+    let response = transport
+        .preferences_custom_entity(&config, &body)
+        .await
+        .expect("preferences_custom_entity succeeds");
+
+    assert_eq!(auth.calls(), 1);
+    assert_eq!(custom_entity.calls(), 1);
+    assert_eq!(response["ok"], true);
+}

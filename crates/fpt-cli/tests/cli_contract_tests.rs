@@ -386,3 +386,69 @@ fn inspect_unknown_command_returns_error() {
         .failure()
         .stderr(predicate::str::contains("UNSUPPORTED_CAPABILITY"));
 }
+
+#[test]
+fn capabilities_outputs_hierarchy_expand_contract() {
+    let mut command = Command::cargo_bin("fpt").expect("binary exists");
+    command.args(["capabilities", "--output", "json"]);
+
+    command
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("\"hierarchy.expand\""));
+}
+
+#[test]
+fn capabilities_outputs_schedule_work_day_rules_contract() {
+    let mut command = Command::cargo_bin("fpt").expect("binary exists");
+    command.args(["capabilities", "--output", "json"]);
+
+    command
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("\"schedule.work-day-rules\""));
+}
+
+#[test]
+fn capabilities_outputs_license_get_contract() {
+    let mut command = Command::cargo_bin("fpt").expect("binary exists");
+    command.args(["capabilities", "--output", "json"]);
+
+    command
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("\"license.get\""));
+}
+
+#[test]
+fn capabilities_outputs_preferences_custom_entity_contract() {
+    let mut command = Command::cargo_bin("fpt").expect("binary exists");
+    command.args(["capabilities", "--output", "json"]);
+
+    command
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("\"preferences.custom-entity\""));
+}
+
+#[test]
+fn inspect_hierarchy_expand_command() {
+    let mut command = Command::cargo_bin("fpt").expect("binary exists");
+    command.args(["inspect", "command", "hierarchy.expand", "--output", "json"]);
+
+    command
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("\"hierarchy.expand\""));
+}
+
+#[test]
+fn inspect_license_get_command() {
+    let mut command = Command::cargo_bin("fpt").expect("binary exists");
+    command.args(["inspect", "command", "license.get", "--output", "json"]);
+
+    command
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("\"license.get\""));
+}
