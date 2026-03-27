@@ -17,6 +17,7 @@ mod user;
 mod work_schedule;
 
 use std::env;
+use std::sync::OnceLock;
 
 use fpt_core::{AppError, Result};
 use serde_json::{Value, json};
@@ -100,13 +101,20 @@ const MAX_BATCH_CONCURRENCY: usize = 32;
 /// Environment variable for overriding the default batch concurrency limit.
 const ENV_FPT_BATCH_CONCURRENCY: &str = "FPT_BATCH_CONCURRENCY";
 
+/// Returns the batch concurrency limit, configurable via `FPT_BATCH_CONCURRENCY`.
+///
+/// The result is cached on first access via [`OnceLock`] so that repeated
+/// calls within batch operations avoid redundant env-var lookups.
 fn batch_concurrency_limit() -> usize {
-    env::var(ENV_FPT_BATCH_CONCURRENCY)
-        .ok()
-        .and_then(|value| value.parse::<usize>().ok())
-        .filter(|value| *value > 0)
-        .map(|value| value.min(MAX_BATCH_CONCURRENCY))
-        .unwrap_or(DEFAULT_BATCH_CONCURRENCY)
+    static CACHED: OnceLock<usize> = OnceLock::new();
+    *CACHED.get_or_init(|| {
+        env::var(ENV_FPT_BATCH_CONCURRENCY)
+            .ok()
+            .and_then(|value| value.parse::<usize>().ok())
+            .filter(|value| *value > 0)
+            .map(|value| value.min(MAX_BATCH_CONCURRENCY))
+            .unwrap_or(DEFAULT_BATCH_CONCURRENCY)
+    })
 }
 
 fn sort_batch_results(results: &mut [Value]) {

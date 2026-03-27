@@ -1,4 +1,4 @@
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, OnceLock};
 use std::time::{Duration, Instant};
 
 use async_trait::async_trait;
@@ -60,8 +60,8 @@ pub struct RequestPlan {
     pub query: Vec<(String, String)>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub body: Option<Value>,
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub notes: Vec<String>,
+    #[serde(default, skip_serializing_if = "<[&str]>::is_empty")]
+    pub notes: Vec<&'static str>,
 }
 
 #[derive(Debug, Clone)]
@@ -373,8 +373,12 @@ impl Default for RestTransport {
 
 impl RestTransport {
     /// Returns `true` when `FPT_DEBUG` is set in the environment.
+    ///
+    /// The result is cached on first access via [`OnceLock`] so that
+    /// repeated calls in hot paths avoid redundant env-var lookups.
     fn is_debug() -> bool {
-        std::env::var(ENV_FPT_DEBUG).is_ok()
+        static CACHED: OnceLock<bool> = OnceLock::new();
+        *CACHED.get_or_init(|| std::env::var(ENV_FPT_DEBUG).is_ok())
     }
 
     fn build_url(
@@ -749,11 +753,17 @@ impl RestTransport {
     }
 
     /// Returns the maximum number of retry attempts, configurable via `FPT_MAX_RETRIES`.
+    ///
+    /// The result is cached on first access via [`OnceLock`] so that
+    /// repeated calls in retry loops avoid redundant env-var lookups.
     fn max_retry_attempts() -> u32 {
-        std::env::var(ENV_FPT_MAX_RETRIES)
-            .ok()
-            .and_then(|v| v.parse::<u32>().ok())
-            .unwrap_or(MAX_RETRY_ATTEMPTS)
+        static CACHED: OnceLock<u32> = OnceLock::new();
+        *CACHED.get_or_init(|| {
+            std::env::var(ENV_FPT_MAX_RETRIES)
+                .ok()
+                .and_then(|v| v.parse::<u32>().ok())
+                .unwrap_or(MAX_RETRY_ATTEMPTS)
+        })
     }
 
     /// Computes the exponential backoff delay for a given attempt number (1-based).
@@ -1606,7 +1616,7 @@ pub(crate) fn plan_entity_create(api_version: &str, entity: &str, body: Value) -
         risk: RiskLevel::Write,
         query: Vec::new(),
         body: Some(body),
-        notes: vec![DRY_RUN_NOTE.to_string()],
+        notes: vec![DRY_RUN_NOTE],
     }
 }
 
@@ -1627,7 +1637,7 @@ pub(crate) fn plan_entity_update(
         risk: RiskLevel::Write,
         query: Vec::new(),
         body: Some(body),
-        notes: vec![DRY_RUN_NOTE.to_string()],
+        notes: vec![DRY_RUN_NOTE],
     }
 }
 
@@ -1644,8 +1654,8 @@ pub(crate) fn plan_entity_delete(api_version: &str, entity: &str, id: u64) -> Re
         query: Vec::new(),
         body: None,
         notes: vec![
-            DRY_RUN_NOTE.to_string(),
-            "actual deletion requires explicit `--yes` flag".to_string(),
+            DRY_RUN_NOTE,
+            "actual deletion requires explicit `--yes` flag",
         ],
     }
 }
@@ -1667,8 +1677,8 @@ pub(crate) fn plan_entity_revive(entity: &str, id: u64) -> RequestPlan {
             ]
         })),
         notes: vec![
-            DRY_RUN_NOTE.to_string(),
-            "RPC auth params are injected from the connection config at execution time".to_string(),
+            DRY_RUN_NOTE,
+            "RPC auth params are injected from the connection config at execution time",
         ],
     }
 }
