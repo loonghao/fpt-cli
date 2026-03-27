@@ -476,7 +476,10 @@ impl RestTransport {
     }
 
     fn extract_rpc_results(response: Value) -> Value {
-        response.get("results").cloned().unwrap_or(response)
+        match response {
+            Value::Object(mut map) => map.remove("results").unwrap_or(Value::Object(map)),
+            other => other,
+        }
     }
 
     fn token_cache_key(config: &ConnectionSettings) -> String {

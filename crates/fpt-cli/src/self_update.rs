@@ -24,6 +24,8 @@ const SUPPORTED_TARGETS: &[&str] = &[
     "x86_64-apple-darwin",
     "aarch64-apple-darwin",
 ];
+/// Transport label used in error envelopes for GitHub API calls.
+const TRANSPORT_REST: &str = "rest";
 
 #[derive(Debug, Clone, Copy)]
 enum ArchiveKind {
@@ -145,7 +147,7 @@ pub async fn run(args: SelfUpdateArgs) -> Result<Value> {
 
     Ok(json!({
         "command": "self.update",
-        "status": if release_version > current_version { "updated" } else { "reinstalled" },
+        "status": if update_available { "updated" } else { "reinstalled" },
         "repository": repository,
         "requested_version": requested_version,
         "previous_version": current_version.to_string(),
@@ -336,7 +338,7 @@ async fn fetch_release(
                 "could not decode GitHub release metadata as JSON: {error}"
             ))
             .with_operation("fetch_release")
-            .with_transport("rest")
+            .with_transport(TRANSPORT_REST)
             .with_expected_shape(
                 "a GitHub release JSON object with `tag_name`, `html_url`, and `assets`",
             )
@@ -511,7 +513,7 @@ fn map_network_error(message: &str) -> impl FnOnce(reqwest::Error) -> AppError +
     move |error| {
         AppError::network(format!("{message}: {error}"))
             .with_operation("self_update")
-            .with_transport("rest")
+            .with_transport(TRANSPORT_REST)
     }
 }
 
