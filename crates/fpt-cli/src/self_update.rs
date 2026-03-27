@@ -64,11 +64,13 @@ pub async fn run(args: SelfUpdateArgs) -> Result<Value> {
         AppError::internal(format!(
             "could not parse the current CLI version from build metadata: {error}"
         ))
+        .with_operation("self_update")
     })?;
     let current_exe = env::current_exe().map_err(|error| {
         AppError::internal(format!(
             "could not resolve the current executable path: {error}"
         ))
+        .with_operation("self_update")
     })?;
     let requested_version = args.version.map(normalize_version);
     let client = build_http_client()?;
@@ -119,6 +121,7 @@ pub async fn run(args: SelfUpdateArgs) -> Result<Value> {
         AppError::internal(format!(
             "could not create a temporary directory for self-update: {error}"
         ))
+        .with_operation("self_update")
     })?;
     let archive_path = temp_dir.path().join(&asset.name);
     let archive_bytes = download_bytes(&client, &asset.browser_download_url).await?;
@@ -137,6 +140,7 @@ pub async fn run(args: SelfUpdateArgs) -> Result<Value> {
         AppError::internal(format!(
             "could not replace the current executable during self-update: {error}"
         ))
+        .with_operation("self_update")
     })?;
 
     Ok(json!({
@@ -273,6 +277,7 @@ fn build_http_client() -> Result<reqwest::Client> {
                 AppError::internal(format!(
                     "could not build the GitHub user-agent header: {error}"
                 ))
+                .with_operation("build_http_client")
             },
         )?,
     );
@@ -298,6 +303,7 @@ fn build_http_client() -> Result<reqwest::Client> {
         .build()
         .map_err(|error| {
             AppError::internal(format!("could not create the GitHub HTTP client: {error}"))
+                .with_operation("build_http_client")
         })
 }
 
@@ -344,6 +350,7 @@ fn parse_release_version(tag_name: &str) -> Result<Version> {
             "release tag `{}` is not a valid semantic version: {error}",
             tag_name
         ))
+        .with_operation("parse_release_version")
     })
 }
 
@@ -462,17 +469,20 @@ fn extract_zip_binary(archive_path: &Path, binary_name: &str, destination: &Path
         File::open(archive_path).map_err(map_io_error("open release archive", archive_path))?;
     let mut archive = ZipArchive::new(file).map_err(|error| {
         AppError::internal(format!("could not read the zip archive structure: {error}"))
+            .with_operation("extract_zip_binary")
     })?;
 
     for index in 0..archive.len() {
         let mut entry = archive.by_index(index).map_err(|error| {
             AppError::internal(format!("could not read zip entry {index}: {error}"))
+                .with_operation("extract_zip_binary")
         })?;
         if entry.name().ends_with(binary_name) && !entry.is_dir() {
             let mut output = File::create(destination)
                 .map_err(map_io_error("create extracted binary", destination))?;
             io::copy(&mut entry, &mut output).map_err(|error| {
                 AppError::internal(format!("could not extract zip entry to disk: {error}"))
+                    .with_operation("extract_zip_binary")
             })?;
             return Ok(());
         }
@@ -488,6 +498,7 @@ fn binary_not_found_error(binary_name: &str, archive_path: &Path) -> AppError {
         binary_name,
         archive_path.display()
     ))
+    .with_operation("extract_binary")
 }
 
 /// Shorthand for mapping an I/O error that occurs while working with a file path.
@@ -497,7 +508,11 @@ fn map_io_error<'a>(context: &'a str, path: &'a Path) -> impl FnOnce(io::Error) 
 
 /// Shorthand for mapping an error into a network-level `AppError` with a message.
 fn map_network_error(message: &str) -> impl FnOnce(reqwest::Error) -> AppError + '_ {
-    move |error| AppError::network(format!("{message}: {error}"))
+    move |error| {
+        AppError::network(format!("{message}: {error}"))
+            .with_operation("self_update")
+            .with_transport("rest")
+    }
 }
 
 fn ensure_executable(path: &Path) -> Result<()> {
