@@ -26,13 +26,15 @@ where
 }
 
 fn normalize_summarize_input(input: Value) -> Result<Value> {
-    let mut object = input.as_object().cloned().ok_or_else(|| {
-        AppError::invalid_input("entity summarize input must be a JSON object")
-            .with_operation("normalize_summarize_input")
-            .with_expected_shape(
-                "a JSON object containing `filters`, `summary_fields`, and optional `grouping`",
-            )
-    })?;
+    let Value::Object(mut object) = input else {
+        return Err(
+            AppError::invalid_input("entity summarize input must be a JSON object")
+                .with_operation("normalize_summarize_input")
+                .with_expected_shape(
+                    "a JSON object containing `filters`, `summary_fields`, and optional `grouping`",
+                ),
+        );
+    };
 
     let filters = object.remove("filters").ok_or_else(|| {
         AppError::invalid_input("entity summarize requires a `filters` field")

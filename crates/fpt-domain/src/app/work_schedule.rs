@@ -32,13 +32,13 @@ where
 }
 
 fn normalize_work_schedule_input(input: Value) -> Result<Value> {
-    let object = input
-        .as_object()
-        .cloned()
-        .ok_or_else(|| AppError::invalid_input("work-schedule read input must be a JSON object")
-            .with_operation("normalize_work_schedule_input")
-            .with_expected_shape("a JSON object containing `start_date`, `end_date`, and optional `project` and `user` entity links")
-        )?;
+    let Value::Object(object) = input else {
+        return Err(
+            AppError::invalid_input("work-schedule read input must be a JSON object")
+                .with_operation("normalize_work_schedule_input")
+                .with_expected_shape("a JSON object containing `start_date`, `end_date`, and optional `project` and `user` entity links"),
+        );
+    };
 
     require_non_empty_string(&object, "start_date")?;
     require_non_empty_string(&object, "end_date")?;
@@ -127,16 +127,15 @@ fn validate_entity_link(value: &Value, field_name: &str, expected_type: &str) ->
 }
 
 fn normalize_work_schedule_update_input(input: Value) -> Result<Value> {
-    let object = input
-        .as_object()
-        .cloned()
-        .ok_or_else(|| {
+    let Value::Object(object) = input else {
+        return Err(
             AppError::invalid_input("work-schedule update input must be a JSON object")
                 .with_operation("normalize_work_schedule_update_input")
                 .with_expected_shape(
                     "a JSON object containing `date`, `working` (bool), and optional `project`, `user`, and `description`",
-                )
-        })?;
+                ),
+        );
+    };
 
     require_non_empty_string(&object, "date")?;
 

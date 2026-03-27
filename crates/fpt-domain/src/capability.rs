@@ -6,6 +6,7 @@ mod follow;
 mod hierarchy;
 mod license;
 mod note;
+mod preferences;
 mod schedule;
 mod schema;
 mod self_update;
@@ -96,9 +97,10 @@ static COMMANDS: &[CommandSpec] = &[
     // Activity
     activity::ACTIVITY_STREAM_SPEC,
     activity::EVENT_LOG_ENTRIES_SPEC,
-    activity::PREFERENCES_GET_SPEC,
-    activity::PREFERENCES_UPDATE_SPEC,
-    activity::PREFERENCES_CUSTOM_ENTITY_SPEC,
+    // Preferences
+    preferences::PREFERENCES_GET_SPEC,
+    preferences::PREFERENCES_UPDATE_SPEC,
+    preferences::PREFERENCES_CUSTOM_ENTITY_SPEC,
     // Self-update & config
     self_update::SELF_UPDATE_SPEC,
     self_update::CONFIG_GET_SPEC,
