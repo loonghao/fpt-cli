@@ -394,13 +394,14 @@ where
                         }
                         Some(existing_entity) => {
                             match on_conflict {
-                                OnConflict::Skip => json!({
-                                    "index": index,
-                                    "ok": true,
-                                    "action": "skipped",
-                                    "request": body,
-                                    "existing": existing_entity,
-                                }),
+                                OnConflict::Skip => batch_result_ok(
+                                    index,
+                                    &[
+                                        ("action", json!("skipped")),
+                                        ("request", body),
+                                        ("existing", existing_entity),
+                                    ],
+                                ),
                                 OnConflict::Error => {
                                     let existing_id = existing_entity
                                         .get("id")
@@ -408,20 +409,20 @@ where
                                     let id_display = existing_id
                                         .map(|id| id.to_string())
                                         .unwrap_or_else(|| "unknown".to_string());
-                                    json!({
-                                        "index": index,
-                                        "ok": false,
-                                        "action": "conflict",
-                                        "request": body,
-                                        "existing": existing_entity,
-                                        "error": {
-                                            "code": "POLICY_BLOCKED",
-                                            "message": format!(
-                                                "entity with {key}={} already exists (id={id_display}); use --on-conflict skip or update to handle conflicts",
-                                                body.get(&key).unwrap_or(&Value::Null)
-                                            ),
-                                        },
-                                    })
+                                    let error = AppError::policy_blocked(format!(
+                                        "entity with {key}={} already exists (id={id_display}); use --on-conflict skip or update to handle conflicts",
+                                        body.get(&key).unwrap_or(&Value::Null)
+                                    ))
+                                    .with_operation("entity_batch_upsert");
+                                    batch_result_err(
+                                        index,
+                                        &error,
+                                        &[
+                                            ("action", json!("conflict")),
+                                            ("request", body),
+                                            ("existing", existing_entity),
+                                        ],
+                                    )
                                 }
                                 OnConflict::Update => {
                                     let existing_id = match existing_entity
@@ -430,16 +431,18 @@ where
                                     {
                                         Some(id) => id,
                                         None => {
-                                            return json!({
-                                                "index": index,
-                                                "ok": false,
-                                                "action": "error",
-                                                "request": body,
-                                                "error": {
-                                                    "code": "API_ERROR",
-                                                    "message": "existing entity is missing `id` field",
-                                                },
-                                            });
+                                            let error = AppError::api(
+                                                "existing entity is missing `id` field",
+                                            )
+                                            .with_operation("entity_batch_upsert");
+                                            return batch_result_err(
+                                                index,
+                                                &error,
+                                                &[
+                                                    ("action", json!("error")),
+                                                    ("request", body),
+                                                ],
+                                            );
                                         }
                                     };
                                     match transport

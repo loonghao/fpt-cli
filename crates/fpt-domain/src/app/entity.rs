@@ -4,7 +4,7 @@ use serde_json::{Map, Value, json};
 use crate::config::{ConnectionOverrides, ConnectionSettings, api_version_or_default};
 use crate::filter_dsl::parse_filter_dsl;
 use crate::transport::{
-    ShotgridTransport, plan_entity_create, plan_entity_delete, plan_entity_revive,
+    RequestPlan, ShotgridTransport, plan_entity_create, plan_entity_delete, plan_entity_revive,
     plan_entity_update,
 };
 
@@ -62,10 +62,11 @@ where
     ) -> Result<Value> {
         if dry_run {
             let api_version = api_version_or_default(overrides.api_version.as_deref());
-            return Ok(json!({
-                "dry_run": true,
-                "plan": plan_entity_create(&api_version, entity, body),
-            }));
+            return Ok(dry_run_response(plan_entity_create(
+                &api_version,
+                entity,
+                body,
+            )));
         }
 
         let config = ConnectionSettings::resolve(overrides)?;
@@ -82,10 +83,12 @@ where
     ) -> Result<Value> {
         if dry_run {
             let api_version = api_version_or_default(overrides.api_version.as_deref());
-            return Ok(json!({
-                "dry_run": true,
-                "plan": plan_entity_update(&api_version, entity, id, body),
-            }));
+            return Ok(dry_run_response(plan_entity_update(
+                &api_version,
+                entity,
+                id,
+                body,
+            )));
         }
 
         let config = ConnectionSettings::resolve(overrides)?;
@@ -104,10 +107,11 @@ where
     ) -> Result<Value> {
         if dry_run {
             let api_version = api_version_or_default(overrides.api_version.as_deref());
-            return Ok(json!({
-                "dry_run": true,
-                "plan": plan_entity_delete(&api_version, entity, id),
-            }));
+            return Ok(dry_run_response(plan_entity_delete(
+                &api_version,
+                entity,
+                id,
+            )));
         }
 
         if !yes {
@@ -130,10 +134,7 @@ where
         dry_run: bool,
     ) -> Result<Value> {
         if dry_run {
-            return Ok(json!({
-                "dry_run": true,
-                "plan": plan_entity_revive(entity, id),
-            }));
+            return Ok(dry_run_response(plan_entity_revive(entity, id)));
         }
 
         let config = ConnectionSettings::resolve(overrides)?;
@@ -393,4 +394,17 @@ fn validate_share_body(body: &Value) -> Result<()> {
     })?;
 
     Ok(())
+}
+
+/// Build a standard dry-run response wrapping a [`RequestPlan`].
+///
+/// Every entity write operation (`create`, `update`, `delete`, `revive`)
+/// returns an identical `{ "dry_run": true, "plan": … }` envelope when
+/// `--dry-run` is active.  This helper centralises that shape so that
+/// changes to the dry-run format only need to be made in one place.
+fn dry_run_response(plan: RequestPlan) -> Value {
+    json!({
+        "dry_run": true,
+        "plan": plan,
+    })
 }
