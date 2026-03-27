@@ -25,6 +25,12 @@ use serde_json::{Value, json};
 use crate::capability::{command_specs, find_command_spec};
 use crate::transport::{RestTransport, ShotgridTransport};
 
+/// Top-level application facade that orchestrates ShotGrid/FPT operations.
+///
+/// `App` is generic over its transport layer (`T: ShotgridTransport`) so that
+/// production code can use [`RestTransport`] while tests supply a recording or
+/// stub transport.  The default type parameter is [`RestTransport`], making
+/// `App::default()` ready for production use.
 pub struct App<T = RestTransport> {
     transport: T,
 }

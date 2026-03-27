@@ -404,8 +404,10 @@ where
                                 OnConflict::Error => {
                                     let existing_id = existing_entity
                                         .get("id")
-                                        .and_then(Value::as_u64)
-                                        .unwrap_or(0);
+                                        .and_then(Value::as_u64);
+                                    let id_display = existing_id
+                                        .map(|id| id.to_string())
+                                        .unwrap_or_else(|| "unknown".to_string());
                                     json!({
                                         "index": index,
                                         "ok": false,
@@ -415,7 +417,7 @@ where
                                         "error": {
                                             "code": "POLICY_BLOCKED",
                                             "message": format!(
-                                                "entity with {key}={} already exists (id={existing_id}); use --on-conflict skip or update to handle conflicts",
+                                                "entity with {key}={} already exists (id={id_display}); use --on-conflict skip or update to handle conflicts",
                                                 body.get(&key).unwrap_or(&Value::Null)
                                             ),
                                         },

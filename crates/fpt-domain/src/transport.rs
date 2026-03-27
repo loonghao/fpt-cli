@@ -20,6 +20,17 @@ const RETRY_MAX_DELAY_MS: u64 = 30_000;
 /// Shared dry-run note used by all request plan builders.
 const DRY_RUN_NOTE: &str = "dry-run: shows the planned request without making a network call";
 
+/// Transport label for the REST API surface.
+const TRANSPORT_REST: &str = "rest";
+
+/// Transport label for the legacy JSON-RPC API surface.
+const TRANSPORT_RPC: &str = "rpc";
+
+/// Custom `Content-Type` header required by the ShotGrid REST `_search`
+/// endpoint.  Using a named constant avoids scattering the vendor media-type
+/// across multiple call sites.
+const SHOTGRID_SEARCH_CONTENT_TYPE: &str = "application/vnd+shotgun.api3_hash+json";
+
 /// Environment variable that, when set, enables verbose debug output for
 /// transport-level operations (e.g. retry logging).
 const ENV_FPT_DEBUG: &str = "FPT_DEBUG";
@@ -79,6 +90,12 @@ struct CachedAccessToken {
     expires_at: Option<Instant>,
 }
 
+/// Abstraction over the ShotGrid/FPT network transport layer.
+///
+/// Each method corresponds to a single ShotGrid API operation.  The default
+/// production implementation is [`RestTransport`], which speaks both the REST
+/// API and the legacy JSON-RPC surface.  Test code can supply a recording or
+/// stub transport by implementing this trait.
 #[async_trait]
 pub trait ShotgridTransport {
     async fn auth_test(&self, config: &ConnectionSettings) -> Result<Value>;
@@ -590,20 +607,20 @@ impl RestTransport {
                     "could not request a ShotGrid access token: {error}"
                 ))
                 .with_operation("request_access_token")
-                .with_transport("rest")
+                .with_transport(TRANSPORT_REST)
                 .with_resource("auth/access_token")
                 .with_retryable_reason("transient network failure while requesting an access token")
                 .retryable(true)
             })?;
 
-        let body = Self::parse_response(response, "rest").await?;
+        let body = Self::parse_response(response, TRANSPORT_REST).await?;
         let access_token = body
             .get("access_token")
             .and_then(Value::as_str)
             .ok_or_else(|| {
                 AppError::auth("ShotGrid access token response is missing `access_token`")
                     .with_operation("request_access_token")
-                    .with_transport("rest")
+                    .with_transport(TRANSPORT_REST)
                     .with_resource("auth/access_token")
                     .with_expected_shape("a JSON object containing a string field `access_token`")
                     .with_hint("Verify the credentials and auth mode, then retry the authentication request.")
@@ -679,7 +696,7 @@ impl RestTransport {
             let response = request.send().await.map_err(|error| {
                 AppError::network(format!("could not send the ShotGrid REST request: {error}"))
                     .with_operation("authorized_json_request")
-                    .with_transport("rest")
+                    .with_transport(TRANSPORT_REST)
                     .with_resource(path)
                     .with_retryable_reason("transient network failure while sending a REST request")
                     .retryable(true)
@@ -690,7 +707,7 @@ impl RestTransport {
                 continue;
             }
 
-            return Self::parse_response(response, "rest").await;
+            return Self::parse_response(response, TRANSPORT_REST).await;
         }
     }
 
@@ -706,7 +723,7 @@ impl RestTransport {
                 "could not serialize the `_search` request body as JSON: {error}"
             ))
             .with_operation("serialize_search_request")
-            .with_transport("rest")
+            .with_transport(TRANSPORT_REST)
             .with_resource(path)
             .with_expected_shape(
                 "a JSON object or array accepted by the ShotGrid `_search` endpoint",
@@ -725,7 +742,7 @@ impl RestTransport {
                 .client
                 .request(Method::POST, url)
                 .header(ACCEPT, "application/json")
-                .header(CONTENT_TYPE, "application/vnd+shotgun.api3_hash+json")
+                .header(CONTENT_TYPE, SHOTGRID_SEARCH_CONTENT_TYPE)
                 .bearer_auth(token.access_token)
                 .body(serialized_body.clone())
                 .send()
@@ -735,7 +752,7 @@ impl RestTransport {
                         "could not send the ShotGrid REST `_search` request: {error}"
                     ))
                     .with_operation("authorized_search_request")
-                    .with_transport("rest")
+                    .with_transport(TRANSPORT_REST)
                     .with_resource(path)
                     .with_retryable_reason(
                         "transient network failure while sending a `_search` request",
@@ -748,7 +765,7 @@ impl RestTransport {
                 continue;
             }
 
-            return Self::parse_response(response, "rest").await;
+            return Self::parse_response(response, TRANSPORT_REST).await;
         }
     }
 
@@ -805,13 +822,13 @@ impl RestTransport {
                     "could not send ShotGrid RPC request `{method_name}`: {error}"
                 ))
                 .with_operation("rpc_request")
-                .with_transport("rpc")
+                .with_transport(TRANSPORT_RPC)
                 .with_resource(method_name)
                 .with_retryable_reason("transient network failure while sending an RPC request")
                 .retryable(true)
             })?;
 
-        let parsed = Self::parse_response(response, "rpc").await?;
+        let parsed = Self::parse_response(response, TRANSPORT_RPC).await?;
         Ok(Self::extract_rpc_results(parsed))
     }
 
@@ -876,7 +893,7 @@ impl ShotgridTransport for RestTransport {
         let token = self.access_token_response(config).await?;
         Ok(json!({
             "ok": true,
-            "transport": "rest",
+            "transport": TRANSPORT_REST,
             "profile": config.summary(),
             "grant_type": config.auth_mode().grant_type(),
             "token_received": !token.access_token.is_empty(),
@@ -1554,6 +1571,13 @@ fn revive_query() -> Vec<(String, String)> {
     vec![("revive".to_string(), "true".to_string())]
 }
 
+/// Convert a ShotGrid entity type name (e.g. `"HumanUser"`, `"CustomEntity01"`)
+/// into the plural, snake_case REST collection path segment used by the API
+/// (e.g. `"human_users"`, `"custom_entity_01s"`).
+///
+/// The conversion handles CamelCase word boundaries, digit transitions, hyphens
+/// and spaces.  If the resulting string does not already end with `'s'`, one is
+/// appended to form the plural.
 pub fn entity_collection_path(entity: &str) -> String {
     let entity = entity.trim();
     let chars: Vec<char> = entity.chars().collect();
@@ -1607,7 +1631,7 @@ pub fn entity_collection_path(entity: &str) -> String {
 
 pub(crate) fn plan_entity_create(api_version: &str, entity: &str, body: Value) -> RequestPlan {
     RequestPlan {
-        transport: "rest",
+        transport: TRANSPORT_REST,
         method: "POST",
         path: format!(
             "/api/{api_version}/entity/{}",
@@ -1627,7 +1651,7 @@ pub(crate) fn plan_entity_update(
     body: Value,
 ) -> RequestPlan {
     RequestPlan {
-        transport: "rest",
+        transport: TRANSPORT_REST,
         method: "PUT",
         path: format!(
             "/api/{api_version}/entity/{}/{}",
@@ -1643,7 +1667,7 @@ pub(crate) fn plan_entity_update(
 
 pub(crate) fn plan_entity_delete(api_version: &str, entity: &str, id: u64) -> RequestPlan {
     RequestPlan {
-        transport: "rest",
+        transport: TRANSPORT_REST,
         method: "DELETE",
         path: format!(
             "/api/{api_version}/entity/{}/{}",
@@ -1662,7 +1686,7 @@ pub(crate) fn plan_entity_delete(api_version: &str, entity: &str, id: u64) -> Re
 
 pub(crate) fn plan_entity_revive(entity: &str, id: u64) -> RequestPlan {
     RequestPlan {
-        transport: "rpc",
+        transport: TRANSPORT_RPC,
         method: "POST",
         path: "/api3/json".to_string(),
         risk: RiskLevel::Write,
