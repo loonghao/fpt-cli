@@ -179,28 +179,9 @@ pub(crate) fn scalar_to_string(value: &Value, field_name: &str) -> Result<String
 /// strings into a single comma-joined string.
 ///
 /// This is the variant used by activity and note query parameter builders.
+/// Delegates to [`string_list`] for the actual parsing, then joins with `","`.
 fn string_list_to_csv(value: &Value, field_name: &str) -> Result<String> {
-    if let Some(s) = value.as_str() {
-        return Ok(s.to_string());
-    }
-    let array = value.as_array().ok_or_else(|| {
-        AppError::invalid_input(format!(
-            "`{field_name}` must be either a comma-separated string or an array of strings"
-        ))
-        .with_invalid_field(field_name)
-        .with_expected_shape("either a comma-separated string or an array of strings")
-    })?;
-    let items: Result<Vec<String>> = array
-        .iter()
-        .map(|v| {
-            v.as_str().map(ToString::to_string).ok_or_else(|| {
-                AppError::invalid_input(format!("`{field_name}` array items must all be strings"))
-                    .with_invalid_field(field_name)
-                    .with_expected_shape("an array containing only strings")
-            })
-        })
-        .collect();
-    Ok(items?.join(","))
+    Ok(string_list(value, field_name)?.join(","))
 }
 
 /// Parse a JSON value into a `Vec<String>`.
