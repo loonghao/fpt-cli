@@ -21,7 +21,7 @@ const RETRY_MAX_DELAY_MS: u64 = 30_000;
 const DRY_RUN_NOTE: &str = "dry-run: shows the planned request without making a network call";
 
 /// Transport label for the REST API surface.
-const TRANSPORT_REST: &str = "rest";
+pub(crate) const TRANSPORT_REST: &str = "rest";
 
 /// Transport label for the legacy JSON-RPC API surface.
 const TRANSPORT_RPC: &str = "rpc";
@@ -938,7 +938,7 @@ impl ShotgridTransport for RestTransport {
         self.authorized_json_request(
             config,
             Method::GET,
-            &format!("entity/{}/{}", entity_collection_path(entity), id),
+            &entity_instance_path(entity, id),
             &query,
             None,
         )
@@ -1010,7 +1010,7 @@ impl ShotgridTransport for RestTransport {
         self.authorized_json_request(
             config,
             Method::PUT,
-            &format!("entity/{}/{}", entity_collection_path(entity), id),
+            &entity_instance_path(entity, id),
             &[],
             Some(body),
         )
@@ -1026,7 +1026,7 @@ impl ShotgridTransport for RestTransport {
         self.authorized_json_request(
             config,
             Method::DELETE,
-            &format!("entity/{}/{}", entity_collection_path(entity), id),
+            &entity_instance_path(entity, id),
             &[],
             None,
         )
@@ -1068,9 +1068,8 @@ impl ShotgridTransport for RestTransport {
         request: UploadUrlRequest<'_>,
     ) -> Result<Value> {
         let path = format!(
-            "entity/{}/{}/{}/_upload",
-            entity_collection_path(request.entity),
-            request.id,
+            "{}/{}/_upload",
+            entity_instance_path(request.entity, request.id),
             request.field_name
         );
         let mut query = vec![
@@ -1095,9 +1094,8 @@ impl ShotgridTransport for RestTransport {
         field_name: &str,
     ) -> Result<Value> {
         let path = format!(
-            "entity/{}/{}/{}/_download",
-            entity_collection_path(entity),
-            id,
+            "{}/{}/_download",
+            entity_instance_path(entity, id),
             field_name
         );
         self.authorized_json_request(config, Method::GET, &path, &[], None)
@@ -1110,7 +1108,7 @@ impl ShotgridTransport for RestTransport {
         entity: &str,
         id: u64,
     ) -> Result<Value> {
-        let path = format!("entity/{}/{}/image", entity_collection_path(entity), id);
+        let path = format!("{}/image", entity_instance_path(entity, id));
         self.authorized_json_request(config, Method::GET, &path, &[], None)
             .await
     }
@@ -1122,11 +1120,7 @@ impl ShotgridTransport for RestTransport {
         id: u64,
         params: &[(String, String)],
     ) -> Result<Value> {
-        let path = format!(
-            "entity/{}/{}/activity_stream",
-            entity_collection_path(entity),
-            id
-        );
+        let path = format!("{}/activity_stream", entity_instance_path(entity, id));
         self.authorized_json_request(config, Method::GET, &path, params, None)
             .await
     }
@@ -1157,7 +1151,7 @@ impl ShotgridTransport for RestTransport {
         entity: &str,
         id: u64,
     ) -> Result<Value> {
-        let path = format!("entity/{}/{}/followers", entity_collection_path(entity), id);
+        let path = format!("{}/followers", entity_instance_path(entity, id));
         self.authorized_json_request(config, Method::GET, &path, &[], None)
             .await
     }
@@ -1169,7 +1163,7 @@ impl ShotgridTransport for RestTransport {
         id: u64,
         user: &Value,
     ) -> Result<Value> {
-        let path = format!("entity/{}/{}/followers", entity_collection_path(entity), id);
+        let path = format!("{}/followers", entity_instance_path(entity, id));
         self.authorized_json_request(config, Method::POST, &path, &[], Some(user))
             .await
     }
@@ -1188,12 +1182,7 @@ impl ShotgridTransport for RestTransport {
                 .with_expected_shape("a user JSON object containing a numeric field `id`")
                 .with_detail("received_user", user.clone())
         })?;
-        let path = format!(
-            "entity/{}/{}/followers/{}",
-            entity_collection_path(entity),
-            id,
-            user_id
-        );
+        let path = format!("{}/followers/{}", entity_instance_path(entity, id), user_id);
         self.authorized_json_request(config, Method::DELETE, &path, &[], None)
             .await
     }
@@ -1297,9 +1286,8 @@ impl ShotgridTransport for RestTransport {
         params: &[(String, String)],
     ) -> Result<Value> {
         let path = format!(
-            "entity/{}/{}/relationships/{}",
-            entity_collection_path(entity),
-            id,
+            "{}/relationships/{}",
+            entity_instance_path(entity, id),
             related_field
         );
         self.authorized_json_request(config, Method::GET, &path, params, None)
@@ -1417,11 +1405,7 @@ impl ShotgridTransport for RestTransport {
         entity: &str,
         id: u64,
     ) -> Result<Value> {
-        let path = format!(
-            "entity/{}/{}/filmstrip_image",
-            entity_collection_path(entity),
-            id
-        );
+        let path = format!("{}/filmstrip_image", entity_instance_path(entity, id));
         self.authorized_json_request(config, Method::GET, &path, &[], None)
             .await
     }
@@ -1463,9 +1447,8 @@ impl ShotgridTransport for RestTransport {
         body: &Value,
     ) -> Result<Value> {
         let path = format!(
-            "entity/{}/{}/relationships/{}",
-            entity_collection_path(entity),
-            id,
+            "{}/relationships/{}",
+            entity_instance_path(entity, id),
             related_field
         );
         self.authorized_json_request(config, Method::POST, &path, &[], Some(body))
@@ -1481,9 +1464,8 @@ impl ShotgridTransport for RestTransport {
         body: &Value,
     ) -> Result<Value> {
         let path = format!(
-            "entity/{}/{}/relationships/{}",
-            entity_collection_path(entity),
-            id,
+            "{}/relationships/{}",
+            entity_instance_path(entity, id),
             related_field
         );
         self.authorized_json_request(config, Method::PUT, &path, &[], Some(body))
@@ -1497,7 +1479,7 @@ impl ShotgridTransport for RestTransport {
         id: u64,
         body: &Value,
     ) -> Result<Value> {
-        let path = format!("entity/{}/{}/_share", entity_collection_path(entity), id);
+        let path = format!("{}/_share", entity_instance_path(entity, id));
         self.authorized_json_request(config, Method::POST, &path, &[], Some(body))
             .await
     }
@@ -1511,9 +1493,8 @@ impl ShotgridTransport for RestTransport {
         body: &Value,
     ) -> Result<Value> {
         let path = format!(
-            "entity/{}/{}/relationships/{}",
-            entity_collection_path(entity),
-            id,
+            "{}/relationships/{}",
+            entity_instance_path(entity, id),
             related_field
         );
         self.authorized_json_request(config, Method::DELETE, &path, &[], Some(body))
@@ -1627,6 +1608,16 @@ pub fn entity_collection_path(entity: &str) -> String {
     }
 
     output
+}
+
+/// Build the REST path segment for a specific entity instance:
+/// `entity/{collection}/{id}`.
+///
+/// This combines [`entity_collection_path`] with the numeric id, removing the
+/// need to repeat the `format!("entity/{}/{}",
+/// entity_collection_path(entity), id)` boilerplate across every CRUD method.
+fn entity_instance_path(entity: &str, id: u64) -> String {
+    format!("entity/{}/{}", entity_collection_path(entity), id)
 }
 
 pub(crate) fn plan_entity_create(api_version: &str, entity: &str, body: Value) -> RequestPlan {
