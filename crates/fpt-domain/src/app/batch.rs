@@ -53,6 +53,17 @@ impl std::fmt::Display for OnConflict {
     }
 }
 
+/// Grouped options for [`App::entity_batch_upsert`] to keep the parameter
+/// list short and extensible.
+#[derive(Debug)]
+pub struct BatchUpsertOptions {
+    pub key: String,
+    pub on_conflict: OnConflict,
+    pub dry_run: bool,
+    pub checkpoint_path: Option<String>,
+    pub resume: bool,
+}
+
 impl<T> App<T>
 where
     T: ShotgridTransport,
@@ -228,18 +239,20 @@ where
         ))
     }
 
-    #[allow(clippy::too_many_arguments)]
     pub async fn entity_batch_upsert(
         &self,
         overrides: ConnectionOverrides,
         entity: &str,
         input: Value,
-        key: &str,
-        on_conflict: OnConflict,
-        dry_run: bool,
-        checkpoint_path: Option<String>,
-        resume: bool,
+        opts: BatchUpsertOptions,
     ) -> Result<Value> {
+        let BatchUpsertOptions {
+            key,
+            on_conflict,
+            dry_run,
+            checkpoint_path,
+            resume,
+        } = opts;
         let items = parse_batch_create_input(input)?;
 
         if dry_run {
@@ -291,7 +304,6 @@ where
         let config = ConnectionSettings::resolve(overrides)?;
         let transport = &self.transport;
         let config = &config;
-        let key = key.to_string();
         let started_at = Instant::now();
         let total_items = items.len();
         let mut results = stream::iter(items.into_iter().enumerate())
@@ -819,96 +831,89 @@ fn parse_batch_get_input(input: Value) -> Result<(Vec<u64>, Option<Vec<String>>)
     }
 }
 
-fn parse_batch_find_input(input: Value) -> Result<Vec<Value>> {
+/// Generic helper for parsing batch input that wraps items in an array or inside
+/// a named object field.  The `validate` callback transforms raw `Vec<Value>`
+/// into the desired output type `T`.
+///
+/// This avoids duplicating the match-on-Array/Object/fallback boilerplate that
+/// was previously copy-pasted across `parse_batch_find_input`,
+/// `parse_batch_create_input`, `parse_batch_update_input` and others.
+fn parse_batch_items<T>(
+    input: Value,
+    field_name: &str,
+    operation: &str,
+    description: &str,
+    array_description: &str,
+    validate: impl FnOnce(Vec<Value>) -> Result<T>,
+) -> Result<T> {
     match input {
-        Value::Array(values) => object_items(values, "entity batch find requests"),
+        Value::Array(values) => validate(values),
         Value::Object(object) => {
-            let requests = object
-                .get("requests")
+            let items = object
+                .get(field_name)
                 .ok_or_else(|| {
-                    AppError::invalid_input(
-                        "entity batch find input is missing required field `requests`",
-                    )
-                    .with_operation("parse_batch_find_input")
-                    .with_missing_fields(["requests"])
-                    .with_expected_shape("a JSON object containing `requests` (array of find request objects)")
+                    AppError::invalid_input(format!(
+                        "entity batch {description} input is missing required field `{field_name}`"
+                    ))
+                    .with_operation(operation)
+                    .with_missing_fields([field_name])
+                    .with_expected_shape(format!(
+                        "a JSON object containing `{field_name}` ({array_description})"
+                    ))
                 })?
                 .as_array()
-                .ok_or_else(|| AppError::invalid_input("`requests` must be a JSON array of objects")
-                    .with_operation("parse_batch_find_input")
-                    .with_invalid_field("requests")
-                    .with_expected_shape("a JSON array of find request objects"))?
+                .ok_or_else(|| {
+                    AppError::invalid_input(format!(
+                        "`{field_name}` must be a JSON array of {array_description}"
+                    ))
+                    .with_operation(operation)
+                    .with_invalid_field(field_name)
+                    .with_expected_shape(format!("a JSON array of {array_description}"))
+                })?
                 .clone();
-            object_items(requests, "requests")
+            validate(items)
         }
-        _ => Err(AppError::invalid_input(
-            "entity batch find input must be either a JSON array of request objects or an object containing `requests`",
-        )
-        .with_operation("parse_batch_find_input")
-        .with_expected_shape("a JSON array of request objects, or a JSON object containing `requests`")),
+        _ => Err(AppError::invalid_input(format!(
+            "entity batch {description} input must be either a JSON array or an object containing `{field_name}`"
+        ))
+        .with_operation(operation)
+        .with_expected_shape(format!(
+            "a JSON array, or a JSON object containing `{field_name}`"
+        ))),
     }
+}
+
+fn parse_batch_find_input(input: Value) -> Result<Vec<Value>> {
+    parse_batch_items(
+        input,
+        "requests",
+        "parse_batch_find_input",
+        "find",
+        "find request objects",
+        |values| object_items(values, "requests"),
+    )
 }
 
 fn parse_batch_create_input(input: Value) -> Result<Vec<Value>> {
-    match input {
-        Value::Array(values) => non_empty_items(values, "entity batch create items"),
-        Value::Object(object) => {
-            let items = object
-                .get("items")
-                .ok_or_else(|| {
-                    AppError::invalid_input(
-                        "entity batch create input is missing required field `items`",
-                    )
-                    .with_operation("parse_batch_create_input")
-                    .with_missing_fields(["items"])
-                    .with_expected_shape("a JSON object containing `items` (array of entity body objects)")
-                })?
-                .as_array()
-                .ok_or_else(|| AppError::invalid_input("`items` must be a JSON array of objects")
-                    .with_operation("parse_batch_create_input")
-                    .with_invalid_field("items")
-                    .with_expected_shape("a JSON array of entity body objects"))?
-                .clone();
-            non_empty_items(items, "items")
-        }
-        _ => Err(AppError::invalid_input(
-            "entity batch create input must be either a JSON array of item bodies or an object containing `items`",
-        )
-        .with_operation("parse_batch_create_input")
-        .with_expected_shape("a JSON array of entity body objects, or a JSON object containing `items`")),
-    }
+    parse_batch_items(
+        input,
+        "items",
+        "parse_batch_create_input",
+        "create",
+        "entity body objects",
+        |values| non_empty_items(values, "items"),
+    )
 }
 
 fn parse_batch_update_input(input: Value) -> Result<Vec<BatchUpdateItem>> {
-    let items = match input {
-        Value::Array(values) => non_empty_items(values, "entity batch update items")?,
-        Value::Object(object) => {
-            let items = object
-                .get("items")
-                .ok_or_else(|| {
-                    AppError::invalid_input(
-                        "entity batch update input is missing required field `items`",
-                    )
-                    .with_operation("parse_batch_update_input")
-                    .with_missing_fields(["items"])
-                    .with_expected_shape("a JSON object containing `items` (array of update objects with `id` and `body`)")
-                })?
-                .as_array()
-                .ok_or_else(|| AppError::invalid_input("`items` must be a JSON array of objects")
-                    .with_operation("parse_batch_update_input")
-                    .with_invalid_field("items")
-                    .with_expected_shape("a JSON array of update objects with `id` and `body`"))?
-                .clone();
-            non_empty_items(items, "items")?
-        }
-        _ => {
-            return Err(AppError::invalid_input(
-                "entity batch update input must be either a JSON array of update objects or an object containing `items`",
-            )
-            .with_operation("parse_batch_update_input")
-            .with_expected_shape("a JSON array of update objects, or a JSON object containing `items`"));
-        }
-    };
+    let items = parse_batch_items(
+        input,
+        "items",
+        "parse_batch_update_input",
+        "update",
+        "update objects with `id` and `body`",
+        |values| non_empty_items(values, "items"),
+    )?;
 
     items
         .into_iter()
@@ -1159,39 +1164,14 @@ fn write_checkpoint(writer: &Option<std::sync::Mutex<File>>, result: &Value) {
 /// Each request must be an object with `entity` (string) and `payload` (object).
 /// Accepts either a JSON array of request objects or an object containing `requests`.
 fn parse_batch_summarize_input(input: Value) -> Result<Vec<Value>> {
-    let items = match input {
-        Value::Array(values) => non_empty_items(values, "entity batch summarize requests")?,
-        Value::Object(object) => {
-            let requests = object
-                .get("requests")
-                .ok_or_else(|| {
-                    AppError::invalid_input(
-                        "entity batch summarize input is missing required field `requests`",
-                    )
-                    .with_operation("parse_batch_summarize_input")
-                    .with_missing_fields(["requests"])
-                    .with_expected_shape(
-                        "a JSON object containing `requests` (array of summarize request objects)",
-                    )
-                })?
-                .as_array()
-                .ok_or_else(|| {
-                    AppError::invalid_input("`requests` must be a JSON array of objects")
-                        .with_operation("parse_batch_summarize_input")
-                        .with_invalid_field("requests")
-                        .with_expected_shape("a JSON array of summarize request objects")
-                })?
-                .clone();
-            non_empty_items(requests, "requests")?
-        }
-        _ => {
-            return Err(AppError::invalid_input(
-                "entity batch summarize input must be either a JSON array of request objects or an object containing `requests`",
-            )
-            .with_operation("parse_batch_summarize_input")
-            .with_expected_shape("a JSON array of request objects, or a JSON object containing `requests`"));
-        }
-    };
+    let items = parse_batch_items(
+        input,
+        "requests",
+        "parse_batch_summarize_input",
+        "summarize",
+        "summarize request objects",
+        |values| non_empty_items(values, "requests"),
+    )?;
 
     // Validate each item has the required fields.
     for (index, item) in items.iter().enumerate() {

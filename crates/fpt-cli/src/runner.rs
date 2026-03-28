@@ -9,6 +9,7 @@ use crate::config;
 use crate::self_update;
 use fpt_core::{AppError, Result, read_json_input};
 use fpt_domain::App;
+use fpt_domain::app::batch::BatchUpsertOptions;
 use fpt_domain::transport::UploadUrlRequest;
 use serde_json::Value;
 
@@ -244,11 +245,13 @@ pub async fn run(cli: Cli) -> Result<Value> {
                         connection,
                         &entity,
                         body,
-                        &key,
-                        on_conflict.into(),
-                        dry_run,
-                        checkpoint,
-                        resume,
+                        BatchUpsertOptions {
+                            key,
+                            on_conflict: on_conflict.into(),
+                            dry_run,
+                            checkpoint_path: checkpoint,
+                            resume,
+                        },
                     )
                     .await
                 }

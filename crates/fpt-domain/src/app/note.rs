@@ -1,8 +1,10 @@
 use fpt_core::{AppError, ErrorCode, Result};
 use serde_json::{Value, json};
 
+use fpt_core::TRANSPORT_REST;
+
 use crate::config::{ConnectionOverrides, ConnectionSettings};
-use crate::transport::{ShotgridTransport, TRANSPORT_REST};
+use crate::transport::ShotgridTransport;
 
 use super::App;
 use super::query_helpers::build_query_params;
@@ -104,7 +106,7 @@ fn translate_note_threads_error(error: AppError, note_id: u64) -> AppError {
             "Note thread lookup failed: `{note_id}` is not a top-level Note record id or the Note does not exist"
         ))
         .with_operation("note_threads")
-        .with_transport(envelope.transport.unwrap_or_else(|| TRANSPORT_REST.to_string()))
+        .with_transport(envelope.transport.unwrap_or_else(|| TRANSPORT_REST.into()))
         .with_resource(format!("Note/{note_id}"))
         .with_detail("note_id", note_id)
         .with_hint("Verify that the id belongs to a top-level Note entity, not a reply or a different entity type.")

@@ -20,8 +20,8 @@ const RETRY_MAX_DELAY_MS: u64 = 30_000;
 /// Shared dry-run note used by all request plan builders.
 const DRY_RUN_NOTE: &str = "dry-run: shows the planned request without making a network call";
 
-/// Transport label for the REST API surface.
-pub(crate) const TRANSPORT_REST: &str = "rest";
+/// Re-export so that in-crate callers can keep using `transport::TRANSPORT_REST`.
+pub(crate) use fpt_core::TRANSPORT_REST;
 
 /// Transport label for the legacy JSON-RPC API surface.
 const TRANSPORT_RPC: &str = "rpc";

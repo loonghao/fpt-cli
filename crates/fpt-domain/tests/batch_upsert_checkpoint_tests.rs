@@ -12,7 +12,7 @@ use std::sync::{Arc, Mutex};
 
 use async_trait::async_trait;
 use fpt_core::{AppError, Result};
-use fpt_domain::app::batch::OnConflict;
+use fpt_domain::app::batch::{BatchUpsertOptions, OnConflict};
 use fpt_domain::transport::{FindParams, ShotgridTransport, UploadUrlRequest};
 use fpt_domain::{App, AuthMode, ConnectionOverrides};
 
@@ -621,11 +621,13 @@ async fn upsert_creates_checkpoint_file() {
             overrides(),
             "Asset",
             input,
-            "code",
-            OnConflict::Skip,
-            false,
-            Some(checkpoint_str.clone()),
-            false,
+            BatchUpsertOptions {
+                key: "code".to_string(),
+                on_conflict: OnConflict::Skip,
+                dry_run: false,
+                checkpoint_path: Some(checkpoint_str.clone()),
+                resume: false,
+            },
         )
         .await
         .expect("upsert succeeds");
@@ -680,11 +682,13 @@ async fn upsert_resumes_from_checkpoint() {
             overrides(),
             "Asset",
             input,
-            "code",
-            OnConflict::Skip,
-            false,
-            Some(checkpoint_str.clone()),
-            true, // resume
+            BatchUpsertOptions {
+                key: "code".to_string(),
+                on_conflict: OnConflict::Skip,
+                dry_run: false,
+                checkpoint_path: Some(checkpoint_str.clone()),
+                resume: true,
+            },
         )
         .await
         .expect("resume upsert succeeds");
@@ -722,11 +726,13 @@ async fn upsert_resume_without_checkpoint_is_error() {
             overrides(),
             "Asset",
             input,
-            "code",
-            OnConflict::Skip,
-            false,
-            None, // no checkpoint
-            true, // resume
+            BatchUpsertOptions {
+                key: "code".to_string(),
+                on_conflict: OnConflict::Skip,
+                dry_run: false,
+                checkpoint_path: None,
+                resume: true,
+            },
         )
         .await
         .expect_err("resume without checkpoint should fail");
@@ -754,11 +760,13 @@ async fn upsert_resume_with_missing_checkpoint_file_is_error() {
             overrides(),
             "Asset",
             input,
-            "code",
-            OnConflict::Skip,
-            false,
-            Some("nonexistent_file.jsonl".to_string()),
-            true, // resume
+            BatchUpsertOptions {
+                key: "code".to_string(),
+                on_conflict: OnConflict::Skip,
+                dry_run: false,
+                checkpoint_path: Some("nonexistent_file.jsonl".to_string()),
+                resume: true,
+            },
         )
         .await
         .expect_err("resume with missing file should fail");
@@ -801,11 +809,13 @@ async fn upsert_resume_tolerates_malformed_checkpoint_lines() {
             overrides(),
             "Asset",
             input,
-            "code",
-            OnConflict::Skip,
-            false,
-            Some(checkpoint_str),
-            true, // resume
+            BatchUpsertOptions {
+                key: "code".to_string(),
+                on_conflict: OnConflict::Skip,
+                dry_run: false,
+                checkpoint_path: Some(checkpoint_str),
+                resume: true,
+            },
         )
         .await
         .expect("upsert with partial checkpoint succeeds");
@@ -849,11 +859,13 @@ async fn upsert_with_on_conflict_update_and_checkpoint() {
             overrides(),
             "Asset",
             input,
-            "code",
-            OnConflict::Update,
-            false,
-            Some(checkpoint_str.clone()),
-            false,
+            BatchUpsertOptions {
+                key: "code".to_string(),
+                on_conflict: OnConflict::Update,
+                dry_run: false,
+                checkpoint_path: Some(checkpoint_str.clone()),
+                resume: false,
+            },
         )
         .await
         .expect("upsert succeeds");
@@ -895,11 +907,13 @@ async fn upsert_with_on_conflict_skip_and_existing_entity() {
             overrides(),
             "Asset",
             input,
-            "code",
-            OnConflict::Skip,
-            false,
-            None,
-            false,
+            BatchUpsertOptions {
+                key: "code".to_string(),
+                on_conflict: OnConflict::Skip,
+                dry_run: false,
+                checkpoint_path: None,
+                resume: false,
+            },
         )
         .await
         .expect("upsert succeeds");
@@ -936,11 +950,13 @@ async fn upsert_with_on_conflict_error_and_existing_entity() {
             overrides(),
             "Asset",
             input,
-            "code",
-            OnConflict::Error,
-            false,
-            None,
-            false,
+            BatchUpsertOptions {
+                key: "code".to_string(),
+                on_conflict: OnConflict::Error,
+                dry_run: false,
+                checkpoint_path: None,
+                resume: false,
+            },
         )
         .await
         .expect("upsert completes (with item-level error)");
@@ -976,11 +992,13 @@ async fn upsert_missing_key_field_reports_item_error() {
             overrides(),
             "Asset",
             input,
-            "code",
-            OnConflict::Skip,
-            false,
-            None,
-            false,
+            BatchUpsertOptions {
+                key: "code".to_string(),
+                on_conflict: OnConflict::Skip,
+                dry_run: false,
+                checkpoint_path: None,
+                resume: false,
+            },
         )
         .await
         .expect("upsert completes");
@@ -1022,11 +1040,13 @@ async fn upsert_dry_run_does_not_create_checkpoint() {
             overrides(),
             "Asset",
             input,
-            "code",
-            OnConflict::Skip,
-            true, // dry_run
-            Some(checkpoint_str),
-            false,
+            BatchUpsertOptions {
+                key: "code".to_string(),
+                on_conflict: OnConflict::Skip,
+                dry_run: true,
+                checkpoint_path: Some(checkpoint_str),
+                resume: false,
+            },
         )
         .await
         .expect("dry run succeeds");
@@ -1059,11 +1079,13 @@ async fn upsert_without_checkpoint_flag_works() {
             overrides(),
             "Asset",
             input,
-            "code",
-            OnConflict::Skip,
-            false,
-            None,  // no checkpoint
-            false, // no resume
+            BatchUpsertOptions {
+                key: "code".to_string(),
+                on_conflict: OnConflict::Skip,
+                dry_run: false,
+                checkpoint_path: None,
+                resume: false,
+            },
         )
         .await
         .expect("upsert without checkpoint succeeds");
@@ -1100,11 +1122,13 @@ async fn upsert_checkpoint_records_all_actions() {
             overrides(),
             "Asset",
             input,
-            "code",
-            OnConflict::Update,
-            false,
-            Some(checkpoint_str.clone()),
-            false,
+            BatchUpsertOptions {
+                key: "code".to_string(),
+                on_conflict: OnConflict::Update,
+                dry_run: false,
+                checkpoint_path: Some(checkpoint_str.clone()),
+                resume: false,
+            },
         )
         .await
         .expect("upsert succeeds");

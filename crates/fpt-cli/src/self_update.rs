@@ -25,7 +25,7 @@ const SUPPORTED_TARGETS: &[&str] = &[
     "aarch64-apple-darwin",
 ];
 /// Transport label used in error envelopes for GitHub API calls.
-const TRANSPORT_REST: &str = "rest";
+use fpt_core::TRANSPORT_REST;
 
 #[derive(Debug, Clone, Copy)]
 enum ArchiveKind {
