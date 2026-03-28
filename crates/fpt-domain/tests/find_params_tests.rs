@@ -324,6 +324,29 @@ impl ShotgridTransport for RecordingTransport {
     async fn preferences_custom_entity(&self, _: &ConnectionSettings, _: &Value) -> Result<Value> {
         Ok(json!({}))
     }
+    async fn schedule_work_day_rules_create(
+        &self,
+        _: &ConnectionSettings,
+        _: &Value,
+    ) -> Result<Value> {
+        Ok(json!({}))
+    }
+    async fn schedule_work_day_rules_delete(
+        &self,
+        _: &ConnectionSettings,
+        _: u64,
+    ) -> Result<Value> {
+        Ok(json!({}))
+    }
+    async fn thumbnail_upload(
+        &self,
+        _: &ConnectionSettings,
+        _: &str,
+        _: u64,
+        _: &Value,
+    ) -> Result<Value> {
+        Ok(json!({}))
+    }
 }
 
 fn test_overrides() -> ConnectionOverrides {

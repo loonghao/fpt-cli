@@ -365,6 +365,23 @@ pub trait ShotgridTransport {
         rule_id: u64,
         body: &Value,
     ) -> Result<Value>;
+    async fn schedule_work_day_rules_create(
+        &self,
+        config: &ConnectionSettings,
+        body: &Value,
+    ) -> Result<Value>;
+    async fn schedule_work_day_rules_delete(
+        &self,
+        config: &ConnectionSettings,
+        rule_id: u64,
+    ) -> Result<Value>;
+    async fn thumbnail_upload(
+        &self,
+        config: &ConnectionSettings,
+        entity: &str,
+        id: u64,
+        body: &Value,
+    ) -> Result<Value>;
     async fn license(&self, config: &ConnectionSettings) -> Result<Value>;
     async fn preferences_custom_entity(
         &self,
@@ -1525,6 +1542,43 @@ impl ShotgridTransport for RestTransport {
         body: &Value,
     ) -> Result<Value> {
         let path = format!("schedule/work_day_rules/{rule_id}");
+        self.authorized_json_request(config, Method::PUT, &path, &[], Some(body))
+            .await
+    }
+
+    async fn schedule_work_day_rules_create(
+        &self,
+        config: &ConnectionSettings,
+        body: &Value,
+    ) -> Result<Value> {
+        self.authorized_json_request(
+            config,
+            Method::POST,
+            "schedule/work_day_rules",
+            &[],
+            Some(body),
+        )
+        .await
+    }
+
+    async fn schedule_work_day_rules_delete(
+        &self,
+        config: &ConnectionSettings,
+        rule_id: u64,
+    ) -> Result<Value> {
+        let path = format!("schedule/work_day_rules/{rule_id}");
+        self.authorized_json_request(config, Method::DELETE, &path, &[], None)
+            .await
+    }
+
+    async fn thumbnail_upload(
+        &self,
+        config: &ConnectionSettings,
+        entity: &str,
+        id: u64,
+        body: &Value,
+    ) -> Result<Value> {
+        let path = format!("{}/image", entity_instance_path(entity, id));
         self.authorized_json_request(config, Method::PUT, &path, &[], Some(body))
             .await
     }

@@ -53,4 +53,17 @@ where
             .filmstrip_thumbnail(&config, entity, id)
             .await
     }
+
+    pub async fn thumbnail_upload(
+        &self,
+        overrides: ConnectionOverrides,
+        entity: &str,
+        id: u64,
+        body: Value,
+    ) -> Result<Value> {
+        let config = ConnectionSettings::resolve(overrides)?;
+        self.transport
+            .thumbnail_upload(&config, entity, id, &body)
+            .await
+    }
 }

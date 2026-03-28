@@ -99,3 +99,28 @@ pub const FILMSTRIP_URL_SPEC: CommandSpec = CommandSpec {
     examples: FILMSTRIP_URL_EXAMPLES,
     notes: FILMSTRIP_NOTES,
 };
+
+const THUMBNAIL_UPLOAD_EXAMPLES: &[&str] = &[
+    "fpt thumbnail upload Shot 123 --input @image_data.json --site ... --auth-mode script --script-name ... --script-key ...",
+    "fpt thumbnail upload Version 456 --input '{\"filename\":\"thumb.jpg\"}' --site ...",
+];
+
+const THUMBNAIL_UPLOAD_NOTES: &[&str] = &[
+    "Uploads a thumbnail image for the specified entity record via PUT /entity/{type}/{id}/image",
+    "Input must be a JSON object with the thumbnail upload payload",
+    "Replaces any existing thumbnail on the entity record",
+];
+
+pub const THUMBNAIL_UPLOAD_SPEC: CommandSpec = CommandSpec {
+    name: "thumbnail.upload",
+    summary: "Upload a thumbnail image for an entity record",
+    risk: RiskLevel::Write,
+    implemented: true,
+    supports_dry_run: false,
+    preferred_transport: "rest",
+    fallback_transport: None,
+    input: "entity + id + thumbnail upload body JSON",
+    output: "json",
+    examples: THUMBNAIL_UPLOAD_EXAMPLES,
+    notes: THUMBNAIL_UPLOAD_NOTES,
+};

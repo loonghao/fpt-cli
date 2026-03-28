@@ -598,6 +598,32 @@ impl ShotgridTransport for RecordingTransport {
     ) -> Result<Value> {
         Ok(json!({"ok": true, "enabled": body}))
     }
+
+    async fn schedule_work_day_rules_create(
+        &self,
+        _config: &ConnectionSettings,
+        body: &Value,
+    ) -> Result<Value> {
+        Ok(json!({"created": true, "body": body}))
+    }
+
+    async fn schedule_work_day_rules_delete(
+        &self,
+        _config: &ConnectionSettings,
+        rule_id: u64,
+    ) -> Result<Value> {
+        Ok(json!({"deleted": true, "rule_id": rule_id}))
+    }
+
+    async fn thumbnail_upload(
+        &self,
+        _config: &ConnectionSettings,
+        entity: &str,
+        id: u64,
+        body: &Value,
+    ) -> Result<Value> {
+        Ok(json!({"entity": entity, "id": id, "uploaded": true, "body": body}))
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -1063,6 +1089,29 @@ impl ShotgridTransport for FindOneTransport {
     ) -> Result<Value> {
         Err(AppError::not_implemented("unused"))
     }
+    async fn schedule_work_day_rules_create(
+        &self,
+        _config: &ConnectionSettings,
+        _body: &Value,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+    async fn schedule_work_day_rules_delete(
+        &self,
+        _config: &ConnectionSettings,
+        _rule_id: u64,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+    async fn thumbnail_upload(
+        &self,
+        _config: &ConnectionSettings,
+        _entity: &str,
+        _id: u64,
+        _body: &Value,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
 }
 
 #[derive(Debug, Clone, Default)]
@@ -1516,6 +1565,29 @@ impl ShotgridTransport for NoteThreadsNotFoundTransport {
     async fn preferences_custom_entity(
         &self,
         _config: &ConnectionSettings,
+        _body: &Value,
+    ) -> Result<Value> {
+        Ok(json!({}))
+    }
+    async fn schedule_work_day_rules_create(
+        &self,
+        _config: &ConnectionSettings,
+        _body: &Value,
+    ) -> Result<Value> {
+        Ok(json!({}))
+    }
+    async fn schedule_work_day_rules_delete(
+        &self,
+        _config: &ConnectionSettings,
+        _rule_id: u64,
+    ) -> Result<Value> {
+        Ok(json!({}))
+    }
+    async fn thumbnail_upload(
+        &self,
+        _config: &ConnectionSettings,
+        _entity: &str,
+        _id: u64,
         _body: &Value,
     ) -> Result<Value> {
         Ok(json!({}))
@@ -1985,6 +2057,29 @@ impl ShotgridTransport for SlowGetTransport {
     async fn preferences_custom_entity(
         &self,
         _config: &ConnectionSettings,
+        _body: &Value,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+    async fn schedule_work_day_rules_create(
+        &self,
+        _config: &ConnectionSettings,
+        _body: &Value,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+    async fn schedule_work_day_rules_delete(
+        &self,
+        _config: &ConnectionSettings,
+        _rule_id: u64,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+    async fn thumbnail_upload(
+        &self,
+        _config: &ConnectionSettings,
+        _entity: &str,
+        _id: u64,
         _body: &Value,
     ) -> Result<Value> {
         Err(AppError::not_implemented("unused"))
@@ -4049,6 +4144,66 @@ async fn preferences_custom_entity_delegates_to_transport() {
 }
 
 // ---------------------------------------------------------------
+// Schedule work day rules create
+// ---------------------------------------------------------------
+
+#[tokio::test]
+async fn schedule_work_day_rules_create_delegates_to_transport() {
+    let app = App::new(RecordingTransport::default());
+    let body = json!({"date": "2026-12-25", "description": "Christmas"});
+    let result = app
+        .schedule_work_day_rules_create(overrides(), body.clone())
+        .await
+        .expect("schedule_work_day_rules_create succeeds");
+    assert_eq!(result["created"], true);
+    assert_eq!(result["body"], body);
+}
+
+#[tokio::test]
+async fn schedule_work_day_rules_create_rejects_non_object() {
+    let app = App::new(RecordingTransport::default());
+    let body = json!("not an object");
+    let err = app
+        .schedule_work_day_rules_create(overrides(), body)
+        .await
+        .expect_err("non-object should be rejected");
+    assert_eq!(err.envelope().code, "INVALID_INPUT");
+}
+
+// ---------------------------------------------------------------
+// Schedule work day rules delete
+// ---------------------------------------------------------------
+
+#[tokio::test]
+async fn schedule_work_day_rules_delete_delegates_to_transport() {
+    let app = App::new(RecordingTransport::default());
+    let result = app
+        .schedule_work_day_rules_delete(overrides(), 42)
+        .await
+        .expect("schedule_work_day_rules_delete succeeds");
+    assert_eq!(result["deleted"], true);
+    assert_eq!(result["rule_id"], 42);
+}
+
+// ---------------------------------------------------------------
+// Thumbnail upload
+// ---------------------------------------------------------------
+
+#[tokio::test]
+async fn thumbnail_upload_delegates_to_transport() {
+    let app = App::new(RecordingTransport::default());
+    let body = json!({"filename": "thumb.jpg"});
+    let result = app
+        .thumbnail_upload(overrides(), "Shot", 42, body.clone())
+        .await
+        .expect("thumbnail_upload succeeds");
+    assert_eq!(result["entity"], "Shot");
+    assert_eq!(result["id"], 42);
+    assert_eq!(result["uploaded"], true);
+    assert_eq!(result["body"], body);
+}
+
+// ---------------------------------------------------------------
 // Capabilities include new commands
 // ---------------------------------------------------------------
 
@@ -4070,6 +4225,18 @@ async fn capabilities_includes_new_api_specs() {
     assert!(
         names.contains(&"schedule.work-day-rules-update"),
         "should include schedule.work-day-rules-update"
+    );
+    assert!(
+        names.contains(&"schedule.work-day-rules-create"),
+        "should include schedule.work-day-rules-create"
+    );
+    assert!(
+        names.contains(&"schedule.work-day-rules-delete"),
+        "should include schedule.work-day-rules-delete"
+    );
+    assert!(
+        names.contains(&"thumbnail.upload"),
+        "should include thumbnail.upload"
     );
     assert!(names.contains(&"license.get"), "should include license.get");
     assert!(

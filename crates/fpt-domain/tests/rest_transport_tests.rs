@@ -1945,3 +1945,93 @@ async fn preferences_custom_entity_uses_expected_post_path() {
     assert_eq!(custom_entity.calls(), 1);
     assert_eq!(response["ok"], true);
 }
+
+// ---------------------------------------------------------------
+// Schedule work day rules create
+// ---------------------------------------------------------------
+
+#[tokio::test]
+async fn schedule_work_day_rules_create_uses_expected_post_path() {
+    let server = MockServer::start();
+    let auth = mock_auth(&server);
+    let rule_create = server.mock(|when, then| {
+        when.method(POST)
+            .path("/api/v1.1/schedule/work_day_rules")
+            .header("authorization", "Bearer token-123");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({"data": {"id": 99, "date": "2026-12-25"}}));
+    });
+    let transport = RestTransport::default();
+    let config = script_config(&server);
+    let body = json!({"date": "2026-12-25", "description": "Christmas", "project": {"type": "Project", "id": 65}});
+
+    let response = transport
+        .schedule_work_day_rules_create(&config, &body)
+        .await
+        .expect("schedule_work_day_rules_create succeeds");
+
+    assert_eq!(auth.calls(), 1);
+    assert_eq!(rule_create.calls(), 1);
+    assert_eq!(response["data"]["id"], 99);
+    assert_eq!(response["data"]["date"], "2026-12-25");
+}
+
+// ---------------------------------------------------------------
+// Schedule work day rules delete
+// ---------------------------------------------------------------
+
+#[tokio::test]
+async fn schedule_work_day_rules_delete_uses_expected_delete_path() {
+    let server = MockServer::start();
+    let auth = mock_auth(&server);
+    let rule_delete = server.mock(|when, then| {
+        when.method(DELETE)
+            .path("/api/v1.1/schedule/work_day_rules/42")
+            .header("authorization", "Bearer token-123");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({"ok": true, "status": 200}));
+    });
+    let transport = RestTransport::default();
+    let config = script_config(&server);
+
+    let response = transport
+        .schedule_work_day_rules_delete(&config, 42)
+        .await
+        .expect("schedule_work_day_rules_delete succeeds");
+
+    assert_eq!(auth.calls(), 1);
+    assert_eq!(rule_delete.calls(), 1);
+    assert_eq!(response["ok"], true);
+}
+
+// ---------------------------------------------------------------
+// Thumbnail upload
+// ---------------------------------------------------------------
+
+#[tokio::test]
+async fn thumbnail_upload_uses_expected_put_path() {
+    let server = MockServer::start();
+    let auth = mock_auth(&server);
+    let thumb_upload = server.mock(|when, then| {
+        when.method(PUT)
+            .path("/api/v1.1/entity/shots/42/image")
+            .header("authorization", "Bearer token-123");
+        then.status(200)
+            .header("content-type", "application/json")
+            .json_body(json!({"upload_url": "https://sg-media.com/upload/thumb"}));
+    });
+    let transport = RestTransport::default();
+    let config = script_config(&server);
+    let body = json!({"filename": "thumb.jpg"});
+
+    let response = transport
+        .thumbnail_upload(&config, "Shot", 42, &body)
+        .await
+        .expect("thumbnail_upload succeeds");
+
+    assert_eq!(auth.calls(), 1);
+    assert_eq!(thumb_upload.calls(), 1);
+    assert_eq!(response["upload_url"], "https://sg-media.com/upload/thumb");
+}

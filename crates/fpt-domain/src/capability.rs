@@ -84,6 +84,8 @@ static COMMANDS: &[CommandSpec] = &[
     // Schedule
     schedule::SCHEDULE_WORK_DAY_RULES_SPEC,
     schedule::SCHEDULE_WORK_DAY_RULES_UPDATE_SPEC,
+    schedule::SCHEDULE_WORK_DAY_RULES_CREATE_SPEC,
+    schedule::SCHEDULE_WORK_DAY_RULES_DELETE_SPEC,
     // License
     license::LICENSE_GET_SPEC,
     // Work schedule
@@ -93,6 +95,7 @@ static COMMANDS: &[CommandSpec] = &[
     upload::UPLOAD_URL_SPEC,
     upload::DOWNLOAD_URL_SPEC,
     upload::THUMBNAIL_URL_SPEC,
+    upload::THUMBNAIL_UPLOAD_SPEC,
     upload::FILMSTRIP_URL_SPEC,
     // Activity
     activity::ACTIVITY_STREAM_SPEC,

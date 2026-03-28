@@ -35,6 +35,29 @@ where
             .schedule_work_day_rules_update(&config, rule_id, &body)
             .await
     }
+
+    pub async fn schedule_work_day_rules_create(
+        &self,
+        overrides: ConnectionOverrides,
+        body: Value,
+    ) -> Result<Value> {
+        validate_work_day_rule_body(&body)?;
+        let config = ConnectionSettings::resolve(overrides)?;
+        self.transport
+            .schedule_work_day_rules_create(&config, &body)
+            .await
+    }
+
+    pub async fn schedule_work_day_rules_delete(
+        &self,
+        overrides: ConnectionOverrides,
+        rule_id: u64,
+    ) -> Result<Value> {
+        let config = ConnectionSettings::resolve(overrides)?;
+        self.transport
+            .schedule_work_day_rules_delete(&config, rule_id)
+            .await
+    }
 }
 
 fn validate_work_day_rule_body(body: &Value) -> Result<()> {

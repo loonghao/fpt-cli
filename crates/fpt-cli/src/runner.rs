@@ -315,6 +315,10 @@ pub async fn run(cli: Cli) -> Result<Value> {
             ThumbnailCommands::Url { entity, id } => {
                 app.thumbnail_url(connection, &entity, id).await
             }
+            ThumbnailCommands::Upload { entity, id, input } => {
+                let body = required_json_input(input)?;
+                app.thumbnail_upload(connection, &entity, id, body).await
+            }
         },
         Commands::Activity(command) => match command {
             ActivityCommands::Stream { entity, id, input } => {
@@ -416,6 +420,14 @@ pub async fn run(cli: Cli) -> Result<Value> {
             ScheduleCommands::WorkDayRulesUpdate { rule_id, input } => {
                 let body = required_json_input(input)?;
                 app.schedule_work_day_rules_update(connection, rule_id, body)
+                    .await
+            }
+            ScheduleCommands::WorkDayRulesCreate { input } => {
+                let body = required_json_input(input)?;
+                app.schedule_work_day_rules_create(connection, body).await
+            }
+            ScheduleCommands::WorkDayRulesDelete { rule_id } => {
+                app.schedule_work_day_rules_delete(connection, rule_id)
                     .await
             }
         },
