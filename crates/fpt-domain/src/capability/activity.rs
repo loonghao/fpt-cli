@@ -53,5 +53,3 @@ pub const EVENT_LOG_ENTRIES_SPEC: CommandSpec = CommandSpec {
     examples: EVENT_LOG_ENTRIES_EXAMPLES,
     notes: EVENT_LOG_ENTRIES_NOTES,
 };
-
-

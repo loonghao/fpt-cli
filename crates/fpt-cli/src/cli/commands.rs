@@ -545,6 +545,16 @@ pub enum ThumbnailCommands {
         about = "Get the thumbnail image URL for an entity record"
     )]
     Url { entity: String, id: u64 },
+    #[command(
+        name = "upload",
+        about = "Upload a thumbnail image for an entity record"
+    )]
+    Upload {
+        entity: String,
+        id: u64,
+        #[arg(long)]
+        input: String,
+    },
 }
 
 #[derive(Debug, Subcommand)]
@@ -740,6 +750,7 @@ pub enum FilmstripCommands {
 }
 
 #[derive(Debug, Subcommand)]
+#[allow(clippy::enum_variant_names)]
 pub enum ScheduleCommands {
     #[command(
         name = "work-day-rules",
@@ -758,6 +769,19 @@ pub enum ScheduleCommands {
         rule_id: u64,
         #[arg(long)]
         input: String,
+    },
+    #[command(name = "work-day-rules-create", about = "Create a new work day rule")]
+    WorkDayRulesCreate {
+        #[arg(long)]
+        input: String,
+    },
+    #[command(
+        name = "work-day-rules-delete",
+        about = "Delete a work day rule by record id"
+    )]
+    WorkDayRulesDelete {
+        #[arg(help = "Work day rule record id")]
+        rule_id: u64,
     },
 }
 
