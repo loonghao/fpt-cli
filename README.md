@@ -37,7 +37,7 @@ This repository provides near-complete coverage of the ShotGrid REST and RPC API
 - **Note thread management**: threads, reply CRUD
 - **Upload/download URL generation** and **thumbnail/filmstrip URL** retrieval
 - **Persistent CLI configuration** via `config get/set/clear/path`
-- **A publishable OpenClaw skill bundle** under `skills/fpt-cli-openclaw` following Agent DX best practices
+- **A publishable OpenClaw skill bundle** under `skills/fpt-cli` following Agent DX best practices
 
 ### Development environment
 
@@ -92,12 +92,12 @@ Notes:
 
 ### OpenClaw skill
 
-This repository includes a publishable OpenClaw skill at `skills/fpt-cli-openclaw`.
+This repository includes a publishable OpenClaw skill at `skills/fpt-cli`.
 
 Install it from ClawHub after publication:
 
 ```bash
-npx clawhub@latest install fpt-cli-openclaw
+npx clawhub@latest install fpt-cli
 ```
 
 Package all repository skills from the local checkout:
@@ -434,7 +434,7 @@ Destructive operations (delete) require explicit `--yes`.
 
 **5. OpenClaw skill**
 
-The `skills/fpt-cli-openclaw/SKILL.md` encodes all Agent DX invariants that cannot be inferred from `--help`:
+The `skills/fpt-cli/SKILL.md` encodes all Agent DX invariants that cannot be inferred from `--help`:
 - Schema introspection patterns
 - Input hardening rules
 - Context window discipline

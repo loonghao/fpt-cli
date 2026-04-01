@@ -37,7 +37,7 @@
 - **Note 线程管理**：线程列表、回复 CRUD
 - **上传/下载 URL 生成** 与 **缩略图/filmstrip URL** 获取
 - **持久化 CLI 配置**：`config get/set/clear/path`
-- 位于 `skills/fpt-cli-openclaw` 的 **可发布 OpenClaw skill 包**，遵循 Agent DX 最佳实践
+- 位于 `skills/fpt-cli` 的 **可发布 OpenClaw skill 包**，遵循 Agent DX 最佳实践
 
 ### 开发环境
 
@@ -94,12 +94,12 @@ fpt self-update --version 0.1.0
 
 ### OpenClaw skill
 
-仓库内包含一个可发布的 OpenClaw skill：`skills/fpt-cli-openclaw`。
+仓库内包含一个可发布的 OpenClaw skill：`skills/fpt-cli`。
 
 发布后可通过 ClawHub 安装：
 
 ```bash
-npx clawhub@latest install fpt-cli-openclaw
+npx clawhub@latest install fpt-cli
 ```
 
 在仓库本地打包整个 `skills/` 目录下的所有 skill：
@@ -434,7 +434,7 @@ CLI 会对实体类型名进行校验，拒绝以下情况：
 
 **5. OpenClaw skill**
 
-`skills/fpt-cli-openclaw/SKILL.md` 编码了所有无法从 `--help` 推断出的 Agent DX 不变量：
+`skills/fpt-cli/SKILL.md` 编码了所有无法从 `--help` 推断出的 Agent DX 不变量：
 - 模式内省模式
 - 输入加固规则
 - 上下文窗口纪律
