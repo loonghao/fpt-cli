@@ -2,9 +2,7 @@ use fpt_core::{CommandSpec, RiskLevel};
 
 const CAPABILITIES_EXAMPLES: &[&str] = &["fpt capabilities --output json"];
 const INSPECT_EXAMPLES: &[&str] = &["fpt inspect command entity.update --output json"];
-const INSPECT_LIST_EXAMPLES: &[&str] = &[
-    "fpt inspect list --output json",
-];
+const INSPECT_LIST_EXAMPLES: &[&str] = &["fpt inspect list --output json"];
 
 const CAPABILITIES_NOTES: &[&str] = &[
     "Stable contract designed for OpenClaw integrations",

@@ -162,7 +162,9 @@ pub struct ConfigClearArgs {
 
 #[derive(Debug, Subcommand)]
 pub enum InspectCommands {
-    Command { name: String },
+    Command {
+        name: String,
+    },
     #[command(name = "list", about = "List all available command names")]
     List,
 }
