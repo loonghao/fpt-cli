@@ -615,6 +615,14 @@ impl ShotgridTransport for RecordingTransport {
         Ok(json!({"deleted": true, "rule_id": rule_id}))
     }
 
+    async fn schedule_work_day_rules_read(
+        &self,
+        _config: &ConnectionSettings,
+        rule_id: u64,
+    ) -> Result<Value> {
+        Ok(json!({"id": rule_id}))
+    }
+
     async fn thumbnail_upload(
         &self,
         _config: &ConnectionSettings,
@@ -1103,6 +1111,13 @@ impl ShotgridTransport for FindOneTransport {
     ) -> Result<Value> {
         Err(AppError::not_implemented("unused"))
     }
+    async fn schedule_work_day_rules_read(
+        &self,
+        _config: &ConnectionSettings,
+        _rule_id: u64,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
     async fn thumbnail_upload(
         &self,
         _config: &ConnectionSettings,
@@ -1577,6 +1592,13 @@ impl ShotgridTransport for NoteThreadsNotFoundTransport {
         Ok(json!({}))
     }
     async fn schedule_work_day_rules_delete(
+        &self,
+        _config: &ConnectionSettings,
+        _rule_id: u64,
+    ) -> Result<Value> {
+        Ok(json!({}))
+    }
+    async fn schedule_work_day_rules_read(
         &self,
         _config: &ConnectionSettings,
         _rule_id: u64,
@@ -2069,6 +2091,13 @@ impl ShotgridTransport for SlowGetTransport {
         Err(AppError::not_implemented("unused"))
     }
     async fn schedule_work_day_rules_delete(
+        &self,
+        _config: &ConnectionSettings,
+        _rule_id: u64,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+    async fn schedule_work_day_rules_read(
         &self,
         _config: &ConnectionSettings,
         _rule_id: u64,

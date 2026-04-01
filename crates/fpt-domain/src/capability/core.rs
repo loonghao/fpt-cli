@@ -2,6 +2,9 @@ use fpt_core::{CommandSpec, RiskLevel};
 
 const CAPABILITIES_EXAMPLES: &[&str] = &["fpt capabilities --output json"];
 const INSPECT_EXAMPLES: &[&str] = &["fpt inspect command entity.update --output json"];
+const INSPECT_LIST_EXAMPLES: &[&str] = &[
+    "fpt inspect list --output json",
+];
 
 const CAPABILITIES_NOTES: &[&str] = &[
     "Stable contract designed for OpenClaw integrations",
@@ -9,6 +12,11 @@ const CAPABILITIES_NOTES: &[&str] = &[
     "Current release is REST-first, with RPC fallback planned",
 ];
 const INSPECT_NOTES: &[&str] = &["Use dotted command names, for example `entity.update`"];
+const INSPECT_LIST_NOTES: &[&str] = &[
+    "Returns a flat JSON array of all available command names and total count",
+    "Use this for agent schema introspection: fetch names first, then call `inspect command <name>` only for the commands you need",
+    "Keeps context window usage low by avoiding full capabilities payload when only names are needed",
+];
 
 pub const CAPABILITIES_SPEC: CommandSpec = CommandSpec {
     name: "capabilities",
@@ -36,4 +44,18 @@ pub const INSPECT_COMMAND_SPEC: CommandSpec = CommandSpec {
     output: "json",
     examples: INSPECT_EXAMPLES,
     notes: INSPECT_NOTES,
+};
+
+pub const INSPECT_LIST_SPEC: CommandSpec = CommandSpec {
+    name: "inspect.list",
+    summary: "List all available command names for agent schema introspection",
+    risk: RiskLevel::Read,
+    implemented: true,
+    supports_dry_run: false,
+    preferred_transport: "core",
+    fallback_transport: None,
+    input: "none",
+    output: "json",
+    examples: INSPECT_LIST_EXAMPLES,
+    notes: INSPECT_LIST_NOTES,
 };

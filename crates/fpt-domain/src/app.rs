@@ -99,6 +99,21 @@ where
             .ok_or_else(|| AppError::unsupported(format!("unknown command `{name}`")))?;
         Ok(json!(spec))
     }
+
+    /// Return a flat JSON array of all available command names.
+    ///
+    /// This enables agent-side schema introspection without loading the full
+    /// capabilities payload: the agent can call `inspect list` to get all
+    /// command names, then use `inspect command <name>` to fetch the contract
+    /// for only the command(s) it actually needs.  This pattern keeps context
+    /// window usage low and avoids over-fetching capabilities.
+    pub fn inspect_list(&self) -> Value {
+        let names: Vec<&str> = command_specs().iter().map(|s| s.name).collect();
+        json!({
+            "commands": names,
+            "count": names.len(),
+        })
+    }
 }
 
 const DEFAULT_BATCH_CONCURRENCY: usize = 8;

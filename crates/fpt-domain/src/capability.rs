@@ -21,6 +21,7 @@ static COMMANDS: &[CommandSpec] = &[
     // Core
     core::CAPABILITIES_SPEC,
     core::INSPECT_COMMAND_SPEC,
+    core::INSPECT_LIST_SPEC,
     // Auth
     auth::AUTH_TEST_SPEC,
     // Server
@@ -65,6 +66,7 @@ static COMMANDS: &[CommandSpec] = &[
     entity::ENTITY_BATCH_REVIVE_SPEC,
     entity::ENTITY_BATCH_UPSERT_SPEC,
     entity::ENTITY_BATCH_SUMMARIZE_SPEC,
+    entity::ENTITY_BATCH_COUNT_SPEC,
     // Follow
     follow::ENTITY_FOLLOWERS_SPEC,
     follow::ENTITY_FOLLOW_SPEC,

@@ -16,13 +16,15 @@ It is also my primary validation and comparison project around MCP-oriented capa
 This repository provides near-complete coverage of the ShotGrid REST and RPC API surface:
 
 - **Rust workspace** split into focused crates (`fpt-cli`, `fpt-core`, `fpt-domain`)
-- **CLI-first** command tree with **72 registered commands** (all implemented)
+- **CLI-first** command tree with **76 registered commands** (all implemented)
 - **Structured JSON output** for automation, now used as the default output mode
-- **Command capability / inspect** discovery APIs
+- **Command capability / inspect** discovery APIs, including `inspect list` for agent schema introspection
+- **Agent DX best practices**: input hardening against hallucination (entity type validation, control-character rejection, query-parameter injection prevention)
 - **REST transport** for auth, schema, entity CRUD, relationships, followers, hierarchy, activity, event log, preferences, scheduling, license, uploads/downloads, and thumbnails
 - **Full schema management**: entity and field CRUD including create, read, update, delete, and revive
 - **`entity.find-one`** for the common "return the first match" workflow
 - **`entity.count`** convenience wrapper for record counting with optional filters
+- **`entity.batch.count`** for counting records across multiple entity types in one call
 - **`entity.summarize`** for server-side aggregate summaries and grouped rollups
 - **`entity.find` structured `_search` support**, including `additional_filter_presets`
 - **`entity batch`** client-side orchestration for batch CRUD, including **`batch.upsert`** and **`batch.summarize`**
@@ -35,7 +37,7 @@ This repository provides near-complete coverage of the ShotGrid REST and RPC API
 - **Note thread management**: threads, reply CRUD
 - **Upload/download URL generation** and **thumbnail/filmstrip URL** retrieval
 - **Persistent CLI configuration** via `config get/set/clear/path`
-- **A publishable OpenClaw skill bundle** under `skills/fpt-cli-openclaw`
+- **A publishable OpenClaw skill bundle** under `skills/fpt-cli-openclaw` following Agent DX best practices
 
 ### Development environment
 
@@ -178,6 +180,7 @@ If `--auth-mode` is not provided explicitly, the CLI infers it from the availabl
 # Core
 fpt capabilities --output json
 fpt inspect command entity.update --output json
+fpt inspect list --output json
 
 # Auth
 fpt auth test --site https://example.shotgrid.autodesk.com --auth-mode script --script-name bot --script-key xxx
@@ -234,6 +237,7 @@ fpt entity batch delete Playlist --input '{"ids":[99,100]}' --dry-run --output j
 fpt entity batch revive Shot --input '{"ids":[860,861]}' --dry-run --output json
 fpt entity batch upsert Shot --input @items.json --key code --on-conflict skip --dry-run --output json
 fpt entity batch summarize --input @batch_summaries.json --output json
+fpt entity batch count --input '["Shot","Asset","Task"]' --output json
 
 # Followers
 fpt followers list Shot 123 --site ...
@@ -260,6 +264,7 @@ fpt hierarchy expand --input @expand_query.json --site ...
 fpt work-schedule read --input @schedule.json --site ...
 fpt work-schedule update --input '{"date":"2026-04-01","working":false}' --site ...
 fpt schedule work-day-rules --site ...
+fpt schedule work-day-rules-read 42 --site ...
 fpt schedule work-day-rules-update 42 --input '{"date":"2026-04-01","is_working":false}' --site ...
 
 # Activity & event log
@@ -295,7 +300,7 @@ fpt config clear --fields site,auth-mode
 
 ### Batch CRUD
 
-`entity batch` provides batch get / find / find-one / create / update / delete / revive / upsert / summarize workflows.
+`entity batch` provides batch get / find / find-one / create / update / delete / revive / upsert / summarize / count workflows.
 The current implementation is **client-side orchestration over existing REST CRUD endpoints** and returns a unified `results` array where each item carries its own `ok` state plus `response` or `error`.
 
 Input conventions:
@@ -309,6 +314,7 @@ Input conventions:
 - **`entity batch revive`**: `[860,861]` or `{"ids":[860,861]}`
 - **`entity batch upsert`**: `[{...body...}]` or `{"items":[...]}` with `--key` field and `--on-conflict` strategy
 - **`entity batch summarize`**: `[{"entity":"Shot","payload":{...}}]` or `{"requests":[...]}`
+- **`entity batch count`**: `["Shot","Asset","Task"]` or `{"entities":["Shot","Asset"]}` or `[{"entity":"Task","filters":[...]}]`
 
 Notes:
 
@@ -317,6 +323,7 @@ Notes:
 - Batch sub-requests in the same CLI process **reuse the access token**
 - Batch sub-requests run with **controlled concurrency**, defaulting to `8`
 - Use **`FPT_BATCH_CONCURRENCY`** to tune concurrency; set it to `1` to force serial execution
+- **`entity batch count`** avoids calling `entity.count` once per type — use it when counting across multiple entity types to reduce round-trips and context window overhead
 
 ### Complex filter DSL and structured search
 
@@ -391,6 +398,47 @@ If the site uses two-factor authentication, you can also set:
 $env:FPT_AUTH_TOKEN = "123456"
 vx cargo run -p fpt-cli -- auth test --output pretty-json
 ```
+
+### Agent DX best practices
+
+`fpt-cli` follows the Agent DX principles from [You Need to Rewrite Your CLI for AI Agents](https://justin.poehnelt.com/posts/rewrite-your-cli-for-ai-agents/):
+
+**1. Schema introspection at runtime — do not guess**
+
+```bash
+# List all command names (low cost — no full payload)
+fpt inspect list --output json
+
+# Fetch contract for the specific command you need
+fpt inspect command entity.batch.count --output json
+```
+
+**2. Input hardening against hallucination**
+
+The CLI validates entity type names and rejects:
+- Names containing `?` or `#` (query parameter / fragment injection)
+- Names containing control characters (below ASCII 0x20)
+
+This prevents hallucinated inputs like `entity get "Shot?fields=code" 123` from silently building malformed URLs.
+
+**3. Context window discipline**
+
+Use `inspect list` to get command names, then `inspect command <name>` for only the contracts you need.
+Use `entity batch count` to count multiple entity types in one call instead of looping.
+Request only the fields you need via the `fields` parameter.
+
+**4. Write safety**
+
+Every mutating command supports `--dry-run` to preview the request plan before execution.
+Destructive operations (delete) require explicit `--yes`.
+
+**5. OpenClaw skill**
+
+The `skills/fpt-cli-openclaw/SKILL.md` encodes all Agent DX invariants that cannot be inferred from `--help`:
+- Schema introspection patterns
+- Input hardening rules
+- Context window discipline
+- Write safety protocol
 
 ### Design principles
 
