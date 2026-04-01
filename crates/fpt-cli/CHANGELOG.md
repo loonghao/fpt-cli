@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.24](https://github.com/loonghao/fpt-cli/compare/v0.2.23...v0.2.24) (2026-04-01)
+
+
+### Bug Fixes
+
+* rename skill slug from fpt-cli-openclaw to fpt-cli ([08aca76](https://github.com/loonghao/fpt-cli/commit/08aca7661facd09193bdc7df9f5ce37c6e210961))
+
 ## [0.2.23](https://github.com/loonghao/fpt-cli/compare/v0.2.22...v0.2.23) (2026-04-01)
 
 
