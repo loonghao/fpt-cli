@@ -517,3 +517,31 @@ pub const ENTITY_BATCH_SUMMARIZE_SPEC: CommandSpec = CommandSpec {
     examples: ENTITY_BATCH_SUMMARIZE_EXAMPLES,
     notes: ENTITY_BATCH_SUMMARIZE_NOTES,
 };
+
+const ENTITY_BATCH_COUNT_EXAMPLES: &[&str] = &[
+    "fpt entity batch count --input '[\"Shot\",\"Asset\",\"Task\"]' --output json",
+    "fpt entity batch count --input '{\"entities\":[\"Shot\",\"Asset\"]}' --output json",
+    "fpt entity batch count --input '[{\"entity\":\"Task\",\"filters\":[[\"sg_status_list\",\"is\",\"ip\"]]}]' --output json",
+];
+
+const ENTITY_BATCH_COUNT_NOTES: &[&str] = &[
+    "Counts records for multiple entity types in one CLI invocation using the RPC summarize method",
+    "Input can be a flat array of entity name strings, or objects with `entity` + optional `filters` + `filter_operator`",
+    "Also accepts an object with `entities` or `requests` key wrapping the array",
+    "Each result contains the entity name, summarize response, and per-item ok/error envelope",
+    "Use this instead of calling entity.count once per entity type — reduces round-trips and token overhead",
+];
+
+pub const ENTITY_BATCH_COUNT_SPEC: CommandSpec = CommandSpec {
+    name: "entity.batch.count",
+    summary: "Count records for multiple entity types in one CLI invocation",
+    risk: RiskLevel::Read,
+    implemented: true,
+    supports_dry_run: false,
+    preferred_transport: "rpc",
+    fallback_transport: None,
+    input: "entity name array / object with entities — each item optionally includes filters",
+    output: "json",
+    examples: ENTITY_BATCH_COUNT_EXAMPLES,
+    notes: ENTITY_BATCH_COUNT_NOTES,
+};

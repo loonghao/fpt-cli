@@ -703,6 +703,53 @@ where
             elapsed_ms(started_at),
         ))
     }
+
+    pub async fn entity_batch_count(
+        &self,
+        overrides: ConnectionOverrides,
+        input: Value,
+    ) -> Result<Value> {
+        let requests = parse_batch_count_input(input)?;
+        let config = ConnectionSettings::resolve(overrides)?;
+        let transport = &self.transport;
+        let config = &config;
+        let started_at = Instant::now();
+        let mut results = stream::iter(requests.into_iter().enumerate())
+            .map(|(index, request)| async move {
+                let entity = request
+                    .get("entity")
+                    .and_then(Value::as_str)
+                    .unwrap_or("unknown")
+                    .to_string();
+                let payload = request.get("payload").cloned().unwrap_or(json!({}));
+                match transport.entity_summarize(config, &entity, &payload).await {
+                    Ok(response) => batch_result_ok(
+                        index,
+                        &[
+                            ("entity", json!(entity)),
+                            ("request", request),
+                            ("response", response),
+                        ],
+                    ),
+                    Err(error) => batch_result_err(
+                        index,
+                        &error,
+                        &[("entity", json!(entity)), ("request", request)],
+                    ),
+                }
+            })
+            .buffer_unordered(batch_concurrency_limit())
+            .collect::<Vec<_>>()
+            .await;
+        sort_batch_results(&mut results);
+
+        Ok(batch_response_with_stats(
+            "entity.batch.count",
+            "_multi",
+            results,
+            elapsed_ms(started_at),
+        ))
+    }
 }
 
 /// Build a single successful batch result entry.
@@ -1220,6 +1267,100 @@ fn parse_batch_summarize_input(input: Value) -> Result<Vec<Value>> {
             .with_missing_fields(["payload"]));
         }
     }
+
+    Ok(items)
+}
+
+/// Parse a batch count input.
+///
+/// Each request can be a string (entity name) or an object with `entity` and
+/// optional `filters` / `filter_operator`.  The function wraps each request
+/// into a `record_count` summarize payload.
+/// Accepts a JSON array of entity name strings or request objects,
+/// or a JSON object containing `entities` or `requests`.
+fn parse_batch_count_input(input: Value) -> Result<Vec<Value>> {
+    let items = match input {
+        Value::Array(values) => {
+            let items = non_empty_items(values, "entity batch count requests")?;
+            items
+                .into_iter()
+                .map(|item| match item {
+                    Value::String(entity) => Ok(json!({
+                        "entity": entity,
+                        "payload": {
+                            "summaries": [{"field": "id", "type": "record_count"}],
+                            "filters": {"filter_operator": "all", "filters": []},
+                        }
+                    })),
+                    Value::Object(object) => {
+                        let entity = object
+                            .get("entity")
+                            .and_then(Value::as_str)
+                            .ok_or_else(|| {
+                                AppError::invalid_input(
+                                    "each batch count request must contain an `entity` string field",
+                                )
+                                .with_operation("parse_batch_count_input")
+                                .with_missing_fields(["entity"])
+                            })?;
+                        let filters = object.get("filters").cloned().unwrap_or(json!([]));
+                        let filter_operator = object
+                            .get("filter_operator")
+                            .and_then(Value::as_str)
+                            .unwrap_or("all");
+                        Ok(json!({
+                            "entity": entity,
+                            "payload": {
+                                "summaries": [{"field": "id", "type": "record_count"}],
+                                "filters": {
+                                    "filter_operator": filter_operator,
+                                    "filters": filters,
+                                },
+                            }
+                        }))
+                    }
+                    _ => Err(AppError::invalid_input(
+                        "each batch count item must be either a string (entity name) or an object with `entity`",
+                    )
+                    .with_operation("parse_batch_count_input")
+                    .with_expected_shape("a string entity name or a JSON object with `entity` field")),
+                })
+                .collect::<Result<Vec<_>>>()?
+        }
+        Value::Object(object) => {
+            let array_field = object
+                .get("entities")
+                .or_else(|| object.get("requests"))
+                .ok_or_else(|| {
+                    AppError::invalid_input(
+                        "entity batch count input is missing required field `entities` or `requests`",
+                    )
+                    .with_operation("parse_batch_count_input")
+                    .with_missing_fields(["entities"])
+                    .with_expected_shape(
+                        "a JSON object containing `entities` (array of entity names or request objects)",
+                    )
+                })?
+                .as_array()
+                .ok_or_else(|| {
+                    AppError::invalid_input("`entities` must be a JSON array")
+                        .with_operation("parse_batch_count_input")
+                        .with_invalid_field("entities")
+                        .with_expected_shape("a JSON array of entity names or request objects")
+                })?
+                .clone();
+            parse_batch_count_input(Value::Array(array_field))?
+        }
+        _ => {
+            return Err(AppError::invalid_input(
+                "entity batch count input must be either a JSON array or an object containing `entities`",
+            )
+            .with_operation("parse_batch_count_input")
+            .with_expected_shape(
+                "a JSON array of entity names/objects, or a JSON object containing `entities`",
+            ));
+        }
+    };
 
     Ok(items)
 }

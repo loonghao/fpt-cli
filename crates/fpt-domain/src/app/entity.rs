@@ -23,6 +23,7 @@ where
         id: u64,
         fields: Option<Vec<String>>,
     ) -> Result<Value> {
+        validate_entity_type(entity)?;
         let config = ConnectionSettings::resolve(overrides)?;
         self.transport.entity_get(&config, entity, id, fields).await
     }
@@ -34,6 +35,7 @@ where
         input: Option<Value>,
         filter_dsl: Option<String>,
     ) -> Result<Value> {
+        validate_entity_type(entity)?;
         let config = ConnectionSettings::resolve(overrides)?;
         let params = build_find_params(input, filter_dsl)?;
         self.transport.entity_find(&config, entity, params).await
@@ -46,6 +48,7 @@ where
         input: Option<Value>,
         filter_dsl: Option<String>,
     ) -> Result<Value> {
+        validate_entity_type(entity)?;
         let config = ConnectionSettings::resolve(overrides)?;
         let mut params = build_find_params(input, filter_dsl)?;
         upsert_query_param(&mut params.query, "page[size]", "1");
@@ -60,6 +63,7 @@ where
         body: Value,
         dry_run: bool,
     ) -> Result<Value> {
+        validate_entity_type(entity)?;
         if dry_run {
             let api_version = api_version_or_default(overrides.api_version.as_deref());
             return Ok(dry_run_response(plan_entity_create(
@@ -81,6 +85,7 @@ where
         body: Value,
         dry_run: bool,
     ) -> Result<Value> {
+        validate_entity_type(entity)?;
         if dry_run {
             let api_version = api_version_or_default(overrides.api_version.as_deref());
             return Ok(dry_run_response(plan_entity_update(
@@ -105,6 +110,7 @@ where
         dry_run: bool,
         yes: bool,
     ) -> Result<Value> {
+        validate_entity_type(entity)?;
         if dry_run {
             let api_version = api_version_or_default(overrides.api_version.as_deref());
             return Ok(dry_run_response(plan_entity_delete(
@@ -133,6 +139,7 @@ where
         id: u64,
         dry_run: bool,
     ) -> Result<Value> {
+        validate_entity_type(entity)?;
         if dry_run {
             return Ok(dry_run_response(plan_entity_revive(entity, id)));
         }
@@ -392,6 +399,45 @@ fn validate_share_body(body: &Value) -> Result<()> {
                 "a JSON object describing the share target (e.g. containing `entities` or project links)",
             )
     })?;
+
+    Ok(())
+}
+
+/// Validate that an entity type name is safe to use in a REST URL path.
+///
+/// Agents can hallucinate malformed entity names that would embed query
+/// parameters (e.g. `"Shot?fields=code"`) or fragment identifiers
+/// (e.g. `"Asset#section"`) into the path.  These are rejected here so that
+/// the URL builder in `RestTransport` never silently builds a malformed request.
+///
+/// Control characters (anything below ASCII 0x20) are also rejected because
+/// they cannot appear in a valid ShotGrid entity type name and may indicate
+/// a prompt-injection attempt.
+pub(crate) fn validate_entity_type(entity: &str) -> Result<()> {
+    if entity.is_empty() {
+        return Err(AppError::invalid_input("entity type name must not be empty")
+            .with_operation("validate_entity_type")
+            .with_invalid_field("entity")
+            .with_hint("Provide a valid ShotGrid entity type name, such as `Shot`, `Asset`, or `Task`."));
+    }
+
+    if entity.contains('?') || entity.contains('#') {
+        return Err(AppError::invalid_input(format!(
+            "entity type name `{entity}` must not contain `?` or `#`; do not embed query parameters or fragment identifiers in entity names"
+        ))
+        .with_operation("validate_entity_type")
+        .with_invalid_field("entity")
+        .with_hint("Provide the plain entity type name without query parameters, for example `Shot` not `Shot?fields=code`."));
+    }
+
+    if entity.chars().any(|c| (c as u32) < 0x20) {
+        return Err(AppError::invalid_input(format!(
+            "entity type name `{entity}` contains control characters (below ASCII 0x20), which are not permitted"
+        ))
+        .with_operation("validate_entity_type")
+        .with_invalid_field("entity")
+        .with_hint("Entity type names must contain only printable characters."));
+    }
 
     Ok(())
 }

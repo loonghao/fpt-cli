@@ -338,6 +338,9 @@ impl ShotgridTransport for RecordingTransport {
     ) -> Result<Value> {
         Ok(json!({}))
     }
+    async fn schedule_work_day_rules_read(&self, _: &ConnectionSettings, _: u64) -> Result<Value> {
+        Ok(json!({}))
+    }
     async fn thumbnail_upload(
         &self,
         _: &ConnectionSettings,

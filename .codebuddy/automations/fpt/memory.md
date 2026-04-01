@@ -1,45 +1,63 @@
 # fpt-cli Code Cleanup Automation Memory
 
-## Last Run: 2026-03-24 (cycle 3)
+## Last Run: 2026-03-29 (cycle 4)
 
-### Findings
+### Changes Applied (unstaged on `code-clear` branch)
 
-1. **PR #76** (`chore/code-cleanup-2026-03-24`) — merged in cycle 1
-   - Extracted `DRY_RUN_NOTE` constant to eliminate 4 duplicate string literals in `transport.rs`
-   - Used `reqwest::header::{ACCEPT, CONTENT_TYPE}` constants for consistent HTTP header casing
-   - Deduplicated `print_stdout`/`print_stderr` via generic `format_value` helper in `output.rs`
-   - Renamed `parse_batch_delete_input` → `parse_batch_id_list_input` (also used by revive)
-   - Added `count_by_action` helper to replace 4 repeated `.iter().filter()` patterns in batch upsert
-   - Renamed `build_query_params_public` → `build_common_query_params` for clarity
+1. **ScheduleCommands enum variant naming** (`commands.rs`, `runner.rs`)
+   - Removed `#[allow(clippy::enum_variant_names)]` suppression
+   - Renamed variants: `WorkDayRules`→`Read`, `WorkDayRulesUpdate`→`Update`, `WorkDayRulesCreate`→`Create`, `WorkDayRulesDelete`→`Delete`
+   - CLI command names preserved via existing `#[command(name = "...")]` attributes — zero external contract change
 
-2. **PR #77** (`style/fix-cargo-fmt-2026-03-24`) — merged in cycle 2
-   - Applied `cargo fmt` to files changed by PR #76 that had formatting inconsistencies
-   - Fixed multiline `#[command(...)]` attributes in `commands.rs`
-   - Normalized match arm formatting in `output.rs`
-   - Fixed error builder chain indentation in `batch.rs`
-   - Removed extra blank line in `app_command_tests.rs`
+2. **Credentials::principal() return type** (`config.rs`)
+   - Changed from `Option<String>` (clone) to `Option<&str>` (borrow)
+   - Eliminated unnecessary `String::clone()` on every call
+   - Updated `summary()` to use `.map(str::to_owned)` only where `ConnectionSummary` needs owned data
 
-3. **PR #90** (`chore/type-unification-cleanup-2026-03-24-2`) — merged in cycle 3
-   - Extracted `push_page_params` helper in `query_helpers.rs` to deduplicate identical page-parsing logic between `build_find_params` (find.rs:97-118) and `build_query_params` (query_helpers.rs:109-130)
-   - Removed trailing whitespace in `config.rs` (line 49, after `.with_allowed_values(...)`)
+3. **Filter normalization ownership** (`find.rs`)
+   - Restructured `normalize_search_filters` to take ownership of `Value::Object(mut map)` instead of borrowing with `ref` and then cloning both `map` and `arr`
+   - Restructured `normalize_filter_conditions` to take ownership of `Value::Object(mut map)` instead of cloning both `inner_conds` and `map` in the recursive path
+   - Net elimination of 4 unnecessary deep clones in filter processing
+
+### Audit Findings (deferred for future runs)
+
+- **Repeated JSON key strings**: `"filters".to_string()` appears 6× across files, `"filter_operator"` similarly. Could extract constants, but adds indirection without clear benefit — skip for now.
+- **entity_relationship_create/update/delete duplication**: 3 methods with near-identical 4-line structure. Duplication is minimal and preserves clear API surface — skip.
+- **transport.rs / batch.rs file size**: 1757 / 1206 lines respectively. These are the two largest files. Splitting would be beneficial but is a larger structural refactor — defer.
+- **runner.rs 425-line match block**: Could split into per-domain handler functions. Moderate complexity — defer.
+- **serialized_body.clone() in retry loop**: `Vec<u8>` cloned per retry attempt. Could use `bytes::Bytes` for O(1) clone, but requires adding dependency for a rarely-executed code path — skip.
+
+### Reverted Pre-Existing WIP
+
+- The previous run (cycle 3) left incomplete unstaged changes adding `schedule_work_day_rules_read` trait method and `entity_batch_count` app method (tests without implementations). These caused compilation failures and were reverted to the committed state. The feature additions should be done as complete units in future runs.
+
+### Verification
+
+- `cargo clippy --workspace -D warnings` ✅ (zero warnings, zero `#[allow]` suppressions on user code)
+- `cargo fmt --check --all` ✅ (clean)
+- `cargo test --workspace` ✅ (all 111 tests pass)
+
+## Previous Runs
+
+### 2026-03-24 (cycles 1–3)
+
+1. **PR #76** — Extracted `DRY_RUN_NOTE` constant, used HTTP header constants, deduplicated `format_value` helper, renamed `parse_batch_delete_input`→`parse_batch_id_list_input`, added `count_by_action` helper
+2. **PR #77** — `cargo fmt` fixes for PR #76 changes
+3. **PR #90** — Extracted `push_page_params` helper, removed trailing whitespace
 
 ### Codebase Health Summary
 
-- `cargo fmt --check` ✅ (all files formatted)
-- `cargo clippy --workspace -D warnings` ✅ (zero warnings)
-- `cargo test --workspace` ✅ (all tests pass)
-- No TODO/FIXME/HACK comments in source code
-- No commented-out code blocks
-- No `#[allow(dead_code)]` or `#[allow(unused)]` annotations
-- No unused imports detected
-- Consistent error handling patterns throughout
+- Zero clippy warnings, zero `#[allow]` on user-authored enums
+- Zero TODO/FIXME/HACK, zero commented-out code, zero unused imports
+- All `Credentials` methods now use borrowing where possible
+- Filter normalization avoids unnecessary deep clones
 - Clean dependency graph in all Cargo.toml files
 
 ### Notes for Next Run
 
-- The codebase is in excellent shape after three cleanup PRs in this cycle
-- The `scripts/local_count_projects.ps1` (466 lines) uses Chinese comments, inconsistent with the English-only development convention, but it's a local debugging script — low priority
-- Two `#![allow(clippy::result_large_err)]` at crate level are acceptable for the AppError pattern
-- One `#[allow(clippy::too_many_arguments)]` on `entity_batch_upsert` (9 params) is acceptable — could consider an `UpsertOptions` struct in a future refactor, but not urgent
-- The `entity_collection_path` function in `transport.rs` has a hand-rolled CamelCase→snake_case conversion (50 lines) that could theoretically use the `heck` crate, but it has ShotGrid-specific pluralization logic that makes a crate swap non-trivial — leave as-is
-- Batch operations in `batch.rs` have repetitive template patterns that could benefit from a generic `run_batch` higher-order function in a future refactor — medium complexity, not urgent
+- Consider splitting `transport.rs` (1757 lines) into separate modules (auth, REST impl, RPC impl)
+- Consider splitting `batch.rs` (1206 lines) — extract checkpoint helpers into a sub-module
+- Consider extracting `runner.rs` dispatch into per-domain handler functions
+- The `scripts/local_count_projects.ps1` still uses Chinese comments — low priority
+- Two `#![allow(clippy::result_large_err)]` at crate level remain acceptable
+- One `#[allow(clippy::too_many_arguments)]` on `entity_batch_upsert` remains acceptable

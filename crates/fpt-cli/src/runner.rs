@@ -20,6 +20,7 @@ pub async fn run(cli: Cli) -> Result<Value> {
         Commands::Capabilities => Ok(app.capabilities(env!("CARGO_PKG_VERSION"))),
         Commands::Inspect(command) => match command {
             InspectCommands::Command { name } => app.inspect_command(&name),
+            InspectCommands::List => Ok(app.inspect_list()),
         },
         Commands::Auth(command) => match command {
             AuthCommands::Test => app.auth_test(connection).await,
@@ -269,6 +270,10 @@ pub async fn run(cli: Cli) -> Result<Value> {
                     let body = required_json_input(input)?;
                     app.entity_batch_summarize(connection, body).await
                 }
+                BatchEntityCommands::Count { input } => {
+                    let body = required_json_input(input)?;
+                    app.entity_batch_count(connection, body).await
+                }
             },
         },
         Commands::WorkSchedule(command) => match command {
@@ -413,20 +418,20 @@ pub async fn run(cli: Cli) -> Result<Value> {
             }
         },
         Commands::Schedule(command) => match command {
-            ScheduleCommands::WorkDayRules { input } => {
+            ScheduleCommands::Read { input } => {
                 let input = read_json_input(input.as_deref())?;
                 app.schedule_work_day_rules(connection, input).await
             }
-            ScheduleCommands::WorkDayRulesUpdate { rule_id, input } => {
+            ScheduleCommands::Update { rule_id, input } => {
                 let body = required_json_input(input)?;
                 app.schedule_work_day_rules_update(connection, rule_id, body)
                     .await
             }
-            ScheduleCommands::WorkDayRulesCreate { input } => {
+            ScheduleCommands::Create { input } => {
                 let body = required_json_input(input)?;
                 app.schedule_work_day_rules_create(connection, body).await
             }
-            ScheduleCommands::WorkDayRulesDelete { rule_id } => {
+            ScheduleCommands::Delete { rule_id } => {
                 app.schedule_work_day_rules_delete(connection, rule_id)
                     .await
             }

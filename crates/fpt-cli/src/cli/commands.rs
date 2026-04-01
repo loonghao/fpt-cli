@@ -162,7 +162,11 @@ pub struct ConfigClearArgs {
 
 #[derive(Debug, Subcommand)]
 pub enum InspectCommands {
-    Command { name: String },
+    Command {
+        name: String,
+    },
+    #[command(name = "list", about = "List all available command names")]
+    List,
 }
 
 #[derive(Debug, Subcommand)]
@@ -505,6 +509,14 @@ pub enum BatchEntityCommands {
         #[arg(long)]
         input: String,
     },
+    #[command(
+        name = "count",
+        about = "Count records for multiple entity types in one CLI invocation"
+    )]
+    Count {
+        #[arg(long)]
+        input: String,
+    },
 }
 
 #[derive(Debug, Subcommand)]
@@ -750,13 +762,12 @@ pub enum FilmstripCommands {
 }
 
 #[derive(Debug, Subcommand)]
-#[allow(clippy::enum_variant_names)]
 pub enum ScheduleCommands {
     #[command(
         name = "work-day-rules",
         about = "Read work day rules from the ShotGrid scheduling system"
     )]
-    WorkDayRules {
+    Read {
         #[arg(long, help = "Optional query parameters as JSON (page, etc.)")]
         input: Option<String>,
     },
@@ -764,14 +775,14 @@ pub enum ScheduleCommands {
         name = "work-day-rules-update",
         about = "Update a specific work day rule by record id"
     )]
-    WorkDayRulesUpdate {
+    Update {
         #[arg(help = "Work day rule record id")]
         rule_id: u64,
         #[arg(long)]
         input: String,
     },
     #[command(name = "work-day-rules-create", about = "Create a new work day rule")]
-    WorkDayRulesCreate {
+    Create {
         #[arg(long)]
         input: String,
     },
@@ -779,7 +790,7 @@ pub enum ScheduleCommands {
         name = "work-day-rules-delete",
         about = "Delete a work day rule by record id"
     )]
-    WorkDayRulesDelete {
+    Delete {
         #[arg(help = "Work day rule record id")]
         rule_id: u64,
     },

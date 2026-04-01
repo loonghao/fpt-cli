@@ -359,6 +359,11 @@ pub trait ShotgridTransport {
         config: &ConnectionSettings,
         params: &[(String, String)],
     ) -> Result<Value>;
+    async fn schedule_work_day_rules_read(
+        &self,
+        config: &ConnectionSettings,
+        rule_id: u64,
+    ) -> Result<Value>;
     async fn schedule_work_day_rules_update(
         &self,
         config: &ConnectionSettings,
@@ -1568,6 +1573,16 @@ impl ShotgridTransport for RestTransport {
     ) -> Result<Value> {
         let path = format!("schedule/work_day_rules/{rule_id}");
         self.authorized_json_request(config, Method::DELETE, &path, &[], None)
+            .await
+    }
+
+    async fn schedule_work_day_rules_read(
+        &self,
+        config: &ConnectionSettings,
+        rule_id: u64,
+    ) -> Result<Value> {
+        let path = format!("schedule/work_day_rules/{rule_id}");
+        self.authorized_json_request(config, Method::GET, &path, &[], None)
             .await
     }
 

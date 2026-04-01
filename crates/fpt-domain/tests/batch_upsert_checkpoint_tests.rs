@@ -587,6 +587,14 @@ impl ShotgridTransport for UpsertTransport {
         Err(AppError::not_implemented("unused"))
     }
 
+    async fn schedule_work_day_rules_read(
+        &self,
+        _config: &fpt_domain::ConnectionSettings,
+        _rule_id: u64,
+    ) -> Result<Value> {
+        Err(AppError::not_implemented("unused"))
+    }
+
     async fn thumbnail_upload(
         &self,
         _config: &fpt_domain::ConnectionSettings,
