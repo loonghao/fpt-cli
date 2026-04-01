@@ -1,5 +1,5 @@
 ---
-name: fpt-cli-openclaw
+name: fpt-cli
 description: This skill should be used when OpenClaw needs to install, configure, inspect, or operate `fpt-cli` for Autodesk Flow Production Tracking / ShotGrid workflows, especially for auth setup, schema/entity reads, structured searches, and safe write previews.
 ---
 

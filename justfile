@@ -54,7 +54,7 @@ package-skills:
     vx uv run python scripts/package_openclaw_skill.py skills dist/skills --all
 
 package-openclaw-skill:
-    vx uv run python scripts/package_openclaw_skill.py skills/fpt-cli-openclaw dist/skills
+    vx uv run python scripts/package_openclaw_skill.py skills/fpt-cli dist/skills
 
 
 clawhub-sync-dry-run:
